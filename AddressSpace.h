@@ -9,6 +9,7 @@
 #include <Memory.h>
 
 namespace Nirvana {
+namespace Core {
 namespace Windows {
 
 ///	<summary>
@@ -97,27 +98,27 @@ public:
 	/// <summary>
 	/// Initializes this instance for current process.
 	/// </summary>
-	void initialize ()
+	void initialize()
 	{
-		initialize (GetCurrentProcessId (), GetCurrentProcess ());
+		initialize(GetCurrentProcessId(), GetCurrentProcess());
 	}
 
 	/// <summary>
 	/// Terminates this instance.
 	/// </summary>
-	void terminate ();
+	void terminate();
 
-	HANDLE process () const
+	HANDLE process() const
 	{
 		return m_process;
 	}
 
-	bool is_current_process () const
+	bool is_current_process() const
 	{
-		return GetCurrentProcess () == m_process;
+		return GetCurrentProcess() == m_process;
 	}
 
-	void* end () const
+	void* end() const
 	{
 		return (void*)(m_directory_size * ALLOCATION_GRANULARITY);
 	}
@@ -128,8 +129,8 @@ public:
 		HANDLE mapping;
 	};
 
-	BlockInfo& block (const void* address);
-	BlockInfo* allocated_block (const void* address);
+	BlockInfo& block(const void* address);
+	BlockInfo* allocated_block(const void* address);
 
 	enum MappingType
 	{
@@ -140,24 +141,24 @@ public:
 	class Block
 	{
 	public:
-		Block (AddressSpace& space, void* address);
+		Block(AddressSpace& space, void* address);
 
-		BYTE* address () const
+		BYTE* address() const
 		{
 			return m_address;
 		}
 
-		HANDLE& mapping ()
+		HANDLE& mapping()
 		{
 			return m_info.mapping;
 		}
 
-		void copy (Block& src, SIZE_T offset, SIZE_T size, LONG flags);
-		void unmap (HANDLE reserve = INVALID_HANDLE_VALUE, bool no_close_handle = false);
-		DWORD check_committed (SIZE_T offset, SIZE_T size);
-		void change_protection (SIZE_T offset, SIZE_T size, LONG flags);
-		void decommit (SIZE_T offset, SIZE_T size);
-		bool is_copy (Block& other, SIZE_T offset, SIZE_T size);
+		void copy(Block& src, SIZE_T offset, SIZE_T size, LONG flags);
+		void unmap(HANDLE reserve = INVALID_HANDLE_VALUE, bool no_close_handle = false);
+		DWORD check_committed(SIZE_T offset, SIZE_T size);
+		void change_protection(SIZE_T offset, SIZE_T size, LONG flags);
+		void decommit(SIZE_T offset, SIZE_T size);
+		bool is_copy(Block& other, SIZE_T offset, SIZE_T size);
 
 		struct State
 		{
@@ -182,7 +183,7 @@ public:
 				/// </summary>
 				struct
 				{
-					DWORD page_state [PAGES_PER_BLOCK];
+					DWORD page_state[PAGES_PER_BLOCK];
 				}
 				mapped;
 
@@ -197,37 +198,37 @@ public:
 				reserved;
 			};
 
-			State () :
-				state (INVALID)
+			State() :
+				state(INVALID)
 			{}
 		};
 
-		const State& state ();
+		const State& state();
 
 	protected:
 		friend class MemoryWindows;
 
-		void invalidate_state ()
+		void invalidate_state()
 		{
 			m_state.state = State::INVALID;
 		}
 
-		void map (HANDLE mapping, MappingType protection, bool commit = false);
+		void map(HANDLE mapping, MappingType protection, bool commit = false);
 
-		bool has_data_outside_of (SIZE_T offset, SIZE_T size, DWORD mask = PageState::MASK_ACCESS);
+		bool has_data_outside_of(SIZE_T offset, SIZE_T size, DWORD mask = PageState::MASK_ACCESS);
 
 	private:
 		friend class AddressSpace;
-		void copy (bool remap, bool move, Block& src, SIZE_T offset, SIZE_T size, LONG flags);
-		
-		bool can_move (SIZE_T offset, SIZE_T size, LONG flags)
+		void copy(bool remap, bool move, Block& src, SIZE_T offset, SIZE_T size, LONG flags);
+
+		bool can_move(SIZE_T offset, SIZE_T size, LONG flags)
 		{
 			bool move = false;
 			if (flags & Memory::DECOMMIT) {
 				if (flags & (Memory::RELEASE & ~Memory::DECOMMIT))
 					move = true;
 				else
-					move = !has_data_outside_of (offset, size);
+					move = !has_data_outside_of(offset, size);
 			}
 			return move;
 		}
@@ -239,51 +240,51 @@ public:
 		State m_state;
 	};
 
-	void* reserve (SIZE_T size, LONG flags = 0, void* dst = 0);
-	void release (void* ptr, SIZE_T size);
+	void* reserve(SIZE_T size, LONG flags = 0, void* dst = 0);
+	void release(void* ptr, SIZE_T size);
 
 	// Quick copy for block sizes <= ALLOCATION_GRANULARITY
-	void* copy (Block& src, SIZE_T offset, SIZE_T size, LONG flags);
+	void* copy(Block& src, SIZE_T offset, SIZE_T size, LONG flags);
 
-	void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) const
+	void query(const void* address, MEMORY_BASIC_INFORMATION& mbi) const
 	{
-		verify (VirtualQueryEx (m_process, address, &mbi, sizeof (mbi)));
+		verify(VirtualQueryEx(m_process, address, &mbi, sizeof(mbi)));
 	}
 
-	void check_allocated (void* ptr, SIZE_T size);
-	DWORD check_committed (void* ptr, SIZE_T size);
-	void change_protection (void* ptr, SIZE_T size, LONG flags);
-	void decommit (void* ptr, SIZE_T size);
+	void check_allocated(void* ptr, SIZE_T size);
+	DWORD check_committed(void* ptr, SIZE_T size);
+	void change_protection(void* ptr, SIZE_T size, LONG flags);
+	void decommit(void* ptr, SIZE_T size);
 
-	bool is_readable (const void* p, SIZE_T size);
-	bool is_writable (const void* p, SIZE_T size);
-	bool is_private (const void* p, SIZE_T size);
-	bool is_copy (const void* p, const void* plocal, SIZE_T size);
+	bool is_readable(const void* p, SIZE_T size);
+	bool is_writable(const void* p, SIZE_T size);
+	bool is_private(const void* p, SIZE_T size);
+	bool is_copy(const void* p, const void* plocal, SIZE_T size);
 
 protected:
-	void initialize (DWORD process_id, HANDLE process_handle);
+	void initialize(DWORD process_id, HANDLE process_handle);
 
 private:
 	friend class MemoryWindows;
 
-	void* map (HANDLE mapping, MappingType protection);
-	void protect (void* address, SIZE_T size, DWORD protection)
+	void* map(HANDLE mapping, MappingType protection);
+	void protect(void* address, SIZE_T size, DWORD protection)
 	{
 		DWORD old;
-		verify (VirtualProtectEx (m_process, address, size, protection, &old));
+		verify(VirtualProtectEx(m_process, address, size, protection, &old));
 	}
 
 private:
-	static void concurrency ()
+	static void concurrency()
 	{
-		Sleep (0);
+		Sleep(0);
 	}
 
 private:
 	HANDLE m_process;
 	HANDLE m_mapping;
 #ifdef _WIN64
-	static const size_t SECOND_LEVEL_BLOCK = ALLOCATION_GRANULARITY / sizeof (BlockInfo);
+	static const size_t SECOND_LEVEL_BLOCK = ALLOCATION_GRANULARITY / sizeof(BlockInfo);
 	BlockInfo** m_directory;
 #else
 	BlockInfo* m_directory;
@@ -291,11 +292,11 @@ private:
 	size_t m_directory_size;
 };
 
-inline bool AddressSpace::is_private (const void* p, SIZE_T size)
+inline bool AddressSpace::is_private(const void* p, SIZE_T size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
-		query (begin, mbi);
+		query(begin, mbi);
 		if (mbi.Protect & (PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY))
 			return false;
 		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
@@ -303,11 +304,11 @@ inline bool AddressSpace::is_private (const void* p, SIZE_T size)
 	return true;
 }
 
-inline bool AddressSpace::is_readable (const void* p, SIZE_T size)
+inline bool AddressSpace::is_readable(const void* p, SIZE_T size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
-		query (begin, mbi);
+		query(begin, mbi);
 		if (!(mbi.Protect & PageState::MASK_ACCESS))
 			return false;
 		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
@@ -315,11 +316,11 @@ inline bool AddressSpace::is_readable (const void* p, SIZE_T size)
 	return true;
 }
 
-inline bool AddressSpace::is_writable (const void* p, SIZE_T size)
+inline bool AddressSpace::is_writable(const void* p, SIZE_T size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
-		query (begin, mbi);
+		query(begin, mbi);
 		if (!(mbi.Protect & PageState::MASK_RW))
 			return false;
 		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
@@ -327,6 +328,7 @@ inline bool AddressSpace::is_writable (const void* p, SIZE_T size)
 	return true;
 }
 
+}
 }
 }
 
