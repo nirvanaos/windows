@@ -1,8 +1,8 @@
 // Nirvana project
 // Protection domain memory service over Win32 API
 
-#ifndef NIRVANA_MEMORYWINDOWS_H_
-#define NIRVANA_MEMORYWINDOWS_H_
+#ifndef NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
+#define NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
 
 #include "AddressSpace.h"
 #include <real_copy.h>
@@ -20,15 +20,15 @@ class MemoryWindows :
 public:
 	static void initialize()
 	{
-		sm_space.initialize();
-		sm_exception_filter = SetUnhandledExceptionFilter(&exception_filter);
+		space_.initialize();
+		exception_filter_ = SetUnhandledExceptionFilter(&exception_filter);
 		_set_se_translator(&se_translator);
 	}
 
 	static void terminate()
 	{
-		SetUnhandledExceptionFilter(sm_exception_filter);
-		sm_space.terminate();
+		SetUnhandledExceptionFilter(exception_filter_);
+		space_.terminate();
 	}
 
 	// Memory::
@@ -47,7 +47,7 @@ public:
 
 				HANDLE mapping = new_mapping();
 				try {
-					ret = sm_space.map(mapping, AddressSpace::MAP_PRIVATE);
+					ret = space_.map(mapping, AddressSpace::MAP_PRIVATE);
 				} catch (...) {
 					CloseHandle(mapping);
 					throw;
@@ -56,20 +56,20 @@ public:
 				try {
 					Block(ret).commit(0, size);
 				} catch (...) {
-					sm_space.release(ret, size);
+					space_.release(ret, size);
 					throw;
 				}
 
 			} else {
 
-				if (!(ret = sm_space.reserve(size, flags, dst)))
+				if (!(ret = space_.reserve(size, flags, dst)))
 					return 0;
 
 				if (!(Memory::RESERVED & flags)) {
 					try {
 						commit_no_check(ret, size);
 					} catch (...) {
-						sm_space.release(ret, size);
+						space_.release(ret, size);
 						throw;
 					}
 				}
@@ -85,7 +85,7 @@ public:
 
 	static void release(void* dst, SIZE_T size)
 	{
-		sm_space.release(dst, size);
+		space_.release(dst, size);
 	}
 
 	static void commit(void* ptr, SIZE_T size)
@@ -97,7 +97,7 @@ public:
 			throw BAD_PARAM();
 
 		// Memory must be allocated.
-		sm_space.check_allocated(ptr, size);
+		space_.check_allocated(ptr, size);
 
 		commit_no_check(ptr, size);
 	}
@@ -108,29 +108,29 @@ private:
 public:
 	static void decommit(void* ptr, SIZE_T size)
 	{
-		sm_space.decommit(ptr, size);
+		space_.decommit(ptr, size);
 	}
 
 	static void* copy(void* dst, void* src, SIZE_T size, LONG flags);
 
 	static bool is_readable(const void* p, SIZE_T size)
 	{
-		return sm_space.is_readable(p, size);
+		return space_.is_readable(p, size);
 	}
 
 	static bool is_writable(const void* p, SIZE_T size)
 	{
-		return sm_space.is_writable(p, size);
+		return space_.is_writable(p, size);
 	}
 
 	static bool is_private(const void* p, SIZE_T size)
 	{
-		return sm_space.is_private(p, size);
+		return space_.is_private(p, size);
 	}
 
 	static bool is_copy(const void* p1, const void* p2, SIZE_T size)
 	{
-		return sm_space.is_copy(p1, p2, size);
+		return space_.is_copy(p1, p2, size);
 	}
 
 	static SIZE_T query(const void* p, Memory::QueryParam q);
@@ -168,7 +168,7 @@ private:
 	{
 	public:
 		Block(void* addr) :
-			AddressSpace::Block(sm_space, addr)
+			AddressSpace::Block(space_, addr)
 		{}
 
 		DWORD commit(SIZE_T offset, SIZE_T size);
@@ -240,14 +240,14 @@ public:
 private:
 	static void protect(void* address, SIZE_T size, DWORD protection)
 	{
-		//sm_space.protect (address, size, protection);
+		//space_.protect (address, size, protection);
 		DWORD old;
 		verify(VirtualProtect(address, size, protection, &old));
 	}
 
 	static void query(const void* address, MEMORY_BASIC_INFORMATION& mbi)
 	{
-		//sm_space.query (address, mbi);
+		//space_.query (address, mbi);
 		verify(VirtualQuery(address, &mbi, sizeof(mbi)));
 	}
 
@@ -279,8 +279,8 @@ private:
 	static void se_translator(unsigned int, struct _EXCEPTION_POINTERS* pex);
 
 private:
-	static AddressSpace sm_space;
-	static PTOP_LEVEL_EXCEPTION_FILTER sm_exception_filter;
+	static AddressSpace space_;
+	static PTOP_LEVEL_EXCEPTION_FILTER exception_filter_;
 };
 
 inline void* MemoryWindows::copy(void* dst, void* src, SIZE_T size, LONG flags)
@@ -292,7 +292,7 @@ inline void* MemoryWindows::copy(void* dst, void* src, SIZE_T size, LONG flags)
 		throw INV_FLAG();
 
 	// Source range have to be committed.
-	DWORD src_prot_mask = sm_space.check_committed(src, size);
+	DWORD src_prot_mask = space_.check_committed(src, size);
 
 	// Current stack location
 	void* stack_begin = &stack_begin;
@@ -307,7 +307,7 @@ inline void* MemoryWindows::copy(void* dst, void* src, SIZE_T size, LONG flags)
 			// Quick copy one block.
 			Block block(src);
 			block.prepare_to_share(src_align, size, flags);
-			ret = sm_space.copy(block, src_align, size, flags);
+			ret = space_.copy(block, src_align, size, flags);
 		} else {
 			Region allocated = {0, 0};
 			if (!dst || (flags & Memory::ALLOCATE)) {
@@ -323,7 +323,7 @@ inline void* MemoryWindows::copy(void* dst, void* src, SIZE_T size, LONG flags)
 						if (
 							allocated.subtract(round_down(src, ALLOCATION_GRANULARITY), round_up((BYTE*)src + size, ALLOCATION_GRANULARITY))
 							&&
-							sm_space.reserve(allocated.size, flags | Memory::EXACTLY, allocated.ptr)
+							space_.reserve(allocated.size, flags | Memory::EXACTLY, allocated.ptr)
 							)
 							ret = dst;
 						else if (flags & Memory::EXACTLY)
@@ -334,7 +334,7 @@ inline void* MemoryWindows::copy(void* dst, void* src, SIZE_T size, LONG flags)
 					if (Memory::RELEASE == (flags & Memory::RELEASE))
 						ret = src;
 					else {
-						BYTE* res = (BYTE*)sm_space.reserve(size + src_align, flags);
+						BYTE* res = (BYTE*)space_.reserve(size + src_align, flags);
 						if (!res)
 							return 0;
 						ret = res + src_align;
@@ -344,7 +344,7 @@ inline void* MemoryWindows::copy(void* dst, void* src, SIZE_T size, LONG flags)
 				}
 			} else {
 				dst_in_stack = is_current_stack(dst);
-				sm_space.check_allocated(dst, size);
+				space_.check_allocated(dst, size);
 				ret = dst;
 			}
 
@@ -358,7 +358,7 @@ inline void* MemoryWindows::copy(void* dst, void* src, SIZE_T size, LONG flags)
 				} else {
 					// Change protection
 					if (src_prot_mask & ((flags & Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO))
-						sm_space.change_protection(src, size, flags);
+						space_.change_protection(src, size, flags);
 					return src;
 				}
 			}
@@ -425,10 +425,10 @@ inline void* MemoryWindows::copy(void* dst, void* src, SIZE_T size, LONG flags)
 					// Physical copy.
 					DWORD state_bits = commit_no_check(ret, size);
 					if (state_bits & PageState::MASK_RO)
-						sm_space.change_protection(dst, size, Memory::READ_WRITE);
+						space_.change_protection(dst, size, Memory::READ_WRITE);
 					real_move((const BYTE*)src, (const BYTE*)src + size, (BYTE*)ret);
 					if (flags & Memory::READ_ONLY)
-						sm_space.change_protection(ret, size, Memory::READ_ONLY);
+						space_.change_protection(ret, size, Memory::READ_ONLY);
 
 					if ((flags & Memory::DECOMMIT) && ret != src) {
 						// Release or decommit source. Regions can overlap.
@@ -470,7 +470,7 @@ inline SIZE_T MemoryWindows::query(const void* p, Memory::QueryParam q)
 				}
 
 			case Memory::ALLOCATION_SPACE_END:
-				return (SIZE_T)sm_space.end();
+				return (SIZE_T)space_.end();
 
 			case Memory::ALLOCATION_UNIT:
 			case Memory::SHARING_UNIT:

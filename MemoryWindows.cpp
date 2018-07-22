@@ -7,8 +7,8 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-AddressSpace MemoryWindows::sm_space;
-PTOP_LEVEL_EXCEPTION_FILTER MemoryWindows::sm_exception_filter;
+AddressSpace MemoryWindows::space_;
+PTOP_LEVEL_EXCEPTION_FILTER MemoryWindows::exception_filter_;
 
 DWORD MemoryWindows::Block::commit(SIZE_T offset, SIZE_T size)
 { // This operation must be thread-safe.
@@ -144,10 +144,10 @@ void MemoryWindows::Block::remap()
 
 	hm = new_mapping();
 	try {
-		BYTE* ptmp = (BYTE*)sm_space.map(hm, AddressSpace::MAP_PRIVATE);
+		BYTE* ptmp = (BYTE*)space_.map(hm, AddressSpace::MAP_PRIVATE);
 		if (!ptmp)
 			throw NO_MEMORY();
-		assert(hm == sm_space.allocated_block(ptmp)->mapping);
+		assert(hm == space_.allocated_block(ptmp)->mapping);
 
 		Regions read_only, read_write;
 		try {
@@ -180,12 +180,12 @@ void MemoryWindows::Block::remap()
 				region_begin = region_end;
 			} while (region_begin < block_end);
 		} catch (...) {
-			sm_space.allocated_block(ptmp)->mapping = 0;
+			space_.allocated_block(ptmp)->mapping = 0;
 			verify(UnmapViewOfFile(ptmp));
 			throw;
 		}
 
-		sm_space.allocated_block(ptmp)->mapping = 0;
+		space_.allocated_block(ptmp)->mapping = 0;
 		verify(UnmapViewOfFile(ptmp));
 
 		// Change to new mapping
@@ -366,11 +366,11 @@ public:
 	{
 		SIZE_T cur_stack_size = stack_base - stack_limit;
 
-		m_tmpbuf = (BYTE*)sm_space.reserve(cur_stack_size);
+		m_tmpbuf = (BYTE*)space_.reserve(cur_stack_size);
 		if (!m_tmpbuf)
 			throw NO_MEMORY();
 		if (!VirtualAlloc(m_tmpbuf, cur_stack_size, MEM_COMMIT, PAGE_READWRITE)) {
-			sm_space.release(m_tmpbuf, cur_stack_size);
+			space_.release(m_tmpbuf, cur_stack_size);
 			throw NO_MEMORY();
 		}
 
@@ -382,12 +382,12 @@ public:
 	{
 		// Remove mappings and free memory. But blocks still marekd as reserved.
 		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY) {
-			HANDLE mapping = InterlockedExchangePointer(&sm_space.allocated_block(p)->mapping, INVALID_HANDLE_VALUE);
+			HANDLE mapping = InterlockedExchangePointer(&space_.allocated_block(p)->mapping, INVALID_HANDLE_VALUE);
 			if (mapping != INVALID_HANDLE_VALUE) {
 				verify(UnmapViewOfFile(p));
 				verify(CloseHandle(mapping));
 			} else if (!mapping)
-				sm_space.allocated_block(p)->mapping = INVALID_HANDLE_VALUE;
+				space_.allocated_block(p)->mapping = INVALID_HANDLE_VALUE;
 			else
 				VirtualFree(p, 0, MEM_RELEASE);
 		}
@@ -400,7 +400,7 @@ public:
 
 		// Mark blocks as free
 		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY)
-			sm_space.allocated_block(p)->mapping = 0;
+			space_.allocated_block(p)->mapping = 0;
 
 		finalize();
 	}
@@ -411,7 +411,7 @@ public:
 		SIZE_T cur_stack_size = stack_base - stack_limit;
 		if (m_tmpbuf) {
 			verify(VirtualFree(m_tmpbuf, cur_stack_size, MEM_DECOMMIT));
-			sm_space.release(m_tmpbuf, cur_stack_size);
+			space_.release(m_tmpbuf, cur_stack_size);
 		}
 	}
 
@@ -478,7 +478,7 @@ public:
 
 		// Mark memory as reserved.
 		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY)
-			sm_space.block(p).mapping = INVALID_HANDLE_VALUE;
+			space_.block(p).mapping = INVALID_HANDLE_VALUE;
 
 		// Decommit Windows memory
 		verify(VirtualFree(guard_begin, stack_base - guard_begin, MEM_DECOMMIT));
@@ -554,7 +554,7 @@ LONG CALLBACK MemoryWindows::exception_filter(struct _EXCEPTION_POINTERS* pex)
 		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
 		) {
 		void* address = (void*)pex->ExceptionRecord->ExceptionInformation[1];
-		const AddressSpace::BlockInfo* block = sm_space.allocated_block(address);
+		const AddressSpace::BlockInfo* block = space_.allocated_block(address);
 		if (block) {
 			if (INVALID_HANDLE_VALUE == block->mapping)
 				throw MEM_NOT_COMMITTED();
@@ -573,8 +573,8 @@ LONG CALLBACK MemoryWindows::exception_filter(struct _EXCEPTION_POINTERS* pex)
 			throw MEM_NOT_ALLOCATED();
 	}
 
-	if (sm_exception_filter)
-		return (sm_exception_filter)(pex);
+	if (exception_filter_)
+		return (exception_filter_)(pex);
 	else
 		return UnhandledExceptionFilter(pex);
 }
@@ -589,7 +589,7 @@ void MemoryWindows::se_translator(unsigned int, struct _EXCEPTION_POINTERS* pex)
 		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
 		) {
 		void* address = (void*)pex->ExceptionRecord->ExceptionInformation[1];
-		const AddressSpace::BlockInfo* block = sm_space.allocated_block(address);
+		const AddressSpace::BlockInfo* block = space_.allocated_block(address);
 		if (block) {
 			if (INVALID_HANDLE_VALUE == block->mapping)
 				throw MEM_NOT_COMMITTED();

@@ -2,8 +2,8 @@
 // Windows implementation.
 // Protection domain (process) address space.
 
-#ifndef NIRVANA_WINDOWS_ADDRESSSPACE_H_
-#define NIRVANA_WINDOWS_ADDRESSSPACE_H_
+#ifndef NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
+#define NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
 
 #include "Win32.h"
 #include <Memory.h>

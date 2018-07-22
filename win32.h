@@ -2,8 +2,8 @@
 // Windows OS implementation.
 // win32.h - base definitions for Win32 API.
 
-#ifndef NIRVANA_WINDOWS_WIN32_H_
-#define NIRVANA_WINDOWS_WIN32_H_
+#ifndef NIRVANA_CORE_WINDOWS_WIN32_H_
+#define NIRVANA_CORE_WINDOWS_WIN32_H_
 
 #define NOMINMAX
 #include <windows.h>
