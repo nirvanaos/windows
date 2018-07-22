@@ -213,10 +213,10 @@ private:
 private:
 	struct StackInfo
 	{
-		BYTE* m_stack_base;
-		BYTE* m_stack_limit;
-		BYTE* m_guard_begin;
-		BYTE* m_allocation_base;
+		BYTE* stack_base;
+		BYTE* stack_limit;
+		BYTE* guard_begin;
+		BYTE* allocation_base;
 
 		StackInfo();
 	};

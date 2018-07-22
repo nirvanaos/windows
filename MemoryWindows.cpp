@@ -315,21 +315,21 @@ inline MemoryWindows::StackInfo::StackInfo()
 {
 	// Obtain stack size.
 	const NT_TIB* ptib = current_TIB();
-	m_stack_base = (BYTE*)ptib->StackBase;
-	m_stack_limit = (BYTE*)ptib->StackLimit;
-	assert(m_stack_limit < m_stack_base);
-	assert(!((SIZE_T)m_stack_base % PAGE_SIZE));
-	assert(!((SIZE_T)m_stack_limit % PAGE_SIZE));
+	stack_base = (BYTE*)ptib->StackBase;
+	stack_limit = (BYTE*)ptib->StackLimit;
+	assert(stack_limit < stack_base);
+	assert(!((SIZE_T)stack_base % PAGE_SIZE));
+	assert(!((SIZE_T)stack_limit % PAGE_SIZE));
 
 	MEMORY_BASIC_INFORMATION mbi;
 #ifdef _DEBUG
-	query(m_stack_limit, mbi);
+	query(stack_limit, mbi);
 	assert(MEM_COMMIT == mbi.State);
 	assert(PAGE_READWRITE == mbi.Protect);
 #endif
 
-	// The pages before m_stack_limit are guard pages.
-	BYTE* guard = m_stack_limit;
+	// The pages before stack_limit are guard pages.
+	BYTE* guard = stack_limit;
 	for (;;) {
 		BYTE* g = guard - PAGE_SIZE;
 		query(g, mbi);
@@ -337,9 +337,9 @@ inline MemoryWindows::StackInfo::StackInfo()
 			break;
 		guard = g;
 	}
-	assert(guard < m_stack_limit);
-	m_guard_begin = guard;
-	m_allocation_base = (BYTE*)mbi.AllocationBase;
+	assert(guard < stack_limit);
+	guard_begin = guard;
+	allocation_base = (BYTE*)mbi.AllocationBase;
 }
 
 MemoryWindows::ThreadMemory::ThreadMemory() :
@@ -364,7 +364,7 @@ public:
 	StackMemory(const StackInfo& thread) :
 		StackInfo(thread)
 	{
-		SIZE_T cur_stack_size = m_stack_base - m_stack_limit;
+		SIZE_T cur_stack_size = stack_base - stack_limit;
 
 		m_tmpbuf = (BYTE*)sm_space.reserve(cur_stack_size);
 		if (!m_tmpbuf)
@@ -375,13 +375,13 @@ public:
 		}
 
 		// Temporary copy current stack.
-		real_copy((const SIZE_T*)m_stack_limit, (const SIZE_T*)(m_stack_base), (SIZE_T*)m_tmpbuf);
+		real_copy((const SIZE_T*)stack_limit, (const SIZE_T*)(stack_base), (SIZE_T*)m_tmpbuf);
 	}
 
 	void unprepare()
 	{
 		// Remove mappings and free memory. But blocks still marekd as reserved.
-		for (BYTE* p = m_allocation_base; p < m_stack_base; p += ALLOCATION_GRANULARITY) {
+		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY) {
 			HANDLE mapping = InterlockedExchangePointer(&sm_space.allocated_block(p)->mapping, INVALID_HANDLE_VALUE);
 			if (mapping != INVALID_HANDLE_VALUE) {
 				verify(UnmapViewOfFile(p));
@@ -393,13 +393,13 @@ public:
 		}
 
 		// Reserve all stack.
-		while (!VirtualAlloc(m_allocation_base, m_stack_base - m_allocation_base, MEM_RESERVE, PAGE_READWRITE)) {
+		while (!VirtualAlloc(allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE)) {
 			assert(ERROR_INVALID_ADDRESS == GetLastError());
 			AddressSpace::concurrency();
 		}
 
 		// Mark blocks as free
-		for (BYTE* p = m_allocation_base; p < m_stack_base; p += ALLOCATION_GRANULARITY)
+		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY)
 			sm_space.allocated_block(p)->mapping = 0;
 
 		finalize();
@@ -408,7 +408,7 @@ public:
 	~StackMemory()
 	{
 		// Release temporary buffer
-		SIZE_T cur_stack_size = m_stack_base - m_stack_limit;
+		SIZE_T cur_stack_size = stack_base - stack_limit;
 		if (m_tmpbuf) {
 			verify(VirtualFree(m_tmpbuf, cur_stack_size, MEM_DECOMMIT));
 			sm_space.release(m_tmpbuf, cur_stack_size);
@@ -424,18 +424,18 @@ private:
 
 void MemoryWindows::ThreadMemory::StackMemory::finalize()
 {
-	SIZE_T cur_stack_size = m_stack_base - m_stack_limit;
+	SIZE_T cur_stack_size = stack_base - stack_limit;
 
 	// Commit current stack
-	if (!VirtualAlloc(m_stack_limit, cur_stack_size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE))
+	if (!VirtualAlloc(stack_limit, cur_stack_size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE))
 		throw NO_MEMORY();
 
 	// Commit guard page(s)
-	if (!VirtualAlloc(m_guard_begin, m_stack_limit - m_guard_begin, MEM_COMMIT, PAGE_GUARD | PageState::RW_MAPPED_PRIVATE))
+	if (!VirtualAlloc(guard_begin, stack_limit - guard_begin, MEM_COMMIT, PAGE_GUARD | PageState::RW_MAPPED_PRIVATE))
 		throw NO_MEMORY();
 
 	// Copy current stack contents back.
-	real_copy((SIZE_T*)m_tmpbuf, (SIZE_T*)m_tmpbuf + cur_stack_size / sizeof(SIZE_T), (SIZE_T*)m_stack_limit);
+	real_copy((SIZE_T*)m_tmpbuf, (SIZE_T*)m_tmpbuf + cur_stack_size / sizeof(SIZE_T), (SIZE_T*)stack_limit);
 }
 
 class MemoryWindows::ThreadMemory::StackPrepare :
@@ -446,7 +446,7 @@ public:
 		StackMemory(thread),
 		m_finalized(true)
 	{
-		m_mapped_end = m_allocation_base;
+		m_mapped_end = allocation_base;
 	}
 
 	~StackPrepare()
@@ -454,16 +454,16 @@ public:
 		if (!m_finalized) {	// On error.
 			// Unmap and free mapped blocks.
 			BYTE* ptail = m_mapped_end + ALLOCATION_GRANULARITY;
-			if (ptail < m_stack_base)
+			if (ptail < stack_base)
 				VirtualFree(ptail, 0, MEM_RELEASE); // May fail. No verify.
 			VirtualFree(m_mapped_end, 0, MEM_RELEASE); // May fail. No verify.
-			while (m_mapped_end > m_allocation_base) {
+			while (m_mapped_end > allocation_base) {
 				Block(m_mapped_end -= ALLOCATION_GRANULARITY).unmap();
 				verify(VirtualFree(m_mapped_end, 0, MEM_RELEASE));
 			}
 
 			// Reserve Windows stack back.
-			verify(VirtualAlloc(m_allocation_base, m_stack_base - m_allocation_base, MEM_RESERVE, PAGE_READWRITE));
+			verify(VirtualAlloc(allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE));
 
 			try {
 				finalize();
@@ -477,25 +477,25 @@ public:
 		m_finalized = false;
 
 		// Mark memory as reserved.
-		for (BYTE* p = m_allocation_base; p < m_stack_base; p += ALLOCATION_GRANULARITY)
+		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY)
 			sm_space.block(p).mapping = INVALID_HANDLE_VALUE;
 
 		// Decommit Windows memory
-		verify(VirtualFree(m_guard_begin, m_stack_base - m_guard_begin, MEM_DECOMMIT));
+		verify(VirtualFree(guard_begin, stack_base - guard_begin, MEM_DECOMMIT));
 
 #ifdef _DEBUG
 		{
 			MEMORY_BASIC_INFORMATION dmbi;
-			query(m_allocation_base, dmbi);
+			query(allocation_base, dmbi);
 			assert(dmbi.State == MEM_RESERVE);
-			assert(m_allocation_base == dmbi.AllocationBase);
-			assert(m_allocation_base == dmbi.BaseAddress);
-			assert(((BYTE*)dmbi.BaseAddress + dmbi.RegionSize) == m_stack_base);
+			assert(allocation_base == dmbi.AllocationBase);
+			assert(allocation_base == dmbi.BaseAddress);
+			assert(((BYTE*)dmbi.BaseAddress + dmbi.RegionSize) == stack_base);
 		}
 #endif
 
 		// Map all stack, but not commit.
-		for (; m_mapped_end < m_stack_base; m_mapped_end += ALLOCATION_GRANULARITY) {
+		for (; m_mapped_end < stack_base; m_mapped_end += ALLOCATION_GRANULARITY) {
 			Block(m_mapped_end).commit(0, 0);
 		}
 

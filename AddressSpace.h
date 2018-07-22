@@ -110,17 +110,17 @@ public:
 
 	HANDLE process() const
 	{
-		return m_process;
+		return process_;
 	}
 
 	bool is_current_process() const
 	{
-		return GetCurrentProcess() == m_process;
+		return GetCurrentProcess() == process_;
 	}
 
 	void* end() const
 	{
-		return (void*)(m_directory_size * ALLOCATION_GRANULARITY);
+		return (void*)(directory_size_ * ALLOCATION_GRANULARITY);
 	}
 
 	struct BlockInfo
@@ -145,12 +145,12 @@ public:
 
 		BYTE* address() const
 		{
-			return m_address;
+			return address_;
 		}
 
 		HANDLE& mapping()
 		{
-			return m_info.mapping;
+			return info_.mapping;
 		}
 
 		void copy(Block& src, SIZE_T offset, SIZE_T size, LONG flags);
@@ -210,7 +210,7 @@ public:
 
 		void invalidate_state()
 		{
-			m_state.state = State::INVALID;
+			state_.state = State::INVALID;
 		}
 
 		void map(HANDLE mapping, MappingType protection, bool commit = false);
@@ -234,10 +234,10 @@ public:
 		}
 
 	private:
-		AddressSpace & m_space;
-		BYTE* m_address;
-		BlockInfo& m_info;
-		State m_state;
+		AddressSpace & space_;
+		BYTE* address_;
+		BlockInfo& info_;
+		State state_;
 	};
 
 	void* reserve(SIZE_T size, LONG flags = 0, void* dst = 0);
@@ -248,7 +248,7 @@ public:
 
 	void query(const void* address, MEMORY_BASIC_INFORMATION& mbi) const
 	{
-		verify(VirtualQueryEx(m_process, address, &mbi, sizeof(mbi)));
+		verify(VirtualQueryEx(process_, address, &mbi, sizeof(mbi)));
 	}
 
 	void check_allocated(void* ptr, SIZE_T size);
@@ -271,7 +271,7 @@ private:
 	void protect(void* address, SIZE_T size, DWORD protection)
 	{
 		DWORD old;
-		verify(VirtualProtectEx(m_process, address, size, protection, &old));
+		verify(VirtualProtectEx(process_, address, size, protection, &old));
 	}
 
 private:
@@ -281,15 +281,15 @@ private:
 	}
 
 private:
-	HANDLE m_process;
-	HANDLE m_mapping;
+	HANDLE process_;
+	HANDLE mapping_;
 #ifdef _WIN64
 	static const size_t SECOND_LEVEL_BLOCK = ALLOCATION_GRANULARITY / sizeof(BlockInfo);
-	BlockInfo** m_directory;
+	BlockInfo** directory_;
 #else
-	BlockInfo* m_directory;
+	BlockInfo* directory_;
 #endif
-	size_t m_directory_size;
+	size_t directory_size_;
 };
 
 inline bool AddressSpace::is_private(const void* p, SIZE_T size)
