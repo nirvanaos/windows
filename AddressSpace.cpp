@@ -448,7 +448,7 @@ void AddressSpace::initialize(DWORD process_id, HANDLE process_handle)
 	}
 
 #ifdef _WIN64
-	directory_ = (BlockInfo**)VirtualAlloc(0, (m_directory_size + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK * sizeof(BlockInfo*), MEM_RESERVE, PAGE_READWRITE);
+	directory_ = (BlockInfo**)VirtualAlloc(0, (directory_size_ + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK * sizeof(BlockInfo*), MEM_RESERVE, PAGE_READWRITE);
 #else
 	directory_ = (BlockInfo*)MapViewOfFile(mapping_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 #endif
@@ -460,7 +460,7 @@ void AddressSpace::terminate()
 {
 	if (directory_) {
 #ifdef _WIN64
-		BlockInfo** end = directory_ + (m_directory_size + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK;
+		BlockInfo** end = directory_ + (directory_size_ + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK;
 		for (BlockInfo** page = directory_; page < end; page += PAGE_SIZE / sizeof(BlockInfo**)) {
 			MEMORY_BASIC_INFORMATION mbi;
 			verify(VirtualQuery(page, &mbi, sizeof(mbi)));
