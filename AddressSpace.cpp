@@ -27,7 +27,7 @@ const AddressSpace::Block::State& AddressSpace::Block::state ()
 			assert (hm);
 			if (!hm || INVALID_HANDLE_VALUE == hm || mbi.Type == MEM_MAPPED)
 				break;
-			concurrency ();
+			back_off ();
 		}
 
 		DWORD page_state_bits = mbi.Protect;
@@ -84,14 +84,14 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 		if (realloc_begin > 0) {
 			while (!VirtualAllocEx (space_.process (), reserved_begin, realloc_begin, MEM_RESERVE, mbi.AllocationProtect)) {
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-				concurrency ();
+				back_off ();
 			}
 		}
 		if (realloc_end > 0) {
 			BYTE* end = address_ + ALLOCATION_GRANULARITY;
 			while (!VirtualAllocEx (space_.process (), end, realloc_end, MEM_RESERVE, mbi.AllocationProtect)) {
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-				concurrency ();
+				back_off ();
 			}
 		}
 	} else if (old) {
@@ -108,7 +108,7 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 
 	while (!MapViewOfFile2 (mapping, space_.process (), 0, address_, ALLOCATION_GRANULARITY, 0, protection)) {
 		assert (ERROR_INVALID_ADDRESS == GetLastError ());
-		concurrency ();
+		back_off ();
 	}
 }
 
@@ -127,7 +127,7 @@ void AddressSpace::Block::unmap (HANDLE reserve, bool no_close_handle)
 		if (reserve)
 			while (!VirtualAllocEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RESERVE, PAGE_NOACCESS)) {
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-				concurrency ();
+				back_off ();
 			}
 	}
 }
@@ -620,7 +620,7 @@ void* AddressSpace::reserve (SIZE_T size, LONG flags, void* dst)
 		while (pb > p)
 			block (pb -= ALLOCATION_GRANULARITY).mapping = 0;
 		verify (VirtualFreeEx (process_, p, 0, MEM_RELEASE));
-		concurrency ();
+		back_off ();
 	}
 	if (dst && (flags & Memory::EXACTLY))
 		return dst;
@@ -665,7 +665,7 @@ void AddressSpace::release (void* dst, SIZE_T size)
 				verify (VirtualFreeEx (process_, begin_mbi.AllocationBase, 0, MEM_RELEASE));
 				while (!VirtualAllocEx (process_, begin_mbi.AllocationBase, realloc, MEM_RESERVE, PAGE_NOACCESS)) {
 					assert (ERROR_INVALID_ADDRESS == GetLastError ());
-					concurrency ();
+					back_off ();
 				}
 			}
 		}
@@ -677,7 +677,7 @@ void AddressSpace::release (void* dst, SIZE_T size)
 					verify (VirtualFreeEx (process_, end_mbi.AllocationBase, 0, MEM_RELEASE));
 				while (!VirtualAllocEx (process_, end, realloc, MEM_RESERVE, PAGE_NOACCESS)) {
 					assert (ERROR_INVALID_ADDRESS == GetLastError ());
-					concurrency ();
+					back_off ();
 				}
 			}
 		}
@@ -726,7 +726,7 @@ void* AddressSpace::map (HANDLE mapping, MappingType protection)
 			throw;
 		}
 		UnmapViewOfFile2 (process_, p, 0);
-		concurrency ();
+		back_off ();
 	}
 }
 

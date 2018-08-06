@@ -394,7 +394,7 @@ public:
 		// Reserve all stack.
 		while (!VirtualAlloc (allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE)) {
 			assert (ERROR_INVALID_ADDRESS == GetLastError ());
-			AddressSpace::concurrency ();
+			AddressSpace::back_off ();
 		}
 
 		// Mark blocks as free
@@ -560,7 +560,7 @@ LONG CALLBACK MemoryWindows::exception_filter (struct _EXCEPTION_POINTERS* pex)
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 			if (MEM_MAPPED != mbi.Type) {
-				AddressSpace::concurrency ();
+				AddressSpace::back_off ();
 				return EXCEPTION_CONTINUE_EXECUTION;
 			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
 				throw MEM_NOT_COMMITTED ();
@@ -592,7 +592,7 @@ void MemoryWindows::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 			if (MEM_MAPPED != mbi.Type) {
-				AddressSpace::concurrency ();
+				AddressSpace::back_off ();
 				return;
 			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
 				throw MEM_NOT_COMMITTED ();
