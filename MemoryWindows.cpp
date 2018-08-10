@@ -2,6 +2,7 @@
 // Protection domain memory service over Win32 API
 
 #include "MemoryWindows.h"
+#include "../BackOff.h"
 
 namespace Nirvana {
 namespace Core {
@@ -392,9 +393,10 @@ public:
 		}
 
 		// Reserve all stack.
-		while (!VirtualAlloc (allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE)) {
+		for (BackOff bo;
+				 !VirtualAlloc (allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE);
+				 bo.sleep ()) {
 			assert (ERROR_INVALID_ADDRESS == GetLastError ());
-			AddressSpace::back_off ();
 		}
 
 		// Mark blocks as free
@@ -560,7 +562,7 @@ LONG CALLBACK MemoryWindows::exception_filter (struct _EXCEPTION_POINTERS* pex)
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 			if (MEM_MAPPED != mbi.Type) {
-				AddressSpace::back_off ();
+				BackOff ().sleep ();
 				return EXCEPTION_CONTINUE_EXECUTION;
 			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
 				throw MEM_NOT_COMMITTED ();
@@ -592,7 +594,7 @@ void MemoryWindows::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 			if (MEM_MAPPED != mbi.Type) {
-				AddressSpace::back_off ();
+				BackOff ().sleep ();
 				return;
 			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
 				throw MEM_NOT_COMMITTED ();

@@ -275,12 +275,6 @@ private:
 	}
 
 private:
-	static void back_off ()
-	{
-		Sleep (0);
-	}
-
-private:
 	HANDLE process_;
 	HANDLE mapping_;
 #ifdef _WIN64

@@ -1,4 +1,5 @@
 #include "MemoryWindows.h"
+#include "../BackOff.h"
 #include <algorithm>
 
 namespace Nirvana {
@@ -20,14 +21,13 @@ const AddressSpace::Block::State& AddressSpace::Block::state ()
 {
 	if (State::INVALID == state_.state) {
 		MEMORY_BASIC_INFORMATION mbi;
-		for (;;) {
+		for (BackOff bo; true; bo.sleep ()) {
 			// Concurrency
 			space_.query (address_, mbi);
 			HANDLE hm = mapping ();
 			assert (hm);
 			if (!hm || INVALID_HANDLE_VALUE == hm || mbi.Type == MEM_MAPPED)
 				break;
-			back_off ();
 		}
 
 		DWORD page_state_bits = mbi.Protect;
@@ -82,16 +82,18 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 		ptrdiff_t realloc_end = (BYTE*)mbi.BaseAddress + mbi.RegionSize - address_ - ALLOCATION_GRANULARITY;
 		verify (VirtualFreeEx (space_.process (), reserved_begin, 0, MEM_RELEASE));
 		if (realloc_begin > 0) {
-			while (!VirtualAllocEx (space_.process (), reserved_begin, realloc_begin, MEM_RESERVE, mbi.AllocationProtect)) {
+			for (BackOff bo;
+					 !VirtualAllocEx (space_.process (), reserved_begin, realloc_begin, MEM_RESERVE, mbi.AllocationProtect);
+					 bo.sleep ()) {
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-				back_off ();
 			}
 		}
 		if (realloc_end > 0) {
 			BYTE* end = address_ + ALLOCATION_GRANULARITY;
-			while (!VirtualAllocEx (space_.process (), end, realloc_end, MEM_RESERVE, mbi.AllocationProtect)) {
+			for (BackOff bo;
+					 !VirtualAllocEx (space_.process (), end, realloc_end, MEM_RESERVE, mbi.AllocationProtect);
+					 bo.sleep ()) {
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-				back_off ();
 			}
 		}
 	} else if (old) {
@@ -106,9 +108,10 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 		throw INTERNAL ();
 	}
 
-	while (!MapViewOfFile2 (mapping, space_.process (), 0, address_, ALLOCATION_GRANULARITY, 0, protection)) {
+	for (BackOff bo;
+			 !MapViewOfFile2 (mapping, space_.process (), 0, address_, ALLOCATION_GRANULARITY, 0, protection);
+			 bo.sleep ()) {
 		assert (ERROR_INVALID_ADDRESS == GetLastError ());
-		back_off ();
 	}
 }
 
@@ -124,11 +127,14 @@ void AddressSpace::Block::unmap (HANDLE reserve, bool no_close_handle)
 		verify (UnmapViewOfFile2 (space_.process (), address_, 0));
 		if (!no_close_handle)
 			verify (CloseHandle (mapping));
-		if (reserve)
-			while (!VirtualAllocEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RESERVE, PAGE_NOACCESS)) {
+		if (reserve) {
+			for (BackOff bo;
+					 !VirtualAllocEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RESERVE, PAGE_NOACCESS);
+					 bo.sleep ()
+					 ) {
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-				back_off ();
 			}
+		}
 	}
 }
 
@@ -600,7 +606,7 @@ void* AddressSpace::reserve (SIZE_T size, LONG flags, void* dst)
 	if (dst && !(flags & Memory::EXACTLY))
 		dst = round_down (dst, ALLOCATION_GRANULARITY);
 	size = round_up (size, ALLOCATION_GRANULARITY);
-	for (;;) {	// Loop to handle possible raise conditions.
+	for (BackOff bo; true; bo.sleep ()) {	// Loop to handle possible concurrency.
 		p = (BYTE*)VirtualAllocEx (process_, dst, size, MEM_RESERVE, PAGE_NOACCESS);
 		if (!p) {
 			if (dst && (flags & Memory::EXACTLY))
@@ -620,7 +626,6 @@ void* AddressSpace::reserve (SIZE_T size, LONG flags, void* dst)
 		while (pb > p)
 			block (pb -= ALLOCATION_GRANULARITY).mapping = 0;
 		verify (VirtualFreeEx (process_, p, 0, MEM_RELEASE));
-		back_off ();
 	}
 	if (dst && (flags & Memory::EXACTLY))
 		return dst;
@@ -663,9 +668,10 @@ void AddressSpace::release (void* dst, SIZE_T size)
 			SSIZE_T realloc = begin - (BYTE*)begin_mbi.AllocationBase;
 			if (realloc > 0) {
 				verify (VirtualFreeEx (process_, begin_mbi.AllocationBase, 0, MEM_RELEASE));
-				while (!VirtualAllocEx (process_, begin_mbi.AllocationBase, realloc, MEM_RESERVE, PAGE_NOACCESS)) {
+				for (BackOff bo; 
+						 !VirtualAllocEx (process_, begin_mbi.AllocationBase, realloc, MEM_RESERVE, PAGE_NOACCESS);
+						 bo.sleep ()) {
 					assert (ERROR_INVALID_ADDRESS == GetLastError ());
-					back_off ();
 				}
 			}
 		}
@@ -675,9 +681,10 @@ void AddressSpace::release (void* dst, SIZE_T size)
 			if (realloc > 0) {
 				if ((BYTE*)end_mbi.AllocationBase >= begin)
 					verify (VirtualFreeEx (process_, end_mbi.AllocationBase, 0, MEM_RELEASE));
-				while (!VirtualAllocEx (process_, end, realloc, MEM_RESERVE, PAGE_NOACCESS)) {
+				for (BackOff bo;
+						 !VirtualAllocEx (process_, end, realloc, MEM_RESERVE, PAGE_NOACCESS);
+						 bo.sleep ()) {
 					assert (ERROR_INVALID_ADDRESS == GetLastError ());
-					back_off ();
 				}
 			}
 		}
@@ -714,7 +721,7 @@ void AddressSpace::release (void* dst, SIZE_T size)
 void* AddressSpace::map (HANDLE mapping, MappingType protection)
 {
 	assert (mapping);
-	for (;;) {
+	for (BackOff bo; true; bo.sleep ()) {
 		void* p = MapViewOfFile2 (mapping, process_, 0, 0, ALLOCATION_GRANULARITY, 0, protection);
 		if (!p)
 			throw NO_MEMORY ();
@@ -726,7 +733,6 @@ void* AddressSpace::map (HANDLE mapping, MappingType protection)
 			throw;
 		}
 		UnmapViewOfFile2 (process_, p, 0);
-		back_off ();
 	}
 }
 
