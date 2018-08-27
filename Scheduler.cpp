@@ -14,8 +14,9 @@ using namespace CORBA;
 void Scheduler::run_worker_thread ()
 {
 	if (!deadlines_.empty ()) {
-		auto earlier = deadlines_.begin ();
-		Process& process = earlier->second.process;
+		DeadlineInfo earlier = deadlines_.begin ()->second;
+		deadlines_.erase (deadlines_.begin ());
+		earlier.process.run (earlier.sync_domain);
 	}
 }
 
@@ -25,15 +26,15 @@ inline void Scheduler::run ()
 	memset (&ovl, 0, sizeof (ovl));
 	ovl.hEvent = (HANDLE)this;
 
-	for (;;) {
-		ReadFileEx (mailslot_, &message_, sizeof (message_), &ovl, read_complete);
+	ReadFileEx (mailslot_, &message_, sizeof (message_), &ovl, read_complete);
+	do {
 		if (deadlines_.empty ())
 			SleepEx (INFINITE, TRUE);
-		else {
-			if (WAIT_OBJECT_0 == WaitForSingleObjectEx (free_cores_semaphore_, INFINITE, TRUE))
-				run_worker_thread ();
+		else if (WAIT_OBJECT_0 == WaitForSingleObjectEx (free_cores_semaphore_, INFINITE, TRUE)) {
+			ReadFileEx (mailslot_, &message_, sizeof (message_), &ovl, read_complete);
+			run_worker_thread ();
 		}
-	}
+	} while (!stop_);
 }
 
 void Scheduler::receive_message ()
@@ -51,8 +52,16 @@ void Scheduler::receive_message ()
 	case MessageSchedule::PROCESS_START:
 		processes_.emplace (message_.body.process_start.process_id, message_.body.process_start.process_id);
 		break;
+
 	case MessageSchedule::PROCESS_STOP:
-		processes_.erase (message_.body.process_stop.process_id);
+		{
+			Processes::iterator process = processes_.find (message_.body.process_stop.process_id);
+			assert (process != processes_.end ());
+			if (process != processes_.end ()) {
+				process->second.clear (deadlines_);
+				processes_.erase (process);
+			}
+		}
 		break;
 	}
 }
@@ -66,6 +75,11 @@ DWORD WINAPI Scheduler::thread_proc (void* _this)
 void CALLBACK Scheduler::read_complete (DWORD error_code, DWORD size, OVERLAPPED* ovl)
 {
 	((Scheduler*)(ovl->hEvent))->receive_message ();
+}
+
+void CALLBACK Scheduler::stop_proc (ULONG_PTR _this)
+{
+	((Scheduler*)_this)->stop_ = true;
 }
 
 }

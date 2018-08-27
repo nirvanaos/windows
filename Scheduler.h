@@ -79,11 +79,17 @@ public:
 			CloseHandle (free_cores_semaphore_);
 			throw ::CORBA::INITIALIZE ();
 		}
+
+		thread_ = CreateThread (nullptr, 0, thread_proc, this, 0, nullptr);
+		assert (thread_);
+		verify (SetThreadPriority (thread_, THREAD_PRIORITY_TIME_CRITICAL));
 	}
 
 	~Scheduler ()
 	{
-		stop ();
+		verify (QueueUserAPC (stop_proc, thread_, (ULONG_PTR)this));
+		WaitForSingleObject (thread_, INFINITE);
+		CloseHandle (thread_);
 		CloseHandle (free_cores_semaphore_);
 		CloseHandle (mailslot_);
 	}
@@ -93,26 +99,25 @@ private:
 	static void CALLBACK read_complete (DWORD error_code, DWORD size, OVERLAPPED* ovl);
 	static void CALLBACK stop_proc (ULONG_PTR _this);
 	void run ();
-	void stop ();
 	void receive_message ();
 	void run_worker_thread ();
 
 	class Process;
+	struct DeadlineInfo;
+
+	typedef std::map <DeadlineTime, DeadlineInfo> Deadlines;
+	typedef std::unordered_map <ULONG_PTR, Deadlines::iterator> ReadyDomains;
 
 	struct DeadlineInfo
 	{
 		Process& process;
-		std::unordered_map <ULONG_PTR, std::map <DeadlineTime, DeadlineInfo>::iterator>::iterator sync_domain;
+		ReadyDomains::iterator sync_domain;
 
-		DeadlineInfo (Process& pr, std::unordered_map <ULONG_PTR, std::map <DeadlineTime, DeadlineInfo>::iterator>::iterator it) :
-			process (pr), 
-			sync_domain (it)
+		DeadlineInfo (Process& p, ReadyDomains::iterator d) :
+			process (p), 
+			sync_domain (d)
 		{}
 	};
-
-	typedef std::unordered_map <ULONG_PTR, std::map <DeadlineTime, DeadlineInfo>::iterator> ReadyDomains;
-
-	typedef std::map <DeadlineTime, DeadlineInfo> Deadlines;
 
 	class Process
 	{
@@ -147,6 +152,21 @@ private:
 				ins.first->second = deadlines.emplace (msg.deadline, DeadlineInfo (*this, ins.first)).first;
 			}
 		}
+
+		void run (ReadyDomains::iterator domain)
+		{
+			MessageRun msg = {domain->first};
+			ready_domains_.erase (domain);
+			DWORD cb;
+			WriteFile (mailslot_, &msg, sizeof (msg), &cb, nullptr);
+		}
+
+		void clear (Deadlines& deadlines)
+		{
+			for (auto p = ready_domains_.begin (); p != ready_domains_.end (); ++p)
+				deadlines.erase (p->second);
+			ready_domains_.clear ();
+		}
 		
 	private:
 		HANDLE mailslot_;
@@ -160,6 +180,7 @@ private:
 	typedef std::map <DWORD, Process> Processes;
 	Processes processes_;
 	Deadlines deadlines_;
+	HANDLE thread_;
 	bool stop_;
 };
 
