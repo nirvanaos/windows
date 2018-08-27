@@ -434,8 +434,9 @@ void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
 {
 	process_ = process_handle;
 
-	WCHAR name [22];
-	wsprintfW (name, L"Nirvana.mmap.%08X", process_id);
+	static const WCHAR fmt [] = OBJ_NAME_PREFIX L".mmap.%08X";
+	WCHAR name [_countof (fmt) + 8 - 3];
+	wsprintfW (name, fmt, process_id);
 
 	SYSTEM_INFO si;
 	GetSystemInfo (&si);

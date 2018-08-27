@@ -21,6 +21,8 @@ const SIZE_T PAGE_SIZE = 4096;
 const SIZE_T PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
 const SIZE_T ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
 
+#define OBJ_NAME_PREFIX L"Nirvana"
+
 // Thread information block
 static const NT_TIB* current_TIB ()
 {

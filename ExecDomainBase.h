@@ -29,6 +29,11 @@ public:
 		return (ExecDomainBase*)GetFiberData ();
 	}
 
+	void switch_to ()
+	{
+		SwitchToFiber (fiber_);
+	}
+
 private:
 	static void CALLBACK fiber_proc (void* param);
 

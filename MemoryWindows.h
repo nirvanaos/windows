@@ -1,4 +1,5 @@
 // Nirvana project
+// Windows implementation.
 // Protection domain memory service over Win32 API
 
 #ifndef NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
