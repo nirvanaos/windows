@@ -11,6 +11,24 @@ namespace Windows {
 using namespace std;
 using namespace CORBA;
 
+WCHAR SchedulerData::scheduler_mailslot_name_ [] = L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\scheduler_mailslot";
+
+HANDLE SchedulerData::open_run_mailslot (DWORD process_id, bool create)
+{
+	static const WCHAR fmt [] = L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\run_mailslot%08X";
+	WCHAR name [_countof (fmt) + 8 - 3];
+	wsprintfW (name, fmt, process_id);
+
+	HANDLE mailslot;
+	if (create)
+		mailslot = CreateMailslotW (name, sizeof (MessageRun), MAILSLOT_WAIT_FOREVER, nullptr);
+	else
+		mailslot = CreateFileW (name, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (INVALID_HANDLE_VALUE == mailslot)
+		throw ::CORBA::INTERNAL ();
+	return mailslot;
+}
+
 void Scheduler::run_worker_thread ()
 {
 	if (!deadlines_.empty ()) {
@@ -26,12 +44,12 @@ inline void Scheduler::run ()
 	memset (&ovl, 0, sizeof (ovl));
 	ovl.hEvent = (HANDLE)this;
 
-	ReadFileEx (mailslot_, &message_, sizeof (message_), &ovl, read_complete);
+	ReadFileEx (scheduler_mailslot_, &message_, sizeof (message_), &ovl, read_complete);
 	do {
 		if (deadlines_.empty ())
 			SleepEx (INFINITE, TRUE);
 		else if (WAIT_OBJECT_0 == WaitForSingleObjectEx (free_cores_semaphore_, INFINITE, TRUE)) {
-			ReadFileEx (mailslot_, &message_, sizeof (message_), &ovl, read_complete);
+			ReadFileEx (scheduler_mailslot_, &message_, sizeof (message_), &ovl, read_complete);
 			run_worker_thread ();
 		}
 	} while (!stop_);

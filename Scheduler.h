@@ -61,9 +61,14 @@ protected:
 	{
 		ULONG_PTR sync_domain;
 	};
+
+	static HANDLE open_run_mailslot (DWORD process_id, bool create);
+
+	static WCHAR scheduler_mailslot_name_ [];
 };
 
-class Scheduler : private SchedulerData
+class Scheduler : 
+	private SchedulerData
 {
 public:
 	Scheduler () :
@@ -73,9 +78,9 @@ public:
 		free_cores_semaphore_ = CreateSemaphoreW (nullptr, core_cnt, core_cnt, OBJ_NAME_PREFIX L".free_cores_semaphore");
 		if (!free_cores_semaphore_)
 			throw ::CORBA::INITIALIZE ();
-		mailslot_ = CreateMailslotW (L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\scheduler_mailslot", sizeof (MessageSchedule), 
+		scheduler_mailslot_ = CreateMailslotW (scheduler_mailslot_name_, sizeof (MessageSchedule),
 																 MAILSLOT_WAIT_FOREVER, nullptr);
-		if (INVALID_HANDLE_VALUE == mailslot_) {
+		if (INVALID_HANDLE_VALUE == scheduler_mailslot_) {
 			CloseHandle (free_cores_semaphore_);
 			throw ::CORBA::INITIALIZE ();
 		}
@@ -91,7 +96,7 @@ public:
 		WaitForSingleObject (thread_, INFINITE);
 		CloseHandle (thread_);
 		CloseHandle (free_cores_semaphore_);
-		CloseHandle (mailslot_);
+		CloseHandle (scheduler_mailslot_);
 	}
 
 private:
@@ -124,17 +129,12 @@ private:
 	public:
 		Process (DWORD process_id)
 		{
-			static const WCHAR fmt [] = L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\run_mailslot%08X";
-			WCHAR name [_countof (fmt) + 8 - 3];
-			wsprintfW (name, fmt, process_id);
-			mailslot_ = CreateFileW (name, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-			if (INVALID_HANDLE_VALUE == mailslot_)
-				throw ::CORBA::INTERNAL ();
+			run_mailslot_ = open_run_mailslot (process_id, false);
 		}
 		
 		~Process ()
 		{
-			CloseHandle (mailslot_);
+			CloseHandle (run_mailslot_);
 		}
 		
 		void schedule (Deadlines& deadlines, const SyncDomainReady& msg)
@@ -158,7 +158,7 @@ private:
 			MessageRun msg = {domain->first};
 			ready_domains_.erase (domain);
 			DWORD cb;
-			WriteFile (mailslot_, &msg, sizeof (msg), &cb, nullptr);
+			WriteFile (run_mailslot_, &msg, sizeof (msg), &cb, nullptr);
 		}
 
 		void clear (Deadlines& deadlines)
@@ -169,13 +169,13 @@ private:
 		}
 		
 	private:
-		HANDLE mailslot_;
+		HANDLE run_mailslot_;
 		ReadyDomains ready_domains_;
 	};
 
 private:
 	HANDLE free_cores_semaphore_;
-	HANDLE mailslot_;
+	HANDLE scheduler_mailslot_;
 	MessageSchedule message_;
 	typedef std::map <DWORD, Process> Processes;
 	Processes processes_;
