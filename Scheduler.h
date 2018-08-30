@@ -71,10 +71,17 @@ class Scheduler :
 	private SchedulerData
 {
 public:
+	static unsigned int hardware_concurrency ()
+	{
+		::SYSTEM_INFO si;
+		::GetSystemInfo (&si);
+		return si.dwNumberOfProcessors;
+	}
+
 	Scheduler () :
 		stop_ (false)
 	{
-		LONG core_cnt = std::thread::hardware_concurrency ();
+		LONG core_cnt = hardware_concurrency ();
 		free_cores_semaphore_ = CreateSemaphoreW (nullptr, core_cnt, core_cnt, OBJ_NAME_PREFIX L".free_cores_semaphore");
 		if (!free_cores_semaphore_)
 			throw ::CORBA::INITIALIZE ();
