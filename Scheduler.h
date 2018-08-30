@@ -3,8 +3,8 @@
 // Scheduler.
 // Scheduler is part of the System Domain, system-wide singleton object.
 
-#ifndef NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
-#define NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
+#ifndef NIRVANA_CORE_WINDOWS_SCHEDULER_H_
+#define NIRVANA_CORE_WINDOWS_SCHEDULER_H_
 
 #include <Nirvana.h>
 #include <ORB.h>
