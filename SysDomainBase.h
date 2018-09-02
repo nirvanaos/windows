@@ -9,12 +9,19 @@
 
 namespace Nirvana {
 namespace Core {
+
+class SysDomain;
+
 namespace Windows {
 
 class SysDomainBase :
 	public Scheduler
 {
 public:
+	static void initialize ();
+	static void terminate ();
+
+	static SysDomain* singleton_; // Temporary solution
 };
 
 }

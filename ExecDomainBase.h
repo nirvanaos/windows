@@ -9,15 +9,22 @@
 
 namespace Nirvana {
 namespace Core {
+
+class ExecDomain;
+
 namespace Windows {
 
 class ExecDomainBase
 {
-public:
-	ExecDomainBase () :
-		thread_handle_ (0) {
+protected:
+	ExecDomainBase ()
+	{
 		fiber_ = CreateFiber (0, fiber_proc, this);
 	}
+
+	ExecDomainBase (void* fiber) :
+		fiber_ (fiber)
+	{}
 
 	~ExecDomainBase()
 	{
@@ -39,7 +46,6 @@ private:
 
 private:
 	void* fiber_;
-	HANDLE thread_handle_;
 };
 
 }
