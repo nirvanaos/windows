@@ -1,10 +1,10 @@
 // Nirvana project
 // Windows implementation.
-// ThreadWorkerBase class.
-// Platform-specific worker thread implementation.
+// ThreadBackgroundBase class.
+// Platform-specific background thread implementation.
 
-#ifndef NIRVANA_CORE_WINDOWS_THREADWORKERBASE_H_
-#define NIRVANA_CORE_WINDOWS_THREADWORKERBASE_H_
+#ifndef NIRVANA_CORE_WINDOWS_THREADBACKGROUNDBASE_H_
+#define NIRVANA_CORE_WINDOWS_THREADBACKGROUNDBASE_H_
 
 #include "../Thread.h"
 
@@ -12,16 +12,16 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class ThreadWorkerBase :
+class ThreadBackgroundBase :
 	public Thread
 {
 public:
-	ThreadWorkerBase ()
+	ThreadBackgroundBase ()
 	{
 		create (thread_proc, this);
 	}
 
-	~ThreadWorkerBase ()
+	~ThreadBackgroundBase ()
 	{
 		close ();
 	}

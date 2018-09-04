@@ -17,18 +17,21 @@ namespace Windows {
 class ExecDomainBase
 {
 protected:
-	ExecDomainBase ()
+	ExecDomainBase (bool convert = false) :
+		convert_ (convert)
 	{
-		fiber_ = CreateFiber (0, fiber_proc, this);
+		if (convert)
+			fiber_ = ConvertThreadToFiber (this);
+		else
+			fiber_ = CreateFiber (0, fiber_proc, this);
 	}
-
-	ExecDomainBase (void* fiber) :
-		fiber_ (fiber)
-	{}
 
 	~ExecDomainBase()
 	{
-		DeleteFiber (fiber_);
+		if (convert_)
+			ConvertFiberToThread ();
+		else
+			DeleteFiber (fiber_);
 	}
 
 	static ExecDomainBase* current ()
@@ -46,6 +49,7 @@ private:
 
 private:
 	void* fiber_;
+	bool convert_;
 };
 
 }
