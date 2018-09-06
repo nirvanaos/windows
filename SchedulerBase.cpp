@@ -8,6 +8,14 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+void SchedulerBase::close ()
+{
+	if (free_cores_semaphore_)
+		CloseHandle (free_cores_semaphore_);
+	if (INVALID_HANDLE_VALUE != scheduler_mailslot_)
+		CloseHandle (scheduler_mailslot_);
+}
+
 inline void Scheduler::run_worker_thread ()
 {
 	if (!deadlines_.empty ()) {
