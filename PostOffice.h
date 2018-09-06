@@ -13,12 +13,11 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+/// Base class for PostOffice template.
+/// This class is used by post office threads as an interface to PostOffice object.
 class PostOfficeBase
 {
-	PostOfficeBase (const PostOfficeBase&);
-	PostOfficeBase& operator = (const PostOfficeBase&);
 public:
-
 	/// Buffer with one incoming message.
 	class Buffer :
 		private OVERLAPPED
@@ -79,6 +78,12 @@ public:
 	/// \throws ::CORBA::INTERNAL
 	void enqueue_buffer (Buffer& buffer);
 
+	/// Returns number of working threads.
+	unsigned thread_count () const
+	{
+		return thread_count_;
+	}
+
 protected:
 	PostOfficeBase (unsigned max_msg_size) :
 		running_ (false),
@@ -87,7 +92,7 @@ protected:
 		max_msg_size_ (max_msg_size)
 	{}
 	
-	void initialize (LPCWSTR mailslot_name);
+	bool initialize (LPCWSTR mailslot_name);
 	
 	void terminate_begin ()
 	{
@@ -101,10 +106,11 @@ protected:
 
 	void close_handles ();
 
-	unsigned thread_count () const
-	{
-		return thread_count_;
-	}
+private:
+	/// Deprecated
+	PostOfficeBase (const PostOfficeBase&);
+	/// Deprecated
+	PostOfficeBase& operator = (const PostOfficeBase&);
 
 private:
 	HANDLE mailslot_;
@@ -115,8 +121,8 @@ private:
 };
 
 /// Template class for multithreaded mailslot receiver.
-/// \param BUF_SIZE Size of message buffer. Maximal message size.
-/// \param Thread Thread class. Thread must start in the constructor and join in the destructor.
+/// \tparam BUF_SIZE Size of message buffer. Maximal message size.
+/// \tparam Thread Thread class. Thread must start in the constructor and join in the destructor.
 /// Thread constructor gets reference to PostOfficeBase as parameter.
 /// Thread procedure must call PostOfficeBase::get_message() method to wait for incoming messages.
 /// If PostOfficeBase::get_message() returned buffer then thread must get message and enqueue buffer
@@ -131,15 +137,20 @@ public:
 		postmasters_ (nullptr)
 	{}
 
+	/// Destructo calls terminate().
 	~PostOffice ()
 	{
 		terminate ();
 	}
 
-	void initialize (LPCWSTR mailslot_name)
+	/// Put the post office to work.
+	/// \param mailslot_name Name of the mailslot for incoming messages.
+	/// \returns `true` on success. `false` if mailslot already exists.
+	bool initialize (LPCWSTR mailslot_name)
 	{
 		try {
-			PostOfficeBase::initialize (mailslot_name);
+			if (!PostOfficeBase::initialize (mailslot_name))
+				return false;
 
 			Allocator allocator;
 			postmasters_ = allocator.allocate (thread_count ());
@@ -155,8 +166,10 @@ public:
 			terminate ();
 			throw;
 		}
+		return true;
 	}
 
+	/// Terminate the post office work.
 	void terminate ();
 
 private:

@@ -6,17 +6,23 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void PostOfficeBase::initialize (LPCWSTR mailslot_name)
+bool PostOfficeBase::initialize (LPCWSTR mailslot_name)
 {
-	running_ = true;
+	assert (!running_);
 	mailslot_ = CreateMailslotW (mailslot_name, max_msg_size_, MAILSLOT_WAIT_FOREVER, nullptr);
-	if (INVALID_HANDLE_VALUE == mailslot_)
+	if (INVALID_HANDLE_VALUE == mailslot_) {
+		DWORD err = GetLastError ();
+		if (ERROR_ALREADY_EXISTS == err)
+			return false;
 		throw ::CORBA::INITIALIZE ();
+	}
 
+	running_ = true;
 	thread_count_ = SystemInfo::hardware_concurrency ();
 	completion_port_ = CreateIoCompletionPort (mailslot_, nullptr, 1, thread_count_);
 	if (!completion_port_)
 		throw ::CORBA::INITIALIZE ();
+	return true;
 }
 
 void PostOfficeBase::close_handles ()
