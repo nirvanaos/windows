@@ -1,27 +1,10 @@
 #include "PostOffice.h"
 #include "SystemInfo.h"
+#include <ORB.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
-
-PostOfficeBase::Buffer* PostOfficeBase::get_message ()
-{
-	if (running_) {
-		ULONG_PTR key;
-		OVERLAPPED* ovl;
-		DWORD size;
-		if (GetQueuedCompletionStatus (completion_port_, &size, &key, &ovl, INFINITE)) {
-			Buffer* buffer = static_cast <Buffer*> (ovl);
-			buffer->enqueued_ = 0;
-			buffer->size_ = size;
-			return buffer;
-		} else {
-			assert (ERROR_ABANDONED_WAIT_0 == GetLastError ());
-		}
-	}
-	return nullptr;
-}
 
 void PostOfficeBase::initialize (LPCWSTR mailslot_name)
 {
@@ -46,6 +29,49 @@ void PostOfficeBase::close_handles ()
 		CloseHandle (mailslot_);
 		mailslot_ = INVALID_HANDLE_VALUE;
 	}
+}
+
+PostOfficeBase::Buffer* PostOfficeBase::get_message ()
+{
+	if (running_) {
+		ULONG_PTR key;
+		OVERLAPPED* ovl;
+		DWORD size;
+		if (GetQueuedCompletionStatus (completion_port_, &size, &key, &ovl, INFINITE)) {
+			Buffer* buffer = static_cast <Buffer*> (ovl);
+			buffer->enqueued_ = 0;
+			buffer->size_ = size;
+			return buffer;
+		} else {
+			DWORD err = GetLastError ();
+			switch (err) {
+			case ERROR_ABANDONED_WAIT_0:
+			case ERROR_OPERATION_ABORTED:
+				break;
+
+			default:
+				throw ::CORBA::INTERNAL ();
+			}
+		}
+	}
+	return nullptr;
+}
+
+inline void PostOfficeBase::Buffer::enqueue (HANDLE h, DWORD size)
+{
+	enqueued_ = true;
+	if (!ReadFile (h, const_cast <void*> (message ()), size, nullptr, this)) {
+		DWORD err = GetLastError ();
+		if (ERROR_IO_PENDING != err) {
+			enqueued_ = false;
+			throw ::CORBA::INTERNAL ();
+		}
+	}
+}
+
+void PostOfficeBase::enqueue_buffer (Buffer& buffer)
+{
+	buffer.enqueue (mailslot_, max_msg_size_);
 }
 
 }

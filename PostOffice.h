@@ -7,7 +7,6 @@
 #define NIRVANA_CORE_WINDOWS_POSTOFFICE_H_
 
 #include "../core.h"
-#include <ORB.h>
 #include <memory>
 
 namespace Nirvana {
@@ -19,6 +18,8 @@ class PostOfficeBase
 	PostOfficeBase (const PostOfficeBase&);
 	PostOfficeBase& operator = (const PostOfficeBase&);
 public:
+
+	/// Buffer with one incoming message.
 	class Buffer :
 		private OVERLAPPED
 	{
@@ -42,11 +43,10 @@ public:
 			memset (static_cast <OVERLAPPED*> (this), 0, sizeof (OVERLAPPED));
 		}
 
-		void enqueue (HANDLE h, DWORD size)
-		{
-			if (ReadFile (h, const_cast <void*> (message ()), size, nullptr, this))
-				enqueued_ = true;
-		}
+	private:
+		friend class PostOfficeBase;
+
+		void enqueue (HANDLE h, DWORD size);
 
 		void cancel (HANDLE h)
 		{
@@ -57,7 +57,6 @@ public:
 		}
 
 	private:
-		friend class PostOfficeBase;
 		union
 		{
 			struct
@@ -70,20 +69,15 @@ public:
 	};
 
 	/// Threads call this method to get incoming messages.
-	/// \param size The size of incoming message.
-	/// \returns Buffer* containing incoming message.
-	/// If returns nullptr, thread must terminate.
+	/// \returns Buffer* containing incoming message. If returns nullptr, thread must terminate.
+	/// \throws ::CORBA::INTERNAL
 	Buffer* get_message ();
 
-	void enqueue_buffer (Buffer& buffer)
-	{
-		buffer.enqueue (mailslot_, max_msg_size_);
-	}
-
-	void cancel_buffer (Buffer& buffer)
-	{
-		buffer.cancel (mailslot_);
-	}
+	/// After reading the message from buffer, before all further processing,
+	/// the buffer have to be returned to pool by enqueue_buffer call.
+	/// \param[in] buffer The buffer acquired by get_message call.
+	/// \throws ::CORBA::INTERNAL
+	void enqueue_buffer (Buffer& buffer);
 
 protected:
 	PostOfficeBase (unsigned max_msg_size) :
@@ -93,11 +87,16 @@ protected:
 		max_msg_size_ (max_msg_size)
 	{}
 	
-	void initialize (LPCWSTR mailslot_name); // Returns number of threads (processor cores).
+	void initialize (LPCWSTR mailslot_name);
 	
 	void terminate_begin ()
 	{
 		running_ = false;
+	}
+
+	void cancel_buffer (Buffer& buffer)
+	{
+		buffer.cancel (mailslot_);
 	}
 
 	void close_handles ();
@@ -107,14 +106,12 @@ protected:
 		return thread_count_;
 	}
 
-protected:
+private:
 	HANDLE mailslot_;
 	HANDLE completion_port_;
-
-private:
-	bool running_;
 	DWORD max_msg_size_;
 	unsigned thread_count_;
+	bool running_;
 };
 
 /// Template class for multithreaded mailslot receiver.
@@ -189,9 +186,12 @@ template <unsigned BUF_SIZE, class Thread>
 void PostOffice <BUF_SIZE, Thread>::terminate ()
 {
 	terminate_begin ();	// Reset running flag.
+
+	// Cancel enqueued buffers.
 	for (Postmaster* p = postmasters_, *end = p + thread_count (); p != end; ++p) {
 		cancel_buffer (*p);
 	}
+
 	close_handles ();	
 	// GetQueuedCompletionStatus will return error after closing the completion port.
 	
