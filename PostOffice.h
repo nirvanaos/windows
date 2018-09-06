@@ -26,7 +26,7 @@ public:
 		/// Returns address of buffer contained incoming message.
 		const void* message () const
 		{
-			return &enqueued_ + 1;	// Data buffer follows after this base class.
+			return this + 1;	// Data buffer follows after this base class.
 		}
 
 		/// Returns size of incoming message.
@@ -63,7 +63,7 @@ public:
 				bool enqueued_;
 				DWORD size_;
 			};
-			ULONGLONG aligned64_;	// To provide alignment to 64 word.
+			ULONGLONG aligned_;	// To provide alignment to 64 word.
 		};
 	};
 
