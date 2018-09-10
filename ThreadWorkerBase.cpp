@@ -15,7 +15,7 @@ DWORD WINAPI ThreadWorkerBase::thread_proc (void* param)
 	_this->thread_init ();
 
 	verify (SetThreadPriority (_this->handle (), WORKER_THREAD_PRIORITY));
-	ProtDomain::singleton ().worker_thread_proc (*static_cast <ThreadWorker*> (_this));
+//	ProtDomain::singleton ().worker_thread_proc (*static_cast <ThreadWorker*> (_this));
 
 	_this->thread_term ();
 
