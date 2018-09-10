@@ -8,7 +8,6 @@
 #include <Nirvana.h>
 #include <ORB.h>
 #include "CompletionPortReceiver.h"
-#include "SystemInfo.h"
 #include "../core.h"
 
 namespace Nirvana {
@@ -25,10 +24,7 @@ private:
 	CompletionPort& operator = (const CompletionPort&);
 
 public:
-	CompletionPort () :
-		completion_port_ (nullptr),
-		thread_count_ (SystemInfo::hardware_concurrency ())
-	{}
+	CompletionPort ();
 
 	~CompletionPort ()
 	{
@@ -38,26 +34,32 @@ public:
 
 	void add_receiver (HANDLE hf, CompletionPortReceiver& receiver)
 	{
+		HANDLE was = completion_port_;
 		create (hf, &receiver);
+		if (!was)
+			start ();
 	}
-	
-	void create ()
+
+	/// Create port and start threads.
+	virtual void start ()
 	{
 		if (!completion_port_)
 			create (INVALID_HANDLE_VALUE, nullptr);
 	}
 
+	/// Posts an I/O completion packet to an I/O completion port.
 	void post (CompletionPortReceiver& receiver, OVERLAPPED* param, DWORD size)
 	{
 		verify (PostQueuedCompletionStatus (completion_port_, size, (ULONG_PTR)&receiver, param));
 	}
 
 	/// On close completion port all threads will return with `ERROR_ABANDONED_WAIT_0` error code.
-	void terminate ()
+	virtual void terminate ()
 	{
 		HANDLE port = completion_port_;
 		completion_port_ = nullptr;
-		CloseHandle (port);
+		if (port)
+			CloseHandle (port);
 	}
 
 	unsigned thread_count () const
@@ -66,30 +68,10 @@ public:
 	}
 
 	/// Worker threads have to call dispatch() while it returns `true`.
-	bool dispatch ()
-	{
-		if (completion_port_) {
-			ULONG_PTR key;
-			OVERLAPPED* ovl;
-			DWORD size;
-			if (GetQueuedCompletionStatus (completion_port_, &size, &key, &ovl, INFINITE)) {
-				reinterpret_cast <CompletionPortReceiver*> (key)->received (ovl, size);
-				return true;
-			} else if (completion_port_) {
-				throw ::CORBA::INTERNAL ();
-			}
-		}
-		return false;
-	}
+	bool dispatch ();
 
 private:
-	void create (HANDLE hfile, CompletionPortReceiver* receiver)
-	{
-		HANDLE port = CreateIoCompletionPort (hfile, completion_port_, (ULONG_PTR)receiver, thread_count ());
-		if (!port)
-			throw ::CORBA::INITIALIZE ();
-		completion_port_ = port;
-	}
+	void create (HANDLE hfile, CompletionPortReceiver* receiver);
 
 private:
 	HANDLE completion_port_;
@@ -106,51 +88,51 @@ class ThreadPool :
 {
 	typedef CoreAllocator <Thread> Allocator;
 
-public:
+protected:
 	ThreadPool () :
 		threads_ (nullptr),
 		thread_count_ (0)
 	{}
 
-	/// Create and start threads.
-	void start ()
+	/// Terminate threads.
+	virtual void terminate ()
 	{
-		CompletionPort::create ();
-		try {
+		CompletionPort::terminate ();
+		// On close completion port all threads will return with ERROR_ABANDONED_WAIT_0 error code.
+		if (threads_) {
 			Allocator allocator;
-			threads_ = allocator.allocate (CompletionPort::thread_count ());
-			for (Thread* p = threads_, *end = p + CompletionPort::thread_count (); p != end; ++p) {
-				allocator.construct (p, *static_cast <CompletionPort*> (this));
-				++thread_count_;
+			for (Thread* p = threads_, *end = p + thread_count_; p != end; ++p) {
+				allocator.destroy (p); // Thread joins in destructor.
 			}
-		} catch (...) {
-			terminate ();
-			throw;
+			allocator.deallocate (threads_, CompletionPort::thread_count ());
+			threads_ = nullptr;
 		}
 	}
 
-	/// Terminate threads.
-	void terminate ();
+private:
+	/// Create and start threads.
+	virtual void start () final
+	{
+		if (!threads_) {
+			try {
+				CompletionPort::start ();
+				Allocator allocator;
+				threads_ = allocator.allocate (CompletionPort::thread_count ());
+				for (Thread* p = threads_, *end = p + CompletionPort::thread_count (); p != end; ++p) {
+					allocator.construct (p, *static_cast <CompletionPort*> (this));
+					++thread_count_;
+				}
+			} catch (...) {
+				terminate ();
+				throw;
+			}
+		}
+	}
 
 private:
 	Thread* threads_;
 	unsigned thread_count_;
 };
-
-template <class Thread>
-void ThreadPool <Thread>::terminate ()
-{
-	CompletionPort::terminate ();
-	// On close completion port all threads will return with ERROR_ABANDONED_WAIT_0 error code.
-	if (threads_) {
-		Allocator allocator;
-		for (Thread* p = threads_, *end = p + thread_count_; p != end; ++p) {
-			allocator.destroy (p); // Thread joins in destructor.
-		}
-		allocator.deallocate (threads_, CompletionPort::thread_count ());
-		threads_ = nullptr;
-	}
-}
 
 }
 }

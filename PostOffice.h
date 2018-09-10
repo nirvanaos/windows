@@ -39,43 +39,29 @@ public:
 	/// Put the post office to work.
 	/// \param mailslot_name Name of the mailslot for incoming messages.
 	/// \returns `true` on success. `false` if mailslot already exists.
-	bool start (LPCWSTR mailslot_name)
+	/// If exception occurs, terminate() will be called internally.
+	bool initialize (LPCWSTR mailslot_name)
 	{
-		// Start reading. If exception occurs, terminate will be called internally, so we move it out of try-catch.
-		if (!MailslotReader::start (mailslot_name, MAX_WORDS * sizeof (LONG_PTR), *static_cast <CompletionPort*> (this)))
-			return false;
-		try {
-			// Start threads
-			ThreadPool <Thread>::start ();
-		} catch (...) {
-			terminate ();
-			throw;
-		}
-		return true;
+		// Start reading.
+		return MailslotReader::initialize (mailslot_name, MAX_WORDS * sizeof (LONG_PTR), *static_cast <CompletionPort*> (this));
 	}
 
 	/// Put the post office to work.
 	/// \param prefix Mailslot name prefix.
 	/// \id Unique id of the mailslot. Usually it is id of the current process.
+	/// If exception occurs, terminate() will be called internally.
 	template <size_t PREFIX_SIZE>
-	void start (const WCHAR (&prefix) [PREFIX_SIZE], DWORD id)
+	void initialize (const WCHAR (&prefix) [PREFIX_SIZE], DWORD id)
 	{
-		// Start reading. If exception occurs, terminate will be called internally, so we move it out of try-catch.
-		MailslotReader::start (prefix, id, MAX_WORDS * sizeof (LONG_PTR), *static_cast <CompletionPort*> (this));
-		try {
-			// Start threads
-			ThreadPool <Thread>::start ();
-		} catch (...) {
-			terminate ();
-			throw;
-		}
+		// Start reading.
+		MailslotReader::initialize (prefix, id, MAX_WORDS * sizeof (LONG_PTR), *static_cast <CompletionPort*> (this));
 	}
 
 	/// Terminate the post office work.
 	virtual void terminate ()
 	{
-		ThreadPool <Thread>::terminate ();
 		MailslotReader::terminate ();
+		ThreadPool <Thread>::terminate ();
 	}
 
 private:

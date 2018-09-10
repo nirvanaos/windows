@@ -8,7 +8,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool MailslotReader::start (LPCWSTR mailslot_name, DWORD max_msg_size, CompletionPort& port)
+bool MailslotReader::initialize (LPCWSTR mailslot_name, DWORD max_msg_size, CompletionPort& port)
 {
 	handle_ = CreateMailslotW (mailslot_name, max_msg_size, MAILSLOT_WAIT_FOREVER, nullptr);
 	if (INVALID_HANDLE_VALUE == handle_) {
@@ -17,7 +17,7 @@ bool MailslotReader::start (LPCWSTR mailslot_name, DWORD max_msg_size, Completio
 			return false;
 		throw ::CORBA::INITIALIZE ();
 	}
-	BufferPool::start (port, max_msg_size);
+	BufferPool::initialize (port, max_msg_size);
 	return true;
 }
 

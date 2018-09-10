@@ -41,7 +41,7 @@ public:
 	virtual void enqueue_buffer (OVERLAPPED* ovl) = 0;
 
 protected:
-	void start (CompletionPort& port, DWORD buffer_size);
+	void initialize (CompletionPort& port, DWORD buffer_size);
 	virtual void terminate ();
 
 	size_t buffer_size () const
