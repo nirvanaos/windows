@@ -17,14 +17,17 @@ namespace Windows {
 /// \tparam T Derived class.
 /// \tparam BUF_SIZE Size of message buffer. Maximal message size.
 /// \tparam Thread Thread class. Thread must start in the constructor and join in the destructor.
-/// Thread constructor gets reference to PostOfficeBase as parameter.
+/// Thread constructor gets reference to PostOfficeBase as parameter./// \tparam PRIORITY Priority of the worker threads.
+
 /// Thread procedure must call PostOffice::dispatch() method while it returns true.
-template <class T, unsigned BUF_SIZE, class Thread>
+template <class T, unsigned BUF_SIZE, class Thread, int PRIORITY = THREAD_PRIORITY_NORMAL>
 class PostOffice :
-	public ThreadPool <Thread>,
-	public MailslotReader
+	public MailslotReader,
+	public ThreadPool <Thread>
 {
 	static const size_t MAX_WORDS = (BUF_SIZE + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR);
+	typedef ThreadPool <Thread> Pool;
+
 public:
 	/// Derived class must override this method to receive messages.
 	void received (void* message, DWORD size)
@@ -43,7 +46,11 @@ public:
 	bool initialize (LPCWSTR mailslot_name)
 	{
 		// Start reading.
-		return MailslotReader::initialize (mailslot_name, MAX_WORDS * sizeof (LONG_PTR), *static_cast <CompletionPort*> (this));
+		if (MailslotReader::initialize (mailslot_name, MAX_WORDS * sizeof (LONG_PTR), *static_cast <CompletionPort*> (this))) {
+			Pool::start (PRIORITY);
+			return true;
+		}
+		return false;
 	}
 
 	/// Put the post office to work.
@@ -55,13 +62,14 @@ public:
 	{
 		// Start reading.
 		MailslotReader::initialize (prefix, id, MAX_WORDS * sizeof (LONG_PTR), *static_cast <CompletionPort*> (this));
+		Pool::start (PRIORITY);
 	}
 
 	/// Terminate the post office work.
 	virtual void terminate ()
 	{
 		MailslotReader::terminate ();
-		ThreadPool <Thread>::terminate ();
+		Pool::terminate ();
 	}
 
 private:

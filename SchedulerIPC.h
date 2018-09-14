@@ -14,41 +14,53 @@ namespace Windows {
 
 class SchedulerIPC
 {
-public:
-
 protected:
-	struct SyncDomainAddress
+	struct ProcessStart
 	{
-		uint64_t mailslot_handle_;
-		uint64_t sync_domain_ptr_;
+		DWORD process_id;
 	};
 
-	struct MsgReady
+	struct ProcessStop
 	{
-		SyncDomainAddress sync_domain;
+		uint64_t process;
+	};
+
+	struct Ready
+	{
+		uint64_t process;
+		uint64_t runnable;
 		DeadlineTime deadline;
-		BOOL update;
 	};
 
-	struct MsgRun
+	struct SchedulerMessage
 	{
-		SyncDomainAddress sync_domain;
+		enum int64_t
+		{
+			CORE_FREE,
+			READY,
+			UPDATE,
+			PROCESS_START,
+			PROCESS_STOP
+		} tag;
+		union
+		{
+			ProcessStart process_start;
+			ProcessStop process_stop;
+			Ready ready;
+		} msg;
 	};
 
-	static HANDLE create_mailslot (LPCWSTR name, DWORD max_msg_size);
-	static HANDLE open_mailslot (LPCWSTR name);
-	static HANDLE open_run_mailslot (DWORD process_id, bool create);
-	
-	template <class Msg>
-	static BOOL send (HANDLE mailslot, const Msg& msg)
+	struct ProcessStartAck
 	{
-		DWORD cb;
-		return WriteFile (mailslot, &msg, sizeof (msg), &cb, nullptr);
-	}
+		uint64_t process;
+	};
 
-protected:
+	struct Run
+	{
+		uint64_t runnable;
+	};
+
 	static WCHAR scheduler_mailslot_name_ [];
-	static WCHAR free_cores_semaphore_name_ [];
 };
 
 }

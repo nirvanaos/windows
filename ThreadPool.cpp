@@ -14,7 +14,16 @@ CompletionPort::CompletionPort () :
 	thread_count_ (SystemInfo::hardware_concurrency ())
 {}
 
-bool CompletionPort::dispatch ()
+void CompletionPort::create (HANDLE hfile, CompletionPortReceiver* receiver)
+{
+	HANDLE port = CreateIoCompletionPort (hfile, completion_port_, (ULONG_PTR)receiver, thread_count ());
+	if (!port)
+		throw ::CORBA::INITIALIZE ();
+	assert (completion_port_ == nullptr || completion_port_ == port);
+	completion_port_ = port;
+}
+
+inline bool CompletionPort::dispatch ()
 {
 	if (completion_port_) {
 		ULONG_PTR key;
@@ -38,13 +47,9 @@ bool CompletionPort::dispatch ()
 	return false;
 }
 
-void CompletionPort::create (HANDLE hfile, CompletionPortReceiver* receiver)
+void CompletionPort::thread_proc ()
 {
-	HANDLE port = CreateIoCompletionPort (hfile, completion_port_, (ULONG_PTR)receiver, thread_count ());
-	if (!port)
-		throw ::CORBA::INITIALIZE ();
-	assert (completion_port_ == nullptr || completion_port_ == port);
-	completion_port_ = port;
+	while (dispatch ());
 }
 
 }

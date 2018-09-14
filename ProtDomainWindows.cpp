@@ -1,8 +1,8 @@
 // Nirvana project.
 // Windows implementation.
-// Worker threads.
+// Protection domain (process).
 
-#include "WorkerThreads.h"
+#include "ProtDomainWindows.h"
 
 namespace Nirvana {
 namespace Core {

@@ -1,8 +1,8 @@
 // Nirvana project.
 // Windows implementation.
-// Protection domain (process).
+// System domain (computer).
 
-#include "ProtDomainBase.h"
+#include "SysDomainWindows.h"
 
 namespace Nirvana {
 namespace Core {
