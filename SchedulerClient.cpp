@@ -7,14 +7,15 @@ namespace Windows {
 
 void SchedulerClient::_schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
 																 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
-																 ::CORBA::Boolean update, ::CORBA::Nirvana::EnvironmentBridge*)
+																 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*)
 {
 	SchedulerClient* _this = static_cast <SchedulerClient*> (bridge);
 	SchedulerMessage msg;
-	msg.tag = update ? SchedulerMessage::UPDATE : SchedulerMessage::SCHEDULE;
+	msg.tag = SchedulerMessage::SCHEDULE;
 	msg.msg.schedule.process = _this->process_;
 	msg.msg.schedule.runnable = (uint64_t)runnable;
 	msg.msg.schedule.deadline = deadline;
+	msg.msg.schedule.deadline_prev = deadline_prev;
 	_this->send (msg);
 }
 

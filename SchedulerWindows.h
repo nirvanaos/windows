@@ -60,7 +60,7 @@ public:
 
 	static void _schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge, 
 												 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
-												 ::CORBA::Boolean update, ::CORBA::Nirvana::EnvironmentBridge*);
+												 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*);
 
 	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
 
@@ -93,12 +93,11 @@ void SchedulerWindows::received (void* data, DWORD size)
 		break;
 
 	case SchedulerMessage::SCHEDULE:
-	case SchedulerMessage::UPDATE:
 		{
 			SchedulerItem item;
 			item.process = (SysDomain::ProtDomainInfo*)msg->msg.schedule.process;
 			item.runnable = msg->msg.schedule.runnable;
-			Base::schedule (msg->msg.schedule.deadline, item, SchedulerMessage::UPDATE == msg->tag);
+			Base::schedule (msg->msg.schedule.deadline, item, msg->msg.schedule.deadline_prev);
 		}
 		break;
 

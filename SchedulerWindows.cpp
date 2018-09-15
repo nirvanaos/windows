@@ -11,10 +11,10 @@ namespace Windows {
 
 void SchedulerWindows::_schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
 																	DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
-																	::CORBA::Boolean update, ::CORBA::Nirvana::EnvironmentBridge*)
+																	DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*)
 {
 	SchedulerItem item = {nullptr, (uint64_t)runnable};
-	static_cast <Base*> (static_cast <SchedulerWindows*> (bridge))->schedule (deadline, item, update);
+	static_cast <Base*> (static_cast <SchedulerWindows*> (bridge))->schedule (deadline, item, deadline_prev);
 }
 
 void SchedulerWindows::_core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*)

@@ -22,7 +22,7 @@ public:
 
 	static void _schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
 												 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
-												 ::CORBA::Boolean update, ::CORBA::Nirvana::EnvironmentBridge*);
+												 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*);
 
 	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
 

@@ -35,6 +35,7 @@ protected:
 		uint64_t process;
 		uint64_t runnable;
 		DeadlineTime deadline;
+		DeadlineTime deadline_prev;
 	};
 
 	struct CoreFree
@@ -46,7 +47,6 @@ protected:
 		{
 			CORE_FREE,
 			SCHEDULE,
-			UPDATE,
 			PROCESS_START,
 			PROCESS_STOP
 		} tag;
@@ -63,7 +63,6 @@ protected:
 		{
 			static const DWORD sizes [5] = {
 				sizeof (tag) + sizeof (msg.core_free),
-				sizeof (tag) + sizeof (msg.schedule),
 				sizeof (tag) + sizeof (msg.schedule),
 				sizeof (tag) + sizeof (msg.process_start),
 				sizeof (tag) + sizeof (msg.process_stop)
