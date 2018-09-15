@@ -28,6 +28,8 @@ const SIZE_T NEUTRAL_FIBER_STACK_SIZE = 0;
 /// Worker thread priority should be greater than normal thread priority.
 const int WORKER_THREAD_PRIORITY = THREAD_PRIORITY_ABOVE_NORMAL;
 
+const DWORD SCHEDULER_ACK_TIMEOUT = 1000;
+
 const SIZE_T PAGE_SIZE = 4096;
 const SIZE_T PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
 const SIZE_T ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;

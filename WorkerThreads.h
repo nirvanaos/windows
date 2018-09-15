@@ -16,6 +16,24 @@ class WorkerThreads :
 	public ThreadPool <ThreadWorker>
 {
 public:
+	static void initialize ()
+	{
+		assert (!singleton_);
+		singleton_ = new WorkerThreads ();
+	}
+
+	static void terminate ()
+	{
+		delete singleton_;
+		singleton_ = nullptr;
+	}
+
+	static WorkerThreads& singleton ()
+	{
+		return *singleton_;
+	}
+
+private:
 	WorkerThreads ()
 	{
 		start (WORKER_THREAD_PRIORITY);
@@ -23,6 +41,9 @@ public:
 
 	~WorkerThreads ()
 	{}
+
+private:
+	static WorkerThreads* singleton_;
 };
 
 }

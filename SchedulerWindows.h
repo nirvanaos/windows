@@ -7,38 +7,101 @@
 
 #include "SchedulerIPC.h"
 #include "PostOffice.h"
+#include "Mailslot.h"
 #include "ThreadPoolable.h"
-#include "../../Interface/Scheduler.h"
+#include "SchedulerServant.h"
+#include "WorkerThreads.h"
+#include "../SysDomain.h"
+#include "../SchedulerImpl.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class SchedulerWindows : 
+struct SchedulerItem
+{
+	SysDomain::ProtDomainInfo* process;
+	uint64_t runnable;
+};
+
+class SchedulerWindows :
+	public SchedulerServant <SchedulerWindows>,
 	public SchedulerIPC,
-	public PostOffice <SchedulerWindows, sizeof (SchedulerMessage), ThreadPoolable, THREAD_PRIORITY_TIME_CRITICAL>,
-	public ::CORBA::Nirvana::Servant <SchedulerWindows, Core::Scheduler>
+	public PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, THREAD_PRIORITY_TIME_CRITICAL>,
+	private SchedulerImpl <SchedulerWindows, SchedulerItem>
 {
 public:
-	struct ProcessInfo
-	{
-		HANDLE mailslot;
-	};
+	typedef SchedulerImpl <SchedulerWindows, SchedulerItem> Base;
 
-	struct QueueItem
-	{
-		ProcessInfo* process;
-		uint64_t runnable;
-	};
-
-	void run (QueueItem)
+	SchedulerWindows () :
+		Base (thread_count ())
 	{}
 
-	virtual void received (OVERLAPPED* ovl, DWORD size);
+	/// Called by SchedulerImpl.
+	void execute (const SchedulerItem& item)
+	{
+		if (item.process)
+			item.process->execute (item.runnable);
+		else
+			in_proc_execute_.execute (item.runnable);
+	}
 
-	void schedule (DeadlineTime, Runnable_ptr);
-	void back_off (::CORBA::ULong);
+	// Implementation of Scheduler interface.
+
+	static void _schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge, 
+												 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
+												 ::CORBA::Boolean update, ::CORBA::Nirvana::EnvironmentBridge*);
+
+	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
+
+	/// Process mailslot message.
+	void received (void* data, DWORD size);
+
+private:
+	class InProcExecute :
+		public CompletionPortReceiver
+	{
+	public:
+		void execute (uint64_t runnable)
+		{
+			WorkerThreads::singleton ().post (*this, reinterpret_cast <OVERLAPPED*> (runnable), 0);
+		}
+	private:
+		virtual void received (OVERLAPPED* ovl, DWORD size);
+	} 
+	in_proc_execute_;
 };
+
+inline
+void SchedulerWindows::received (void* data, DWORD size)
+{
+	SchedulerMessage* msg = (SchedulerMessage*)data;
+
+	switch (msg->tag) {
+	case SchedulerMessage::CORE_FREE:
+		Base::core_free ();
+		break;
+
+	case SchedulerMessage::SCHEDULE:
+	case SchedulerMessage::UPDATE:
+		{
+			SchedulerItem item;
+			item.process = (SysDomain::ProtDomainInfo*)msg->msg.schedule.process;
+			item.runnable = msg->msg.schedule.runnable;
+			Base::schedule (msg->msg.schedule.deadline, item, SchedulerMessage::UPDATE == msg->tag);
+		}
+		break;
+
+	case SchedulerMessage::PROCESS_START:
+		((SysDomain::ProtDomainInfo*)msg->msg.process_start.process)->process_start (msg->msg.process_start.process_id);
+		break;
+
+		//case SchedulerMessage::PROCESS_STOP:
+
+	default:
+		assert (false);
+	}
+}
 
 }
 }

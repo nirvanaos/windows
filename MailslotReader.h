@@ -6,7 +6,7 @@
 #define NIRVANA_CORE_WINDOWS_MAILSLOTREADER_H_
 
 #include "BufferPool.h"
-#include <algorithm>
+#include <real_copy.h>
 
 namespace Nirvana {
 namespace Core {
@@ -35,7 +35,7 @@ protected:
 	void initialize (const WCHAR (&prefix) [PREFIX_SIZE], DWORD id, size_t max_msg_size, CompletionPort& port)
 	{
 		WCHAR name [PREFIX_SIZE + 8];
-		_ultow (id, std::copy (prefix, prefix + PREFIX_SIZE - 1, name), 16);
+		_ultow (id, real_copy (prefix, prefix + PREFIX_SIZE - 1, name), 16);
 		if (!initialize (name, max_msg_size, port))
 			throw ::CORBA::INITIALIZE ();
 	}

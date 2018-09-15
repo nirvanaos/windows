@@ -8,6 +8,7 @@
 #include "win32.h"
 #include <Nirvana.h>
 #include <ORB.h>
+#include <real_copy.h>
 
 namespace Nirvana {
 namespace Core {
@@ -31,7 +32,7 @@ public:
 	bool open (const WCHAR (&prefix) [PREFIX_SIZE], DWORD id)
 	{
 		WCHAR name [PREFIX_SIZE + 8];
-		_ultow (id, std::copy (prefix, prefix + PREFIX_SIZE - 1, name), 16);
+		_ultow (id, real_copy (prefix, prefix + PREFIX_SIZE - 1, name), 16);
 		return open (name);
 	}
 

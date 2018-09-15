@@ -10,17 +10,12 @@ ExecContextWindows::ExecContextWindows (CreationType type) :
 	if (CREATE_NONE != type)
 		fiber_ = CreateFiber (CREATE_NEUTRAL == type ? NEUTRAL_FIBER_STACK_SIZE : 0, fiber_proc, this);
 }
-/*
+
 void CALLBACK ExecContextWindows::fiber_proc (void* param)
 {
-	__try {
-
-	} __except ()
-	{
-
-	}
+	// TODO: Implement
 }
-*/
+
 }
 }
 }

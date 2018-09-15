@@ -10,9 +10,9 @@ namespace Windows {
 
 DWORD WINAPI ThreadWorker::thread_proc (ThreadWorker* _this)
 {
-	convert_to_fiber ();
+	_this->convert_to_fiber ();
 	ThreadPoolable::thread_proc (_this);
-	convert_to_thread ();
+	_this->convert_to_thread ();
 	return 0;
 }
 

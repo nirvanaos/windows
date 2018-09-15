@@ -2,39 +2,29 @@
 // Windows implementation.
 // SchedulerWindows class.
 
-#include "../SchedulerImpl.h"
+#include "SchedulerWindows.h"
+#include "../Thread.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void SchedulerWindows::received (OVERLAPPED* ovl, DWORD size)
+void SchedulerWindows::_schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
+																	DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
+																	::CORBA::Boolean update, ::CORBA::Nirvana::EnvironmentBridge*)
 {
-	SchedulerMessage msg = *(SchedulerMessage*)data (ovl);
-	enqueue_buffer (ovl);
+	SchedulerItem item = {nullptr, (uint64_t)runnable};
+	static_cast <Base*> (static_cast <SchedulerWindows*> (bridge))->schedule (deadline, item, update);
+}
 
-	SchedulerImpl* scheduler = static_cast <SchedulerImpl*> (this);
-	switch (msg.tag) {
-	case SchedulerMessage::CORE_FREE:
-		scheduler->core_free ();
-		break;
+void SchedulerWindows::_core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*)
+{
+	static_cast <Base*> (static_cast <SchedulerWindows*> (bridge))->core_free ();
+}
 
-	case SchedulerMessage::READY:
-	case SchedulerMessage::UPDATE:
-		{
-			QueueItem item;
-			item.process = (ProcessInfo*)msg.msg.ready.process;
-			item.runnable = msg.msg.ready.runnable;
-			scheduler->schedule (msg.msg.ready.deadline, item, SchedulerMessage::UPDATE == msg.tag);
-		}
-		break;
-
-	//case SchedulerMessage::PROCESS_START:
-	//case SchedulerMessage::PROCESS_STOP:
-
-	default:
-		assert (false);
-	}
+void SchedulerWindows::InProcExecute::received (OVERLAPPED* ovl, DWORD size)
+{
+	Thread::execute (reinterpret_cast <::CORBA::Nirvana::Bridge <Runnable>*> (ovl));
 }
 
 }

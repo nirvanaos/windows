@@ -8,6 +8,9 @@
 #include <Nirvana.h>
 #include "win32.h"
 
+#define SCHEDULER_MAILSLOT_NAME L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\scheduler_mailslot"
+#define EXECUTE_MAILSLOT_PREFIX L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\execute_mailslot"
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {
@@ -17,50 +20,68 @@ class SchedulerIPC
 protected:
 	struct ProcessStart
 	{
+		uint64_t process;
 		DWORD process_id;
 	};
 
 	struct ProcessStop
 	{
 		uint64_t process;
+		DWORD process_id;
 	};
 
-	struct Ready
+	struct Schedule
 	{
 		uint64_t process;
 		uint64_t runnable;
 		DeadlineTime deadline;
 	};
 
+	struct CoreFree
+	{};
+
 	struct SchedulerMessage
 	{
 		enum int64_t
 		{
 			CORE_FREE,
-			READY,
+			SCHEDULE,
 			UPDATE,
 			PROCESS_START,
 			PROCESS_STOP
 		} tag;
+
 		union
 		{
+			CoreFree core_free;
+			Schedule schedule;
 			ProcessStart process_start;
 			ProcessStop process_stop;
-			Ready ready;
 		} msg;
+
+		DWORD size () const
+		{
+			static const DWORD sizes [5] = {
+				sizeof (tag) + sizeof (msg.core_free),
+				sizeof (tag) + sizeof (msg.schedule),
+				sizeof (tag) + sizeof (msg.schedule),
+				sizeof (tag) + sizeof (msg.process_start),
+				sizeof (tag) + sizeof (msg.process_stop)
+			};
+
+			return sizes [tag];
+		}
 	};
 
 	struct ProcessStartAck
 	{
-		uint64_t process;
+		uint64_t error;
 	};
 
-	struct Run
+	struct Execute
 	{
 		uint64_t runnable;
 	};
-
-	static WCHAR scheduler_mailslot_name_ [];
 };
 
 }
