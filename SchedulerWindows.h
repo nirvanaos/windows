@@ -22,6 +22,16 @@ struct SchedulerItem
 {
 	SysDomain::ProtDomainInfo* process;
 	uint64_t runnable;
+
+	bool operator < (const SchedulerItem& rhs) const
+	{
+		// Compare runnable first to avoid grouping of the processes.
+		if (runnable < rhs.runnable)
+			return true;
+		else if (runnable > rhs.runnable)
+			return false;
+		return process < process;
+	}
 };
 
 class SchedulerWindows :
