@@ -51,7 +51,7 @@ public:
 		return (ExecContextWindows*)GetFiberData ();
 	}
 
-	void run (::CORBA::Nirvana::EnvironmentBridge*)
+	void switch_to ()
 	{
 		SwitchToFiber (fiber_);
 	}

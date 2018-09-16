@@ -10,11 +10,10 @@ namespace Core {
 namespace Windows {
 
 void SchedulerWindows::_schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
-																	DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
+																	DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Executor>* executor,
 																	DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*)
 {
-	SchedulerItem item = {nullptr, (uint64_t)runnable};
-	static_cast <Base*> (static_cast <SchedulerWindows*> (bridge))->schedule (deadline, item, deadline_prev);
+	static_cast <Base*> (static_cast <SchedulerWindows*> (bridge))->schedule (deadline, SchedulerItem (executor, deadline), deadline_prev);
 }
 
 void SchedulerWindows::_core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*)
@@ -24,7 +23,8 @@ void SchedulerWindows::_core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
 
 void SchedulerWindows::InProcExecute::received (OVERLAPPED* ovl, DWORD size)
 {
-	Thread::execute (reinterpret_cast <::CORBA::Nirvana::Bridge <Runnable>*> (ovl));
+	Execute* exec = reinterpret_cast <Execute*> (ovl);
+	Thread::execute (reinterpret_cast < ::CORBA::Nirvana::Bridge <Executor>*> (exec->executor), exec->deadline);
 }
 
 }

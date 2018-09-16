@@ -17,23 +17,23 @@ namespace Windows {
 
 class SchedulerIPC
 {
-protected:
+public:
 	struct ProcessStart
 	{
-		uint64_t process;
+		uint64_t protection_domain;
 		DWORD process_id;
 	};
 
 	struct ProcessStop
 	{
-		uint64_t process;
+		uint64_t protection_domain;
 		DWORD process_id;
 	};
 
 	struct Schedule
 	{
-		uint64_t process;
-		uint64_t runnable;
+		uint64_t protection_domain;
+		uint64_t executor;
 		DeadlineTime deadline;
 		DeadlineTime deadline_prev;
 	};
@@ -79,7 +79,8 @@ protected:
 
 	struct Execute
 	{
-		uint64_t runnable;
+		uint64_t executor;
+		DeadlineTime deadline;
 	};
 };
 

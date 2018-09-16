@@ -13,24 +13,43 @@
 #include "WorkerThreads.h"
 #include "../SysDomain.h"
 #include "../SchedulerImpl.h"
+#include "../AtomicCounter.h"
+#include <nlzntz.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-struct SchedulerItem
+struct SchedulerItem :
+	public SchedulerIPC::Execute
 {
-	SysDomain::ProtDomainInfo* process;
-	uint64_t runnable;
+	SysDomain::ProtDomainInfo* protection_domain;
+
+	SchedulerItem ()
+	{}
+
+	SchedulerItem (uint64_t prot_domain, uint64_t executor, DeadlineTime deadline) :
+		protection_domain (reinterpret_cast <SysDomain::ProtDomainInfo*> (prot_domain))
+	{
+		this->executor = executor;
+		this->deadline = deadline;
+	}
+
+	SchedulerItem (::CORBA::Nirvana::Bridge <Executor>* executor, DeadlineTime deadline) :
+		protection_domain (nullptr)
+	{
+		this->executor = (uint64_t)executor;
+		this->deadline = deadline;
+	}
 
 	bool operator < (const SchedulerItem& rhs) const
 	{
-		// Compare runnable first to avoid grouping of the processes.
-		if (runnable < rhs.runnable)
+		// Compare executors first to avoid grouping of the processes.
+		if (executor < rhs.executor)
 			return true;
-		else if (runnable > rhs.runnable)
+		else if (executor > rhs.executor)
 			return false;
-		return process < process;
+		return protection_domain < protection_domain;
 	}
 };
 
@@ -44,22 +63,23 @@ public:
 	typedef SchedulerImpl <SchedulerWindows, SchedulerItem> Base;
 
 	SchedulerWindows () :
-		Base (thread_count ())
+		Base (thread_count ()),
+		in_proc_execute_ (thread_count ())
 	{}
 
 	/// Called by SchedulerImpl.
 	void execute (const SchedulerItem& item)
 	{
-		if (item.process)
-			item.process->execute (item.runnable);
+		if (item.protection_domain)
+			item.protection_domain->execute (item);
 		else
-			in_proc_execute_.execute (item.runnable);
+			in_proc_execute_.execute (item);
 	}
 
 	// Implementation of Scheduler interface.
 
 	static void _schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge, 
-												 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
+												 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Executor>* executor,
 												 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*);
 
 	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
@@ -68,16 +88,37 @@ public:
 	void received (void* data, DWORD size);
 
 private:
+	/// Helper class for executing in the current process.
 	class InProcExecute :
 		public CompletionPortReceiver
 	{
 	public:
-		void execute (uint64_t runnable)
+		InProcExecute (unsigned thread_count) :
+			buffer_idx_ (-1)
 		{
-			WorkerThreads::singleton ().post (*this, reinterpret_cast <OVERLAPPED*> (runnable), 0);
+			AtomicCounter::UIntType buf_cnt = clp2 ((AtomicCounter::UIntType)thread_count);
+			buffer_ = (Execute*)g_core_heap->allocate (nullptr, sizeof (Execute) * buf_cnt, 0);
+			mask_ = buf_cnt - 1;
 		}
+
+		~InProcExecute ()
+		{
+			g_core_heap->release (buffer_, sizeof (Execute) * (mask_ + 1));
+		}
+
+		void execute (const Execute& msg)
+		{
+			Execute* buffer = buffer_ + (buffer_idx_.increment () & mask_);
+			*buffer = msg;
+			WorkerThreads::singleton ().post (*this, reinterpret_cast <OVERLAPPED*> (buffer), 0);
+		}
+
 	private:
 		virtual void received (OVERLAPPED* ovl, DWORD size);
+
+		Execute* buffer_;
+		AtomicCounter buffer_idx_;
+		AtomicCounter::UIntType mask_;
 	} 
 	in_proc_execute_;
 };
@@ -94,15 +135,14 @@ void SchedulerWindows::received (void* data, DWORD size)
 
 	case SchedulerMessage::SCHEDULE:
 		{
-			SchedulerItem item;
-			item.process = (SysDomain::ProtDomainInfo*)msg->msg.schedule.process;
-			item.runnable = msg->msg.schedule.runnable;
-			Base::schedule (msg->msg.schedule.deadline, item, msg->msg.schedule.deadline_prev);
+			Base::schedule (msg->msg.schedule.deadline, 
+											SchedulerItem (msg->msg.schedule.protection_domain, msg->msg.schedule.executor, msg->msg.schedule.deadline),
+											msg->msg.schedule.deadline_prev);
 		}
 		break;
 
 	case SchedulerMessage::PROCESS_START:
-		((SysDomain::ProtDomainInfo*)msg->msg.process_start.process)->process_start (msg->msg.process_start.process_id);
+		reinterpret_cast <SysDomain::ProtDomainInfo*> (msg->msg.process_start.protection_domain)->process_start (msg->msg.process_start.process_id);
 		break;
 
 		//case SchedulerMessage::PROCESS_STOP:

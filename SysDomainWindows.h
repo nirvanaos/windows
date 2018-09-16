@@ -43,9 +43,8 @@ public:
 			// TODO: Kill process by id.
 		}
 
-		void execute (uint64_t runnable)
+		void execute (const Execute& msg)
 		{
-			Execute msg = {runnable};
 			execute_mailslot_.send (msg);
 		}
 

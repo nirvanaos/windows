@@ -18,10 +18,10 @@ class SchedulerClient :
 	public MailslotReader
 {
 public:
-	SchedulerClient (uint64_t process);
+	SchedulerClient (uint64_t protection_domain);
 
 	static void _schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
-												 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Runnable>* runnable,
+												 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Executor>* executor,
 												 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*);
 
 	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
@@ -31,13 +31,13 @@ private:
 	void send (const SchedulerMessage& msg);
 	
 private:
-	uint64_t process_;
+	uint64_t protection_domain_;
 	Mailslot scheduler_mailslot_;
 };
 
 inline
-SchedulerClient::SchedulerClient (uint64_t process) :
-	process_ (process)
+SchedulerClient::SchedulerClient (uint64_t protection_domain) :
+	protection_domain_ (protection_domain)
 {
 	DWORD id = GetCurrentProcessId ();
 	static const WCHAR prefix [] = EXECUTE_MAILSLOT_PREFIX;
@@ -55,7 +55,7 @@ SchedulerClient::SchedulerClient (uint64_t process) :
 			{
 				SchedulerMessage msg;
 				msg.tag = SchedulerMessage::PROCESS_START;
-				msg.msg.process_start.process = process;
+				msg.msg.process_start.protection_domain = protection_domain;
 				msg.msg.process_start.process_id = id;
 				send (msg);
 			}
