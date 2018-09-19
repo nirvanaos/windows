@@ -33,13 +33,15 @@ void SchedulerClient::send (const SchedulerMessage& msg)
 
 void SchedulerClient::received (OVERLAPPED* ovl, DWORD size)
 {
+	assert (sizeof (Execute) == size);
 	Execute exec = {0};
 	if (sizeof (Execute) == size)
 		exec = *(Execute*)data (ovl);
 	enqueue_buffer (ovl);
 	
-	::CORBA::Nirvana::Bridge <Executor>* p = reinterpret_cast < ::CORBA::Nirvana::Bridge <Executor>*> (exec.executor);
-	Thread::execute (p, exec.deadline);
+	::CORBA::Nirvana::Bridge <Executor>* executor = reinterpret_cast < ::CORBA::Nirvana::Bridge <Executor>*> (exec.executor);
+	if (executor)
+		Thread::execute (executor, exec.deadline);
 }
 
 }

@@ -72,6 +72,13 @@ protected:
 		WaitForSingleObject (handle_, INFINITE);
 	}
 
+	/// Returns special "neutral" execution context with own stack and CPU state.
+	virtual ExecContext* neutral_context ()
+	{
+		assert (false);
+		return nullptr;
+	}
+
 private:
 	void create (SIZE_T stack_size, LPTHREAD_START_ROUTINE thread_proc, void* param, int priority);
 

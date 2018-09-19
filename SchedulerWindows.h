@@ -20,26 +20,24 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-struct SchedulerItem :
-	public SchedulerIPC::Execute
+struct SchedulerItem
 {
+	uint64_t executor;
 	SysDomain::ProtDomainInfo* protection_domain;
 
 	SchedulerItem ()
 	{}
 
-	SchedulerItem (uint64_t prot_domain, uint64_t executor, DeadlineTime deadline) :
+	SchedulerItem (uint64_t prot_domain, uint64_t executor) :
 		protection_domain (reinterpret_cast <SysDomain::ProtDomainInfo*> (prot_domain))
 	{
 		this->executor = executor;
-		this->deadline = deadline;
 	}
 
-	SchedulerItem (::CORBA::Nirvana::Bridge <Executor>* executor, DeadlineTime deadline) :
+	SchedulerItem (::CORBA::Nirvana::Bridge <Executor>* executor) :
 		protection_domain (nullptr)
 	{
 		this->executor = (uint64_t)executor;
-		this->deadline = deadline;
 	}
 
 	bool operator < (const SchedulerItem& rhs) const
@@ -68,12 +66,15 @@ public:
 	{}
 
 	/// Called by SchedulerImpl.
-	void execute (const SchedulerItem& item)
+	void execute (const SchedulerItem& item, DeadlineTime deadline)
 	{
+		Execute msg;
+		msg.executor = item.executor;
+		msg.deadline = deadline;
 		if (item.protection_domain)
-			item.protection_domain->execute (item);
+			item.protection_domain->execute (msg);
 		else
-			in_proc_execute_.execute (item);
+			in_proc_execute_.execute (msg);
 	}
 
 	// Implementation of Scheduler interface.
@@ -136,7 +137,7 @@ void SchedulerWindows::received (void* data, DWORD size)
 	case SchedulerMessage::SCHEDULE:
 		{
 			Base::schedule (msg->msg.schedule.deadline, 
-											SchedulerItem (msg->msg.schedule.protection_domain, msg->msg.schedule.executor, msg->msg.schedule.deadline),
+											SchedulerItem (msg->msg.schedule.protection_domain, msg->msg.schedule.executor),
 											msg->msg.schedule.deadline_prev);
 		}
 		break;
