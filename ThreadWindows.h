@@ -6,11 +6,13 @@
 #define NIRVANA_CORE_WINDOWS_THREADWINDOWS_H_
 
 #include <Nirvana.h>
-#include "../ExecDomain.h"
 #include "win32.h"
 
 namespace Nirvana {
 namespace Core {
+
+class ExecContext;
+
 namespace Windows {
 
 class ThreadWindows
