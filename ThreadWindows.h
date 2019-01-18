@@ -74,6 +74,11 @@ protected:
 		WaitForSingleObject (handle_, INFINITE);
 	}
 
+	void boost_priority (bool boost)
+	{
+		SetThreadPriority (handle_, boost ? BOOSTED_THREAD_PRIORITY : THREAD_PRIORITY_NORMAL);
+	}
+
 	/// Returns special "neutral" execution context with own stack and CPU state.
 	virtual ExecContext* neutral_context ()
 	{

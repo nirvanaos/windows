@@ -5,10 +5,11 @@
 #ifndef NIRVANA_CORE_WINDOWS_MAILSLOT_H_
 #define NIRVANA_CORE_WINDOWS_MAILSLOT_H_
 
-#include "win32.h"
 #include <Nirvana.h>
 #include <ORB.h>
 #include <real_copy.h>
+#include <stdlib.h>
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
