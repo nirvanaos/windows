@@ -14,7 +14,7 @@
 #include "../SysDomain.h"
 #include "../SchedulerImpl.h"
 #include "../AtomicCounter.h"
-#include <Nirvana/nlzntz.h>
+#include <Nirvana/bitutils.h>
 
 namespace Nirvana {
 namespace Core {
