@@ -5,8 +5,8 @@
 #ifndef NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
 #define NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
 
+#include <Nirvana/Memory.h>
 #include "Win32.h"
-#include <Interface/Memory.h>
 
 namespace Nirvana {
 namespace Core {

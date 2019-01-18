@@ -7,7 +7,7 @@
 #define NIRVANA_CORE_WINDOWS_POSTOFFICE_H_
 
 #include "MailslotReader.h"
-#include <real_copy.h>
+#include <Nirvana/real_copy.h>
 
 namespace Nirvana {
 namespace Core {

@@ -5,9 +5,9 @@
 #ifndef NIRVANA_CORE_WINDOWS_MAILSLOT_H_
 #define NIRVANA_CORE_WINDOWS_MAILSLOT_H_
 
-#include <Nirvana.h>
+#include <Nirvana/Nirvana.h>
 #include <ORB.h>
-#include <real_copy.h>
+#include <Nirvana/real_copy.h>
 #include <stdlib.h>
 #include "win32.h"
 

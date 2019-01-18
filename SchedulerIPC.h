@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERIPC_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERIPC_H_
 
-#include <Nirvana.h>
+#include <Nirvana/Nirvana.h>
 #include "win32.h"
 
 #define SCHEDULER_MAILSLOT_NAME L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\scheduler_mailslot"

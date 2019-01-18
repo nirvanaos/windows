@@ -6,7 +6,7 @@
 #define NIRVANA_CORE_WINDOWS_MAILSLOTREADER_H_
 
 #include "BufferPool.h"
-#include <real_copy.h>
+#include <Nirvana/real_copy.h>
 
 namespace Nirvana {
 namespace Core {

@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_THREADWINDOWS_H_
 #define NIRVANA_CORE_WINDOWS_THREADWINDOWS_H_
 
-#include <Nirvana.h>
+#include <Nirvana/Nirvana.h>
 #include "win32.h"
 
 namespace Nirvana {

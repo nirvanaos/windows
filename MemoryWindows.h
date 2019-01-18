@@ -6,7 +6,7 @@
 #define NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
 
 #include "AddressSpace.h"
-#include <real_copy.h>
+#include <Nirvana/real_copy.h>
 #include <eh.h>
 
 namespace Nirvana {
