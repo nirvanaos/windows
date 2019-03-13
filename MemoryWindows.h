@@ -7,6 +7,7 @@
 
 #include "AddressSpace.h"
 #include <Nirvana/real_copy.h>
+#include <Nirvana/Memory_s.h>
 #include <eh.h>
 
 namespace Nirvana {

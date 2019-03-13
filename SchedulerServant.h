@@ -1,7 +1,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERSERVANT_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERSERVANT_H_
 
-#include "../Scheduler.h"
+#include "../Scheduler_s.h"
 #include "../core.h"
 #include "win32.h"
 

@@ -6,7 +6,7 @@
 #define NIRVANA_CORE_WINDOWS_EXECCONTEXTWINDOWS_H_
 
 #include "Win32.h"
-#include <ORB.h>
+#include <Nirvana/Nirvana.h>
 
 namespace Nirvana {
 namespace Core {
