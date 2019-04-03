@@ -7,7 +7,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include <Nirvana/real_copy.h>
-#include <Exception.h>
+#include <CORBA/Exception.h>
 #include <stdlib.h>
 #include "win32.h"
 

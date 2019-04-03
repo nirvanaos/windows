@@ -1,5 +1,5 @@
 #include "ThreadWindows.h"
-#include <Exception.h>
+#include <CORBA/Exception.h>
 
 namespace Nirvana {
 namespace Core {
