@@ -12,7 +12,8 @@ namespace Windows {
 template <class S>
 class SchedulerServant :
 	public CoreObject,
-	public ::CORBA::Nirvana::Servant <S, Scheduler>
+	public ::CORBA::Nirvana::Servant <S, Scheduler>,
+	public ::CORBA::Nirvana::LifeCycleRefCntAbstract <S>
 {
 public:
 	static void _back_off (::CORBA::Nirvana::Bridge <Scheduler>*, ::CORBA::ULong hint, ::CORBA::Nirvana::EnvironmentBridge*)
