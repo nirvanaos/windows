@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_PORT_EXECCONTEXT_H_
 #define NIRVANA_CORE_PORT_EXECCONTEXT_H_
 
-#include "Win32.h"
+#include "../Source/Win32.h"
 #include <Nirvana/Nirvana.h>
 
 namespace Nirvana {

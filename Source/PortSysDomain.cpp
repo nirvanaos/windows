@@ -2,7 +2,7 @@
 // Windows implementation.
 // System domain (computer).
 
-#include "PortSysDomain.h"
+#include "../Port/SysDomain.h"
 
 namespace Nirvana {
 namespace Core {

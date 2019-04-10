@@ -6,7 +6,7 @@
 #define NIRVANA_CORE_PORT_THREAD_H_
 
 #include <Nirvana/Nirvana.h>
-#include "win32.h"
+#include "../Source/win32.h"
 
 namespace Nirvana {
 namespace Core {

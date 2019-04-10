@@ -2,7 +2,7 @@
 // Windows implementation.
 // Protection domain (process).
 
-#include "PortProtDomain.h"
+#include "../Port/ProtDomain.h"
 
 namespace Nirvana {
 namespace Core {

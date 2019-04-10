@@ -5,8 +5,8 @@
 #ifndef NIRVANA_CORE_PORT_SYSDOMAIN_H_
 #define NIRVANA_CORE_PORT_SYSDOMAIN_H_
 
-#include "SchedulerIPC.h"
-#include "Mailslot.h"
+#include "../Source/SchedulerIPC.h"
+#include "../Source/Mailslot.h"
 
 namespace Nirvana {
 namespace Core {

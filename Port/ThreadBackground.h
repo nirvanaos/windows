@@ -18,7 +18,7 @@ class ThreadBackground :
 public:
 	ThreadBackground ()
 	{
-		create (this, thread_proc);
+		Port::Thread::create (this, thread_proc);
 	}
 
 	~ThreadBackground ()
