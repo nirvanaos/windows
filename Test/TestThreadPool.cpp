@@ -14,7 +14,7 @@ const WCHAR mailslot_prefix [] = L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\unit_t
 
 struct Message
 {
-	unsigned tag;
+	LONG_PTR tag;
 };
 
 const unsigned TAG = 123456789;
