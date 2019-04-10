@@ -1,4 +1,4 @@
-#include "ThreadWindows.h"
+#include "PortThread.h"
 #include <CORBA/Exception.h>
 
 namespace Nirvana {

@@ -6,7 +6,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_THREADBACKGROUNDBASE_H_
 #define NIRVANA_CORE_WINDOWS_THREADBACKGROUNDBASE_H_
 
-#include "../Thread.h"
+#include <Thread.h>
 
 namespace Nirvana {
 namespace Core {
