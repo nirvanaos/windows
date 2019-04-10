@@ -11,9 +11,9 @@
 #include "ThreadPoolable.h"
 #include "SchedulerServant.h"
 #include "WorkerThreads.h"
-#include "../SysDomain.h"
-#include "../SchedulerImpl.h"
-#include "../AtomicCounter.h"
+#include <SysDomain.h>
+#include <SchedulerImpl.h>
+#include <AtomicCounter.h>
 #include <Nirvana/bitutils.h>
 
 namespace Nirvana {

@@ -7,7 +7,7 @@
 #define NIRVANA_CORE_WINDOWS_THREADWORKER_H_
 
 #include "ThreadPoolable.h"
-#include "../ExecContext.h"
+#include "ExecContext.h"
 
 namespace Nirvana {
 namespace Core {

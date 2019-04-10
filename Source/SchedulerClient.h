@@ -6,7 +6,7 @@
 #include "Mailslot.h"
 #include "MailslotReader.h"
 #include "WorkerThreads.h"
-#include "../core.h"
+#include <core.h>
 
 namespace Nirvana {
 namespace Core {

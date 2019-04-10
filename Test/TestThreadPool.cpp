@@ -1,7 +1,7 @@
-#include "../../Source/Windows/PostOffice.h"
-#include "../../Source/Windows/Mailslot.h"
-#include "../../Source/Windows/ThreadPoolable.h"
-#include "../MockMemory.h"
+#include "../Source/PostOffice.h"
+#include "../Source/Mailslot.h"
+#include "../Source/ThreadPoolable.h"
+#include <MockMemory.h>
 #include <gtest/gtest.h>
 #include <atomic>
 

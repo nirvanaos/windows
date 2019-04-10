@@ -1,5 +1,5 @@
-#include "../InitTerm.h"
-#include "../core.h"
+#include <InitTerm.h>
+#include <core.h>
 #include "MemoryWindows.h"
 
 namespace Nirvana {

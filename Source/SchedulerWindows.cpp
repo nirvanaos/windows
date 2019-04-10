@@ -3,7 +3,7 @@
 // SchedulerWindows class.
 
 #include "SchedulerWindows.h"
-#include "../Thread.h"
+#include <Thread.h>
 
 namespace Nirvana {
 namespace Core {

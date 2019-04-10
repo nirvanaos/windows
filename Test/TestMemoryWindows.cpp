@@ -1,4 +1,4 @@
-#include "../../Source/Windows/MemoryWindows.h"
+#include "../Source/MemoryWindows.h"
 #include <gtest/gtest.h>
 
 namespace TestMemoryWindows {

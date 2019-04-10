@@ -4,7 +4,7 @@
 #ifndef NIRVANA_CORE_THREADPOOLABLE_H_
 #define NIRVANA_CORE_THREADPOOLABLE_H_
 
-#include "../Thread.h"
+#include <Thread.h>
 #include "ThreadPool.h"
 
 namespace Nirvana {

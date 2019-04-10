@@ -7,7 +7,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include "CompletionPortReceiver.h"
-#include "../core.h"
+#include <core.h>
 
 namespace Nirvana {
 namespace Core {
