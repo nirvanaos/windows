@@ -20,7 +20,7 @@ class ThreadWorker :
 public:
 	ThreadWorker (CompletionPort& completion_port, int priority) :
 		ThreadPoolable (completion_port, priority),
-		ExecContext (ExecContextWindows::CREATE_NONE)
+		ExecContext (Port::ExecContext::CREATE_NONE)
 	{}
 
 	~ThreadWorker ()

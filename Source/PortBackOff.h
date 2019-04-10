@@ -1,12 +1,13 @@
-#ifndef NIRVANA_CORE_PORTBACKOFF_H_
-#define NIRVANA_CORE_PORTBACKOFF_H_
+#ifndef NIRVANA_CORE_PORT_BACKOFF_H_
+#define NIRVANA_CORE_PORT_BACKOFF_H_
 
 #include "win32.h"
 
 namespace Nirvana {
 namespace Core {
+namespace Port {
 
-class PortBackOff
+class BackOff
 {
 protected:
 	static void sleep (unsigned hint)
@@ -15,6 +16,7 @@ protected:
 	}
 };
 
+}
 }
 }
 

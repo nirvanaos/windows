@@ -2,16 +2,16 @@
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
-ExecContextWindows::ExecContextWindows (CreationType type) :
+ExecContext::ExecContext (CreationType type) :
 	fiber_ (nullptr)
 {
 	if (CREATE_NONE != type)
-		fiber_ = CreateFiber (CREATE_NEUTRAL == type ? NEUTRAL_FIBER_STACK_SIZE : 0, fiber_proc, this);
+		fiber_ = CreateFiber (CREATE_NEUTRAL == type ? Windows::NEUTRAL_FIBER_STACK_SIZE : 0, fiber_proc, this);
 }
 
-void CALLBACK ExecContextWindows::fiber_proc (void* param)
+void CALLBACK ExecContext::fiber_proc (void* param)
 {
 	// TODO: Implement
 }

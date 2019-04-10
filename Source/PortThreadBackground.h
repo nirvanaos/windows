@@ -10,18 +10,18 @@
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
-class ThreadBackgroundBase :
-	public Thread
+class ThreadBackground :
+	public Core::Thread
 {
 public:
-	ThreadBackgroundBase ()
+	ThreadBackground ()
 	{
-		create (thread_proc, this);
+		create (this, thread_proc);
 	}
 
-	~ThreadBackgroundBase ()
+	~ThreadBackground ()
 	{
 		close ();
 	}

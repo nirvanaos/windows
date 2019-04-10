@@ -2,8 +2,8 @@
 // Windows implementation.
 // Execution context (fiber).
 
-#ifndef NIRVANA_CORE_WINDOWS_EXECCONTEXTWINDOWS_H_
-#define NIRVANA_CORE_WINDOWS_EXECCONTEXTWINDOWS_H_
+#ifndef NIRVANA_CORE_PORT_EXECCONTEXT_H_
+#define NIRVANA_CORE_PORT_EXECCONTEXT_H_
 
 #include "Win32.h"
 #include <Nirvana/Nirvana.h>
@@ -13,9 +13,9 @@ namespace Core {
 
 class ExecDomain;
 
-namespace Windows {
+namespace Port {
 
-class ExecContextWindows
+class ExecContext
 {
 public:
 	enum CreationType
@@ -25,9 +25,9 @@ public:
 		CREATE_NONE
 	};
 
-	ExecContextWindows (CreationType type = CREATE_DEFAULT);
+	ExecContext (CreationType type = CREATE_DEFAULT);
 
-	~ExecContextWindows()
+	~ExecContext()
 	{
 		if (fiber_)
 			DeleteFiber (fiber_);
@@ -46,9 +46,9 @@ public:
 		verify (ConvertFiberToThread ());
 	}
 
-	static ExecContextWindows* current ()
+	static ExecContext* current ()
 	{
-		return (ExecContextWindows*)GetFiberData ();
+		return (ExecContext*)GetFiberData ();
 	}
 
 	void switch_to ()

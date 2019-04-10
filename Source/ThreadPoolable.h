@@ -18,7 +18,7 @@ public:
 	ThreadPoolable (CompletionPort& completion_port, int priority) :
 		completion_port_ (completion_port)
 	{
-		ThreadWindows::create (this, NEUTRAL_FIBER_STACK_SIZE, priority);
+		Port::Thread::create (this, NEUTRAL_FIBER_STACK_SIZE, priority);
 	}
 
 	~ThreadPoolable ()

@@ -2,21 +2,21 @@
 // Windows implementation.
 // System domain (computer).
 
-#ifndef NIRVANA_CORE_WINDOWS_SYSDOMAINWINDOWS_H_
-#define NIRVANA_CORE_WINDOWS_SYSDOMAINWINDOWS_H_
+#ifndef NIRVANA_CORE_PORT_SYSDOMAIN_H_
+#define NIRVANA_CORE_PORT_SYSDOMAIN_H_
 
 #include "SchedulerIPC.h"
 #include "Mailslot.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
-class SysDomainWindows
+class SysDomain
 {
 public:
 	class ProtDomainInfo :
-		private SchedulerIPC
+		private Windows::SchedulerIPC
 	{
 	public:
 		ProtDomainInfo (DWORD process_id) :
@@ -49,7 +49,7 @@ public:
 		}
 
 	private:
-		Mailslot execute_mailslot_;
+		Windows::Mailslot execute_mailslot_;
 		DWORD process_id_;
 	};
 };

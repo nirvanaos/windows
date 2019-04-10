@@ -1,9 +1,9 @@
 // Nirvana project
 // Windows implementation.
-// ThreadWindows class. Thread object base.
+// Port::Thread class. Thread object base.
 
-#ifndef NIRVANA_CORE_WINDOWS_THREADWINDOWS_H_
-#define NIRVANA_CORE_WINDOWS_THREADWINDOWS_H_
+#ifndef NIRVANA_CORE_PORT_THREAD_H_
+#define NIRVANA_CORE_PORT_THREAD_H_
 
 #include <Nirvana/Nirvana.h>
 #include "win32.h"
@@ -13,14 +13,14 @@ namespace Core {
 
 class ExecContext;
 
-namespace Windows {
+namespace Port {
 
-class ThreadWindows
+class Thread
 {
 	/// Deprecated
-	ThreadWindows (const ThreadWindows&);
+	Thread (const Thread&);
 	/// Deprecated
-	ThreadWindows& operator = (const ThreadWindows&);
+	Thread& operator = (const Thread&);
 
 protected:
 	static void initialize ()
@@ -33,22 +33,22 @@ protected:
 		TlsFree (tls_current_);
 	}
 
-	static ThreadWindows* current ()
+	static Thread* current ()
 	{
-		return (ThreadWindows*)TlsGetValue (tls_current_);
+		return (Thread*)TlsGetValue (tls_current_);
 	}
 
-	ThreadWindows () :
+	Thread () :
 		handle_ (nullptr)
 	{}
 
-	~ThreadWindows ()
+	~Thread ()
 	{
 		if (handle_)
 			CloseHandle (handle_);
 	}
 
-	static void thread_proc (ThreadWindows* _this)
+	static void thread_proc (Thread* _this)
 	{
 		TlsSetValue (tls_current_, _this);
 	}
@@ -76,11 +76,11 @@ protected:
 
 	void boost_priority (bool boost)
 	{
-		SetThreadPriority (handle_, boost ? BOOSTED_THREAD_PRIORITY : THREAD_PRIORITY_NORMAL);
+		SetThreadPriority (handle_, boost ? Windows::BOOSTED_THREAD_PRIORITY : THREAD_PRIORITY_NORMAL);
 	}
 
 	/// Returns special "neutral" execution context with own stack and CPU state.
-	virtual ExecContext* neutral_context ()
+	virtual Core::ExecContext* neutral_context ()
 	{
 		assert (false);
 		return nullptr;
