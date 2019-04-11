@@ -2,8 +2,8 @@
 // Windows implementation.
 // Protection domain memory service over Win32 API
 
-#ifndef NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
-#define NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
+#ifndef NIRVANA_CORE_PORT_PROTDOMAINMEMORY_H_
+#define NIRVANA_CORE_PORT_PROTDOMAINMEMORY_H_
 
 #include "../Source/AddressSpace.h"
 #include <Nirvana/real_copy.h>
@@ -32,6 +32,11 @@ public:
 	{
 		SetUnhandledExceptionFilter (0);
 		space_.terminate ();
+	}
+
+	static Memory_ptr singleton ()
+	{
+		return _this ();
 	}
 
 	// Memory::
