@@ -10,6 +10,11 @@
 
 namespace Nirvana {
 namespace Core {
+
+namespace Port {
+class ProtDomainMemory;
+}
+
 namespace Windows {
 
 ///	<summary>
@@ -206,7 +211,7 @@ public:
 		const State& state ();
 
 	protected:
-		friend class MemoryWindows;
+		friend class Port::ProtDomainMemory;
 
 		void invalidate_state ()
 		{
@@ -265,7 +270,7 @@ protected:
 	void initialize (DWORD process_id, HANDLE process_handle);
 
 private:
-	friend class MemoryWindows;
+	friend class Port::ProtDomainMemory;
 
 	void* map (HANDLE mapping, MappingType protection);
 	void protect (void* address, SIZE_T size, DWORD protection)

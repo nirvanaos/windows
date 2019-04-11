@@ -1,16 +1,16 @@
 // Nirvana project
 // Protection domain memory service over Win32 API
 
-#include "MemoryWindows.h"
+#include "../Port/ProtDomainMemory.h"
 #include <BackOff.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
-AddressSpace MemoryWindows::space_;
+Windows::AddressSpace ProtDomainMemory::space_;
 
-DWORD MemoryWindows::Block::commit (SIZE_T offset, SIZE_T size)
+DWORD ProtDomainMemory::Block::commit (SIZE_T offset, SIZE_T size)
 { // This operation must be thread-safe.
 
 	assert (offset + size <= ALLOCATION_GRANULARITY);
@@ -71,7 +71,7 @@ DWORD MemoryWindows::Block::commit (SIZE_T offset, SIZE_T size)
 	return ret;
 }
 
-bool MemoryWindows::Block::need_remap_to_share (SIZE_T offset, SIZE_T size)
+bool ProtDomainMemory::Block::need_remap_to_share (SIZE_T offset, SIZE_T size)
 {
 	const State& st = state ();
 	if (st.state != State::MAPPED)
@@ -89,7 +89,7 @@ bool MemoryWindows::Block::need_remap_to_share (SIZE_T offset, SIZE_T size)
 	return false;
 }
 
-void MemoryWindows::Block::prepare_to_share_no_remap (SIZE_T offset, SIZE_T size)
+void ProtDomainMemory::Block::prepare_to_share_no_remap (SIZE_T offset, SIZE_T size)
 {
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
@@ -132,7 +132,7 @@ void MemoryWindows::Block::prepare_to_share_no_remap (SIZE_T offset, SIZE_T size
 	}
 }
 
-void MemoryWindows::Block::remap ()
+void ProtDomainMemory::Block::remap ()
 {
 	HANDLE hm;
 
@@ -202,12 +202,12 @@ void MemoryWindows::Block::remap ()
 	}
 }
 
-void MemoryWindows::Block::remap_proc (Block* block)
+void ProtDomainMemory::Block::remap_proc (Block* block)
 {
 	block->remap ();
 }
 
-void MemoryWindows::Block::copy (void* src, SIZE_T size, LONG flags)
+void ProtDomainMemory::Block::copy (void* src, SIZE_T size, LONG flags)
 {
 	assert (size);
 	SIZE_T offset = (SIZE_T)src % ALLOCATION_GRANULARITY;
@@ -255,7 +255,7 @@ void MemoryWindows::Block::copy (void* src, SIZE_T size, LONG flags)
 	AddressSpace::Block::copy (src_block, offset, size, flags);
 }
 
-void MemoryWindows::Block::copy (SIZE_T offset, SIZE_T size, const void* src, LONG flags)
+void ProtDomainMemory::Block::copy (SIZE_T offset, SIZE_T size, const void* src, LONG flags)
 {
 	if (PageState::MASK_RO & commit (offset, size))
 		change_protection (offset, size, Memory::READ_WRITE);
@@ -264,7 +264,7 @@ void MemoryWindows::Block::copy (SIZE_T offset, SIZE_T size, const void* src, LO
 		change_protection (offset, size, Memory::READ_ONLY);
 }
 
-bool MemoryWindows::Block::copy_page_part (const void* src, SIZE_T size, LONG flags)
+bool ProtDomainMemory::Block::copy_page_part (const void* src, SIZE_T size, LONG flags)
 {
 	SIZE_T offset = (SIZE_T)src % ALLOCATION_GRANULARITY;
 	DWORD s = state ().mapped.page_state [offset / PAGE_SIZE];
@@ -280,7 +280,7 @@ bool MemoryWindows::Block::copy_page_part (const void* src, SIZE_T size, LONG fl
 	return false;
 }
 
-DWORD MemoryWindows::commit_no_check (void* ptr, SIZE_T size)
+DWORD ProtDomainMemory::commit_no_check (void* ptr, SIZE_T size)
 {
 	DWORD mask = 0;
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
@@ -294,7 +294,7 @@ DWORD MemoryWindows::commit_no_check (void* ptr, SIZE_T size)
 	return mask;
 }
 
-void MemoryWindows::prepare_to_share (void* src, SIZE_T size, LONG flags)
+void ProtDomainMemory::prepare_to_share (void* src, SIZE_T size, LONG flags)
 {
 	if (!size)
 		return;
@@ -311,7 +311,7 @@ void MemoryWindows::prepare_to_share (void* src, SIZE_T size, LONG flags)
 	}
 }
 
-inline MemoryWindows::StackInfo::StackInfo ()
+inline ProtDomainMemory::StackInfo::StackInfo ()
 {
 	// Obtain stack size.
 	const NT_TIB* ptib = current_TIB ();
@@ -342,7 +342,7 @@ inline MemoryWindows::StackInfo::StackInfo ()
 	allocation_base = (BYTE*)mbi.AllocationBase;
 }
 
-MemoryWindows::ThreadMemory::ThreadMemory () :
+ProtDomainMemory::ThreadMemory::ThreadMemory () :
 	StackInfo ()
 { // Prepare stack of current thread to share.
 	// Call stack_prepare in fiber
@@ -352,12 +352,12 @@ MemoryWindows::ThreadMemory::ThreadMemory () :
 	_set_se_translator (&se_translator);
 }
 
-MemoryWindows::ThreadMemory::~ThreadMemory ()
+ProtDomainMemory::ThreadMemory::~ThreadMemory ()
 {
 	call_in_fiber ((FiberMethod)&stack_unprepare, this);
 }
 
-class MemoryWindows::ThreadMemory::StackMemory :
+class ProtDomainMemory::ThreadMemory::StackMemory :
 	protected StackInfo
 {
 public:
@@ -393,7 +393,7 @@ public:
 		}
 
 		// Reserve all stack.
-		for (BackOff bo;
+		for (Core::BackOff bo;
 				 !VirtualAlloc (allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE);
 				 bo.sleep ()) {
 			assert (ERROR_INVALID_ADDRESS == GetLastError ());
@@ -423,7 +423,7 @@ private:
 	BYTE * m_tmpbuf;
 };
 
-void MemoryWindows::ThreadMemory::StackMemory::finalize ()
+void ProtDomainMemory::ThreadMemory::StackMemory::finalize ()
 {
 	SIZE_T cur_stack_size = stack_base - stack_limit;
 
@@ -439,7 +439,7 @@ void MemoryWindows::ThreadMemory::StackMemory::finalize ()
 	real_copy ((SIZE_T*)m_tmpbuf, (SIZE_T*)m_tmpbuf + cur_stack_size / sizeof (SIZE_T), (SIZE_T*)stack_limit);
 }
 
-class MemoryWindows::ThreadMemory::StackPrepare :
+class ProtDomainMemory::ThreadMemory::StackPrepare :
 	private StackMemory
 {
 public:
@@ -509,17 +509,17 @@ private:
 	bool m_finalized;
 };
 
-void MemoryWindows::ThreadMemory::stack_prepare (const ThreadMemory* param_ptr)
+void ProtDomainMemory::ThreadMemory::stack_prepare (const ThreadMemory* param_ptr)
 {
 	StackPrepare (*param_ptr).prepare ();
 }
 
-void MemoryWindows::ThreadMemory::stack_unprepare (const ThreadMemory* param_ptr)
+void ProtDomainMemory::ThreadMemory::stack_unprepare (const ThreadMemory* param_ptr)
 {
 	StackMemory (*param_ptr).unprepare ();
 }
 
-void MemoryWindows::call_in_fiber (FiberMethod method, void* param)
+void ProtDomainMemory::call_in_fiber (FiberMethod method, void* param)
 {
 	FiberParam fp;
 	fp.source_fiber = GetCurrentFiber ();
@@ -533,7 +533,7 @@ void MemoryWindows::call_in_fiber (FiberMethod method, void* param)
 	fp.environment.check ();
 }
 
-void CALLBACK MemoryWindows::fiber_proc (FiberParam* param)
+void CALLBACK ProtDomainMemory::fiber_proc (FiberParam* param)
 {
 	try {
 		(*param->method) (param->param);
@@ -545,7 +545,7 @@ void CALLBACK MemoryWindows::fiber_proc (FiberParam* param)
 	SwitchToFiber (param->source_fiber);
 }
 
-LONG CALLBACK MemoryWindows::exception_filter (struct _EXCEPTION_POINTERS* pex)
+LONG CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pex)
 {
 	if (
 		pex->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION
@@ -562,7 +562,7 @@ LONG CALLBACK MemoryWindows::exception_filter (struct _EXCEPTION_POINTERS* pex)
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 			if (MEM_MAPPED != mbi.Type) {
-				BackOff ().sleep ();
+				Sleep (0);
 				return EXCEPTION_CONTINUE_EXECUTION;
 			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
 				throw MEM_NOT_COMMITTED ();
@@ -577,7 +577,7 @@ LONG CALLBACK MemoryWindows::exception_filter (struct _EXCEPTION_POINTERS* pex)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-void MemoryWindows::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex)
+void ProtDomainMemory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex)
 {
 	if (
 		pex->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION
@@ -594,7 +594,7 @@ void MemoryWindows::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 			if (MEM_MAPPED != mbi.Type) {
-				BackOff ().sleep ();
+				Sleep (0);
 				return;
 			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
 				throw MEM_NOT_COMMITTED ();

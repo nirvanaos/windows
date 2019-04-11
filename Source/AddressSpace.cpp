@@ -1,4 +1,4 @@
-#include "MemoryWindows.h"
+#include "../Port/ProtDomainMemory.h"
 #include <BackOff.h>
 #include <algorithm>
 
@@ -840,7 +840,7 @@ bool AddressSpace::is_copy (const void* p, const void* plocal, SIZE_T size)
 		try {
 			for (BYTE* begin1 = (BYTE*)p, *end1 = begin1 + size, *begin2 = (BYTE*)plocal; begin1 < end1;) {
 				Block block1 (*this, begin1);
-				MemoryWindows::Block block2 (begin2);
+				Port::ProtDomainMemory::Block block2 (begin2);
 				BYTE* block_end1 = block1.address () + ALLOCATION_GRANULARITY;
 				if (block_end1 > end1)
 					block_end1 = end1;

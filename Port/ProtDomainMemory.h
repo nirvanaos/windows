@@ -5,19 +5,20 @@
 #ifndef NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
 #define NIRVANA_CORE_WINDOWS_MEMORYWINDOWS_H_
 
-#include "AddressSpace.h"
+#include "../Source/AddressSpace.h"
 #include <Nirvana/real_copy.h>
 #include <Nirvana/Memory_s.h>
 #include <eh.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
 using namespace ::CORBA;
+using namespace ::Nirvana::Core::Windows;
 
-class MemoryWindows :
-	public ::CORBA::Nirvana::ServantStatic <MemoryWindows, ::Nirvana::Memory>
+class ProtDomainMemory :
+	public ::CORBA::Nirvana::ServantStatic <ProtDomainMemory, ::Nirvana::Memory>
 {
 public:
 	static void initialize ()
@@ -198,7 +199,7 @@ private:
 	{
 	public:
 		Block (void* addr) :
-			AddressSpace::Block (MemoryWindows::space_, addr)
+			AddressSpace::Block (ProtDomainMemory::space_, addr)
 		{}
 
 		DWORD commit (SIZE_T offset, SIZE_T size);
@@ -282,7 +283,7 @@ private:
 	static AddressSpace space_;
 };
 
-inline void* MemoryWindows::copy (void* dst, void* src, SIZE_T size, LONG flags)
+inline void* ProtDomainMemory::copy (void* dst, void* src, SIZE_T size, LONG flags)
 {
 	if (!size)
 		return dst;
@@ -456,7 +457,7 @@ inline void* MemoryWindows::copy (void* dst, void* src, SIZE_T size, LONG flags)
 	return ret;
 }
 
-inline SIZE_T MemoryWindows::query (const void* p, Memory::QueryParam q)
+inline SIZE_T ProtDomainMemory::query (const void* p, Memory::QueryParam q)
 {
 	{
 		switch (q) {
