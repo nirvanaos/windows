@@ -6,7 +6,7 @@ namespace Core {
 namespace Windows {
 
 void SchedulerClient::_schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
-																 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Executor>* executor,
+																 DeadlineTime deadline, ::CORBA::Nirvana::BridgeMarshal <Executor>* executor,
 																 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*)
 {
 	SchedulerClient* _this = static_cast <SchedulerClient*> (bridge);

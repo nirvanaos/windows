@@ -77,10 +77,12 @@ private:
 	const unsigned thread_count_;
 };
 
-/// Template class for thread pool controlled by a completion port.
-/// \tparam Thread Thread class. Thread must start in the constructor and join in the destructor.
-/// Thread constructor gets reference to CompletionPort as first parameter and priority as second.
-/// Thread procedure must call CompletionPort::thread_proc() method.
+//! Template class for thread pool controlled by a completion port.
+//! \tparam Thread Thread class.
+//! Thread constructor gets reference to CompletionPort as parameter.
+//! Thread class must have method Thread::create(int priority);
+//! Thread procedure must call CompletionPort::thread_proc() method.
+
 template <class Thread>
 class ThreadPool :
 	public CompletionPort
@@ -90,54 +92,64 @@ class ThreadPool :
 public:
 	ThreadPool () :
 		CompletionPort (),
-		threads_ (nullptr),
-		thread_count_ (0)
-	{}
-
-	/// Create and start threads.
-	void start (int priority);
-
-	/// Terminate threads.
-	virtual void terminate ();
-
-private:
-	Thread* threads_;
-	unsigned thread_count_;
-};
-
-template <class Thread>
-void ThreadPool <Thread>::start (int priority)
-{
-	if (!threads_) {
+		threads_ (nullptr)
+	{
+		Allocator allocator;
+		threads_ = allocator.allocate (CompletionPort::thread_count ());
+		Thread* p = threads_;
 		try {
-			CompletionPort::start ();
-			Allocator allocator;
-			threads_ = allocator.allocate (CompletionPort::thread_count ());
-			for (Thread* p = threads_, *end = p + CompletionPort::thread_count (); p != end; ++p) {
-				allocator.construct (p, *static_cast <CompletionPort*> (this), priority);
-				++thread_count_;
+			for (Thread* end = p + CompletionPort::thread_count (); p != end; ++p) {
+				allocator.construct (p, *static_cast <CompletionPort*> (this));
 			}
 		} catch (...) {
-			terminate ();
+			while (p != threads_) {
+				allocator.destroy (--p);
+			}
+			allocator.deallocate (threads_, CompletionPort::thread_count ());
 			throw;
 		}
 	}
-}
 
-template <class Thread>
-void ThreadPool <Thread>::terminate ()
-{
-	CompletionPort::terminate ();
-	// On close completion port all threads will return with ERROR_ABANDONED_WAIT_0 error code.
-	if (threads_) {
+	~ThreadPool ()
+	{
 		Allocator allocator;
-		for (Thread* p = threads_, *end = p + thread_count_; p != end; ++p) {
-			allocator.destroy (p); // Thread joins in destructor.
+		for (Thread* p = threads_, *end = p + CompletionPort::thread_count (); p != end; ++p) {
+			allocator.destroy (p);
 		}
 		allocator.deallocate (threads_, CompletionPort::thread_count ());
-		threads_ = nullptr;
 	}
-}
+
+	Thread* threads ()
+	{
+		return threads_;
+	}
+
+	unsigned thread_count () const
+	{
+		return CompletionPort::thread_count ();
+	}
+
+	//! Create and start threads.
+	void start (int priority)
+	{
+		CompletionPort::start ();
+		for (Thread* p = threads_, *end = p + thread_count (); p != end; ++p) {
+			p->create (priority);
+		}
+	}
+
+	//! Terminate threads.
+	virtual void terminate ()
+	{
+		for (Thread* p = threads_, *end = p + thread_count (); p != end; ++p) {
+			p->join ();
+		}
+		CompletionPort::terminate ();
+	}
+
+private:
+	Thread* threads_;
+};
 
 }
 }

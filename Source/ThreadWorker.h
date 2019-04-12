@@ -18,8 +18,8 @@ class ThreadWorker :
 	public ExecContext
 {
 public:
-	ThreadWorker (CompletionPort& completion_port, int priority) :
-		ThreadPoolable (completion_port, priority),
+	ThreadWorker (CompletionPort& completion_port) :
+		ThreadPoolable (completion_port),
 		ExecContext (Port::ExecContext::CREATE_NONE)
 	{}
 

@@ -60,7 +60,7 @@ public:
 	template <size_t PREFIX_SIZE>
 	void initialize (const WCHAR (&prefix) [PREFIX_SIZE], DWORD id)
 	{
-		// Start reading.
+		/// Start reading.
 		MailslotReader::initialize (prefix, id, MAX_WORDS * sizeof (LONG_PTR), *static_cast <CompletionPort*> (this));
 		Pool::start (PRIORITY);
 	}

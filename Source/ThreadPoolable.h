@@ -15,15 +15,19 @@ class ThreadPoolable :
 	public Core::Thread
 {
 public:
-	ThreadPoolable (CompletionPort& completion_port, int priority) :
+	ThreadPoolable (CompletionPort& completion_port) :
 		completion_port_ (completion_port)
+	{
+	}
+
+	void create (int priority)
 	{
 		Port::Thread::create (this, NEUTRAL_FIBER_STACK_SIZE, priority);
 	}
 
-	~ThreadPoolable ()
+	void join ()
 	{
-		join ();
+		Thread::join ();
 	}
 
 	static DWORD WINAPI thread_proc (ThreadPoolable* _this);
