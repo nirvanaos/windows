@@ -34,7 +34,7 @@ struct SchedulerItem
 		this->executor = executor;
 	}
 
-	SchedulerItem (::CORBA::Nirvana::Bridge <Executor>* executor) :
+	SchedulerItem (::CORBA::Nirvana::BridgeMarshal <Executor>* executor) :
 		protection_domain (nullptr)
 	{
 		this->executor = (uint64_t)executor;
@@ -80,7 +80,7 @@ public:
 	// Implementation of Scheduler interface.
 
 	static void _schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge, 
-												 DeadlineTime deadline, ::CORBA::Nirvana::Bridge <Executor>* executor,
+												 DeadlineTime deadline, ::CORBA::Nirvana::BridgeMarshal <Executor>* executor,
 												 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*);
 
 	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
