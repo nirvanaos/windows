@@ -21,8 +21,8 @@ public:
 	enum CreationType
 	{
 		CREATE_DEFAULT,
-		CREATE_NEUTRAL,
-		CREATE_NONE
+		CREATE_NONE,
+		CREATE_CONVERT
 	};
 
 	ExecContext (CreationType type = CREATE_DEFAULT);
@@ -54,6 +54,12 @@ public:
 	void switch_to ()
 	{
 		SwitchToFiber (fiber_);
+	}
+
+	void attach (void* fiber)
+	{
+		assert (!fiber_);
+		fiber_ = fiber;
 	}
 
 private:

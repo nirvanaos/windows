@@ -22,19 +22,6 @@ class Thread
 	/// Deprecated
 	Thread& operator = (const Thread&);
 
-public:
-	//! \fn	void Thread::attach ()
-	//!
-	//! \brief	Attaches current thread to the Thread object.
-
-	void attach ()
-	{
-		assert (!handle_);
-		BOOL ok = DuplicateHandle (GetCurrentProcess (), GetCurrentThread (), GetCurrentProcess (), &handle_, 0, FALSE, DUPLICATE_SAME_ACCESS);
-		assert (ok);
-		TlsSetValue (tls_current_, this);
-	}
-
 protected:
 	static void initialize ()
 	{
@@ -60,6 +47,28 @@ protected:
 	{
 		if (handle_)
 			CloseHandle (handle_);
+	}
+
+	//! \fn	void Thread::attach ()
+	//!
+	//! \brief	Attaches current thread to the Thread object.
+
+	void attach ()
+	{
+		assert (!handle_);
+		BOOL ok = DuplicateHandle (GetCurrentProcess (), GetCurrentThread (), GetCurrentProcess (), &handle_, 0, FALSE, DUPLICATE_SAME_ACCESS);
+		assert (ok);
+		TlsSetValue (tls_current_, this);
+	}
+
+	void detach ()
+	{
+		if (handle_) {
+			assert (GetThreadId (handle_) == GetCurrentThreadId ());
+			TlsSetValue (tls_current_, nullptr);
+			CloseHandle (handle_);
+			handle_ = nullptr;
+		}
 	}
 
 	static void thread_proc (Thread* _this)

@@ -59,11 +59,24 @@ class SchedulerWindows :
 {
 public:
 	typedef SchedulerImpl <SchedulerWindows, SchedulerItem> Base;
+	typedef PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, THREAD_PRIORITY_TIME_CRITICAL> Office;
 
 	SchedulerWindows () :
 		Base (thread_count ()),
 		in_proc_execute_ (thread_count ())
 	{}
+
+	void run (Runnable_ptr startup, DeadlineTime deadline)
+	{
+		Office::initialize (SCHEDULER_MAILSLOT_NAME);
+		in_proc_execute_.run (startup, deadline);
+	}
+
+	void shutdown ()
+	{
+		Office::terminate ();
+		in_proc_execute_.shutdown ();
+	}
 
 	/// Called by SchedulerImpl.
 	void execute (const SchedulerItem& item, DeadlineTime deadline)
@@ -111,7 +124,17 @@ private:
 		{
 			Execute* buffer = buffer_ + (buffer_idx_.increment () & mask_);
 			*buffer = msg;
-			WorkerThreads::singleton ().post (*this, reinterpret_cast <OVERLAPPED*> (buffer), 0);
+			worker_threads_.post (*this, reinterpret_cast <OVERLAPPED*> (buffer), 0);
+		}
+
+		void run (Runnable_ptr startup, DeadlineTime deadline)
+		{
+			worker_threads_.run (startup, deadline);
+		}
+
+		void shutdown ()
+		{
+			worker_threads_.shutdown ();
 		}
 
 	private:
@@ -120,7 +143,8 @@ private:
 		Execute* buffer_;
 		AtomicCounter buffer_idx_;
 		AtomicCounter::UIntType mask_;
-	} 
+		WorkerThreads worker_threads_;
+	}
 	in_proc_execute_;
 };
 

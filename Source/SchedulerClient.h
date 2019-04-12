@@ -26,6 +26,17 @@ public:
 
 	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
 
+	void run (Runnable_ptr startup, DeadlineTime deadline)
+	{
+		worker_threads_.run (startup, deadline);
+		MailslotReader::terminate ();
+	}
+
+	void shutdown ()
+	{
+		worker_threads_.shutdown ();
+	}
+
 private:
 	virtual void received (OVERLAPPED* ovl, DWORD size);
 	void send (const SchedulerMessage& msg);
@@ -33,6 +44,7 @@ private:
 private:
 	uint64_t protection_domain_;
 	Mailslot scheduler_mailslot_;
+	WorkerThreads worker_threads_;
 };
 
 inline
@@ -41,7 +53,7 @@ SchedulerClient::SchedulerClient (uint64_t protection_domain) :
 {
 	DWORD id = GetCurrentProcessId ();
 	static const WCHAR prefix [] = EXECUTE_MAILSLOT_PREFIX;
-	initialize (prefix, id, sizeof (Execute), WorkerThreads::singleton ());
+	initialize (prefix, id, sizeof (Execute), worker_threads_);
 
 	try {
 		if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))

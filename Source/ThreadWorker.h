@@ -20,11 +20,22 @@ class ThreadWorker :
 public:
 	ThreadWorker (CompletionPort& completion_port) :
 		ThreadPoolable (completion_port),
-		ExecContext (Port::ExecContext::CREATE_NONE)
+		ExecContext (CREATE_NONE)
 	{}
 
 	~ThreadWorker ()
 	{}
+
+	void attach (void* fiber)
+	{
+		ExecContext::attach (fiber);
+		Thread::attach ();
+	}
+
+	void detach ()
+	{
+		Thread::detach ();
+	}
 
 	virtual ExecContext* neutral_context ();
 

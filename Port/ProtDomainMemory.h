@@ -174,7 +174,7 @@ public:
 	};
 
 private:
-	friend class AddressSpace;
+	friend class Windows::AddressSpace;
 
 	struct Region
 	{

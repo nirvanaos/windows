@@ -141,10 +141,10 @@ public:
 	//! Terminate threads.
 	virtual void terminate ()
 	{
+		CompletionPort::terminate ();
 		for (Thread* p = threads_, *end = p + thread_count (); p != end; ++p) {
 			p->join ();
 		}
-		CompletionPort::terminate ();
 	}
 
 private:

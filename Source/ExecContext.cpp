@@ -1,4 +1,5 @@
-#include "../Port/ExecContext.h"
+#include <ExecDomain.h>
+#include <CORBA/Exception.h>
 
 namespace Nirvana {
 namespace Core {
@@ -7,13 +8,29 @@ namespace Port {
 ExecContext::ExecContext (CreationType type) :
 	fiber_ (nullptr)
 {
-	if (CREATE_NONE != type)
-		fiber_ = CreateFiber (CREATE_NEUTRAL == type ? Windows::NEUTRAL_FIBER_STACK_SIZE : 0, fiber_proc, this);
+	switch (type) {
+	case CREATE_NONE:
+		return;
+
+	case CREATE_CONVERT:
+		fiber_ = ConvertThreadToFiber (this);
+		break;
+
+	case CREATE_DEFAULT:
+		fiber_ = CreateFiber (0, fiber_proc, this);
+		break;
+
+	default:
+		assert (false);
+	}
+
+	if (!fiber_)
+		throw CORBA::NO_MEMORY ();
 }
 
 void CALLBACK ExecContext::fiber_proc (void* param)
 {
-	// TODO: Implement
+	static_cast <ExecDomain&> (*(ExecContext*)param).execute_loop ();
 }
 
 }

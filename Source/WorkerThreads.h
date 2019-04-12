@@ -7,6 +7,7 @@
 
 #include "ThreadWorker.h"
 #include "ThreadPool.h"
+#include <ExecDomain.h>
 
 namespace Nirvana {
 namespace Core {
@@ -16,34 +17,24 @@ class WorkerThreads :
 	public ThreadPool <ThreadWorker>
 {
 public:
-	static void initialize ()
-	{
-		assert (!singleton_);
-		singleton_ = new WorkerThreads ();
-	}
-
-	static void terminate ()
-	{
-		delete singleton_;
-		singleton_ = nullptr;
-	}
-
-	static WorkerThreads& singleton ()
-	{
-		return *singleton_;
-	}
-
-private:
 	WorkerThreads ()
 	{
-		start (WORKER_THREAD_PRIORITY);
+		CompletionPort::start ();
 	}
 
-	~WorkerThreads ()
-	{}
+	void run (Runnable_ptr startup, DeadlineTime deadline);
+	void shutdown ();
 
 private:
-	static WorkerThreads* singleton_;
+	struct MainFiberParam
+	{
+		ExecDomain* main_context;
+		ThreadPoolable* worker_thread;
+		Runnable_ptr startup;
+		DeadlineTime deadline;
+	};
+
+	static void CALLBACK main_fiber_proc (void* param);
 };
 
 }
