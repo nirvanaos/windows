@@ -17,12 +17,12 @@ class ThreadPoolable :
 public:
 	ThreadPoolable (CompletionPort& completion_port) :
 		completion_port_ (completion_port)
-	{
-	}
+	{}
 
-	void create (int priority)
+	template <class T>
+	static void create (T* p, int priority)
 	{
-		Port::Thread::create (this, NEUTRAL_FIBER_STACK_SIZE, priority);
+		Port::Thread::create (p, NEUTRAL_FIBER_STACK_SIZE, priority);
 	}
 
 	void join ()

@@ -134,7 +134,7 @@ public:
 	{
 		CompletionPort::start ();
 		for (Thread* p = threads_, *end = p + thread_count (); p != end; ++p) {
-			p->create (priority);
+			Thread::create (p, priority);
 		}
 	}
 

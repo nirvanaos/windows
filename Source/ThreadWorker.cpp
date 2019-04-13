@@ -11,6 +11,7 @@ namespace Windows {
 DWORD WINAPI ThreadWorker::thread_proc (ThreadWorker* _this)
 {
 	_this->convert_to_fiber ();
+	_this->context (_this);
 	ThreadPoolable::thread_proc (_this);
 	_this->convert_to_thread ();
 	return 0;

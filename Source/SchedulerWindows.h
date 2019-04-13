@@ -70,11 +70,11 @@ public:
 	{
 		Office::initialize (SCHEDULER_MAILSLOT_NAME);
 		in_proc_execute_.run (startup, deadline);
+		Office::terminate ();
 	}
 
 	void shutdown ()
 	{
-		Office::terminate ();
 		in_proc_execute_.shutdown ();
 	}
 

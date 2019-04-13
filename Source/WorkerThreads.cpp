@@ -13,7 +13,11 @@ void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)
 {
 	MainFiberParam param;
 	
-	param.main_context = new ExecDomain (Port::ExecContext::CREATE_CONVERT);
+	void* my_fiber = ConvertThreadToFiber (nullptr);
+	if (!my_fiber)
+		throw CORBA::NO_MEMORY ();
+
+	param.main_context = new ExecDomain (my_fiber);
 	param.worker_thread = threads ();
 	param.startup = startup;
 	param.deadline = deadline;
@@ -24,20 +28,21 @@ void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)
 
 	threads ()->attach (worker_fiber);
 	for (ThreadWorker* p = threads () + 1, *end = threads () + thread_count (); p != end; ++p) {
-		p->create (WORKER_THREAD_PRIORITY);
+		ThreadWorker::create (p, WORKER_THREAD_PRIORITY);
 	}
 
 	int prio = GetThreadPriority (GetCurrentThread ());
 	SetThreadPriority (GetCurrentThread (), WORKER_THREAD_PRIORITY);
 	threads ()->switch_to ();
 
-	param.main_context->execute_loop ();
+	ExecContext::fiber_proc (nullptr);
 
 	threads ()->detach ();
 
 	SetThreadPriority (GetCurrentThread (), prio);
 
-	param.main_context->convert_to_thread ();
+	ConvertFiberToThread ();
+	param.main_context->detach ();	// Prevent DeleteFiber()
 
 	ThreadPool <ThreadWorker>::terminate ();
 }
@@ -48,7 +53,7 @@ void CALLBACK WorkerThreads::main_fiber_proc (void* p)
 	param->main_context->_remove_ref (); // Place my fiber to pool for reuse
 	ExecDomain::async_call (param->startup, param->deadline, nullptr);
 	ThreadPoolable::thread_proc (((MainFiberParam*)param)->worker_thread);
-	((MainFiberParam*)param)->main_context->switch_to ();
+	param->main_context->switch_to ();
 }
 
 void WorkerThreads::shutdown ()

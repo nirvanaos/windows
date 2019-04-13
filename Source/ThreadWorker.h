@@ -20,7 +20,7 @@ class ThreadWorker :
 public:
 	ThreadWorker (CompletionPort& completion_port) :
 		ThreadPoolable (completion_port),
-		ExecContext (CREATE_NONE)
+		ExecContext (nullptr)
 	{}
 
 	~ThreadWorker ()
@@ -39,7 +39,6 @@ public:
 
 	virtual ExecContext* neutral_context ();
 
-private:
 	static DWORD WINAPI thread_proc (ThreadWorker* _this);
 };
 

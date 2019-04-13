@@ -18,14 +18,16 @@ namespace Port {
 class ExecContext
 {
 public:
-	enum CreationType
+	ExecContext () :
+		fiber_ (CreateFiber (0, fiber_proc, nullptr))
 	{
-		CREATE_DEFAULT,
-		CREATE_NONE,
-		CREATE_CONVERT
-	};
+		if (!fiber_)
+			throw CORBA::NO_MEMORY ();
+	}
 
-	ExecContext (CreationType type = CREATE_DEFAULT);
+	ExecContext (void* fiber) :
+		fiber_ (fiber)
+	{}
 
 	~ExecContext()
 	{
@@ -36,7 +38,7 @@ public:
 	void convert_to_fiber ()
 	{
 		assert (!fiber_);
-		fiber_ = ConvertThreadToFiber (this);
+		fiber_ = ConvertThreadToFiber (nullptr);
 	}
 
 	void convert_to_thread ()
@@ -44,11 +46,6 @@ public:
 		assert (fiber_);
 		fiber_ = nullptr;
 		verify (ConvertFiberToThread ());
-	}
-
-	static ExecContext* current ()
-	{
-		return (ExecContext*)GetFiberData ();
 	}
 
 	void switch_to ()
@@ -62,8 +59,14 @@ public:
 		fiber_ = fiber;
 	}
 
-private:
-	static void CALLBACK fiber_proc (void* param);
+	void* detach ()
+	{
+		void* f = fiber_;
+		fiber_ = nullptr;
+		return f;
+	}
+
+	static void CALLBACK fiber_proc (void*);
 
 private:
 	void* fiber_;

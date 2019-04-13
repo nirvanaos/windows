@@ -19,7 +19,13 @@ class WorkerThreads :
 public:
 	WorkerThreads ()
 	{
+		Port::Thread::initialize ();
 		CompletionPort::start ();
+	}
+
+	~WorkerThreads ()
+	{
+		Port::Thread::terminate ();
 	}
 
 	void run (Runnable_ptr startup, DeadlineTime deadline);

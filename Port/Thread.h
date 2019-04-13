@@ -22,7 +22,14 @@ class Thread
 	/// Deprecated
 	Thread& operator = (const Thread&);
 
-protected:
+public:
+	/// Returns special "neutral" execution context with own stack and CPU state.
+	virtual Core::ExecContext* neutral_context ()
+	{
+		assert (false);
+		return nullptr;
+	}
+
 	static void initialize ()
 	{
 		tls_current_ = TlsAlloc ();
@@ -33,6 +40,7 @@ protected:
 		TlsFree (tls_current_);
 	}
 
+protected:
 	static Thread* current ()
 	{
 		assert (tls_current_);
@@ -77,9 +85,9 @@ protected:
 	}
 
 	template <class T>
-	void create (T* p, SIZE_T stack_size = 0, int priority = THREAD_PRIORITY_NORMAL)
+	static void create (T* p, SIZE_T stack_size = 0, int priority = THREAD_PRIORITY_NORMAL)
 	{
-		create (stack_size, (LPTHREAD_START_ROUTINE)T::thread_proc, p, priority);
+		static_cast <Thread*> (p)->create (stack_size, (LPTHREAD_START_ROUTINE)T::thread_proc, p, priority);
 	}
 
 	HANDLE handle () const
@@ -101,13 +109,6 @@ protected:
 	void boost_priority (bool boost)
 	{
 		SetThreadPriority (handle_, boost ? Windows::BOOSTED_THREAD_PRIORITY : THREAD_PRIORITY_NORMAL);
-	}
-
-	/// Returns special "neutral" execution context with own stack and CPU state.
-	virtual Core::ExecContext* neutral_context ()
-	{
-		assert (false);
-		return nullptr;
 	}
 
 private:
