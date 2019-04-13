@@ -4,6 +4,7 @@
 
 #include "WorkerThreads.h"
 #include <CORBA/Exception.h>
+#include <SysScheduler.h>
 
 namespace Nirvana {
 namespace Core {
@@ -17,7 +18,10 @@ void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)
 	if (!my_fiber)
 		throw CORBA::NO_MEMORY ();
 
+	// Convert main thread context into execution domain
+	SysScheduler::activity_begin ();
 	param.main_context = new ExecDomain (my_fiber);
+
 	param.worker_thread = threads ();
 	param.startup = startup;
 	param.deadline = deadline;
