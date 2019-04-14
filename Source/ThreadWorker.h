@@ -28,7 +28,7 @@ public:
 
 	void attach (void* fiber)
 	{
-		ExecContext::attach (fiber);
+		ExecContext::port ().attach (fiber);
 		Thread::attach ();
 	}
 

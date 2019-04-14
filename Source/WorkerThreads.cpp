@@ -19,7 +19,6 @@ void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)
 		throw CORBA::NO_MEMORY ();
 
 	// Convert main thread context into execution domain
-	SysScheduler::activity_begin ();
 	param.main_context = new ExecDomain (my_fiber);
 
 	param.worker_thread = threads ();
@@ -39,14 +38,15 @@ void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)
 	SetThreadPriority (GetCurrentThread (), WORKER_THREAD_PRIORITY);
 	threads ()->switch_to ();
 
-	ExecContext::fiber_proc (nullptr);
+	Port::ExecContext::fiber_proc (nullptr);
 
 	threads ()->detach ();
 
 	SetThreadPriority (GetCurrentThread (), prio);
 
 	ConvertFiberToThread ();
-	param.main_context->detach ();	// Prevent DeleteFiber()
+
+	param.main_context->port ().detach ();	// Prevent DeleteFiber()
 
 	ThreadPool <ThreadWorker>::terminate ();
 }
