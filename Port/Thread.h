@@ -40,21 +40,10 @@ public:
 		TlsFree (tls_current_);
 	}
 
-protected:
 	static Thread* current ()
 	{
 		assert (tls_current_);
 		return (Thread*)TlsGetValue (tls_current_);
-	}
-
-	Thread () :
-		handle_ (nullptr)
-	{}
-
-	~Thread ()
-	{
-		if (handle_)
-			CloseHandle (handle_);
 	}
 
 	//! \fn	void Thread::attach ()
@@ -79,11 +68,6 @@ protected:
 		}
 	}
 
-	static void thread_proc (Thread* _this)
-	{
-		TlsSetValue (tls_current_, _this);
-	}
-
 	template <class T>
 	static void create (T* p, SIZE_T stack_size = 0, int priority = THREAD_PRIORITY_NORMAL)
 	{
@@ -95,11 +79,6 @@ protected:
 		return handle_;
 	}
 
-	void close ()
-	{
-		CloseHandle (handle_);
-	}
-
 	void join () const
 	{
 		if (handle_)
@@ -109,6 +88,22 @@ protected:
 	void boost_priority (bool boost)
 	{
 		SetThreadPriority (handle_, boost ? Windows::BOOSTED_THREAD_PRIORITY : THREAD_PRIORITY_NORMAL);
+	}
+
+protected:
+	Thread () :
+		handle_ (nullptr)
+	{}
+
+	~Thread ()
+	{
+		if (handle_)
+			CloseHandle (handle_);
+	}
+
+	static void thread_proc (Thread* _this)
+	{
+		TlsSetValue (tls_current_, _this);
 	}
 
 private:

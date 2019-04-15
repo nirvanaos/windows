@@ -22,9 +22,7 @@ public:
 	}
 
 	~ThreadBackground ()
-	{
-		close ();
-	}
+	{}
 
 private:
 	static DWORD WINAPI thread_proc (void* _this);
