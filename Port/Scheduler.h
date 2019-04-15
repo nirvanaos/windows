@@ -8,8 +8,7 @@ namespace Nirvana {
 namespace Core {
 
 namespace Windows {
-class SchedulerWindows;
-class SchedulerClient;
+class SchedulerAbstract;
 }
 
 namespace Port {
@@ -17,7 +16,6 @@ namespace Port {
 class Scheduler
 {
 public:
-	
 	static void run (Runnable_ptr startup, DeadlineTime deadline);
 	
 	static Scheduler_ptr singleton ()
@@ -25,18 +23,10 @@ public:
 		return scheduler_;
 	}
 
-	static void shutdown ();
+	static void run_client (uint64_t protection_domain, Runnable_ptr startup, DeadlineTime deadline);
 
 private:
-	static Scheduler_ptr scheduler_;
-
-	static union Implementation
-	{
-		Windows::SchedulerWindows* sys_domain;
-		Windows::SchedulerClient* prot_domain;
-	} implementation_;
-	
-	static bool sys_domain_;
+	static Core::Scheduler_ptr scheduler_;
 };
 
 }

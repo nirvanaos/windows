@@ -6,24 +6,22 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-Scheduler_ptr Scheduler::scheduler_;
-Scheduler::Implementation Scheduler::implementation_;
-bool Scheduler::sys_domain_ = false;
+Core::Scheduler_ptr Scheduler::scheduler_;
 
 void Scheduler::run (Runnable_ptr startup, DeadlineTime deadline)
 {
-	sys_domain_ = true;
-	scheduler_ = implementation_.sys_domain = new Windows::SchedulerWindows ();
-	implementation_.sys_domain->run (startup, deadline);
-	CORBA::release (scheduler_);
+	Windows::SchedulerWindows impl;
+	scheduler_ = &impl;
+	impl.run (startup, deadline);
+	scheduler_ = Core::Scheduler::_nil ();
 }
 
-void Scheduler::shutdown ()
+void Scheduler::run_client (uint64_t protection_domain, Runnable_ptr startup, DeadlineTime deadline)
 {
-	if (sys_domain_)
-		implementation_.sys_domain->shutdown ();
-	else
-		implementation_.prot_domain->shutdown ();
+	Windows::SchedulerClient impl (protection_domain);
+	scheduler_ = &impl;
+	impl.run (startup, deadline);
+	scheduler_ = Core::Scheduler::_nil ();
 }
 
 }
