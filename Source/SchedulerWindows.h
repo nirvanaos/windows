@@ -84,7 +84,7 @@ public:
 		msg.executor = item.executor;
 		msg.deadline = deadline;
 		if (item.protection_domain)
-			item.protection_domain->execute (msg);
+			item.protection_domain->port ().execute (msg);
 		else
 			in_proc_execute_.execute (msg);
 	}
@@ -166,7 +166,7 @@ void SchedulerWindows::received (void* data, DWORD size)
 		break;
 
 	case SchedulerMessage::PROCESS_START:
-		reinterpret_cast <SysDomain::ProtDomainInfo*> (msg->msg.process_start.protection_domain)->process_start (msg->msg.process_start.process_id);
+		reinterpret_cast <SysDomain::ProtDomainInfo*> (msg->msg.process_start.protection_domain)->port ().process_start (msg->msg.process_start.process_id);
 		break;
 
 		//case SchedulerMessage::PROCESS_STOP:

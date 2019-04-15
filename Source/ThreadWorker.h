@@ -14,13 +14,12 @@ namespace Core {
 namespace Windows {
 
 class ThreadWorker :
-	public ThreadPoolable,
-	public ExecContext
+	public ThreadPoolable
 {
 public:
 	ThreadWorker (CompletionPort& completion_port) :
 		ThreadPoolable (completion_port),
-		ExecContext (nullptr)
+		neutral_context_ (nullptr)
 	{}
 
 	~ThreadWorker ()
@@ -28,18 +27,21 @@ public:
 
 	void attach (void* fiber)
 	{
-		ExecContext::port ().attach (fiber);
-		Thread::attach ();
+		neutral_context_.port ().attach (fiber);
+		port ().attach ();
 	}
 
 	void detach ()
 	{
-		Thread::detach ();
+		port ().detach ();
 	}
 
 	virtual ExecContext* neutral_context ();
 
 	static DWORD WINAPI thread_proc (ThreadWorker* _this);
+
+private:
+	ExecContext neutral_context_;
 };
 
 }

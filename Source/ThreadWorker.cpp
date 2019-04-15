@@ -10,16 +10,16 @@ namespace Windows {
 
 DWORD WINAPI ThreadWorker::thread_proc (ThreadWorker* _this)
 {
-	_this->port ().convert_to_fiber ();
-	_this->context (_this);
+	_this->neutral_context_.port ().convert_to_fiber ();
+	_this->context (&_this->neutral_context_);
 	ThreadPoolable::thread_proc (_this);
-	_this->port ().convert_to_thread ();
+	_this->neutral_context_.port ().convert_to_thread ();
 	return 0;
 }
 
 ExecContext* ThreadWorker::neutral_context ()
 {
-	return this;
+	return &neutral_context_;
 }
 
 }

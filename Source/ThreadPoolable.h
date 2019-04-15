@@ -20,14 +20,14 @@ public:
 	{}
 
 	template <class T>
-	static void create (T* p, int priority)
+	void create (T* p, int priority)
 	{
-		Port::Thread::create (p, NEUTRAL_FIBER_STACK_SIZE, priority);
+		port ().create (p, NEUTRAL_FIBER_STACK_SIZE, priority);
 	}
 
 	void join ()
 	{
-		Thread::join ();
+		port ().join ();
 	}
 
 	static DWORD WINAPI thread_proc (ThreadPoolable* _this);

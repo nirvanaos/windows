@@ -31,12 +31,12 @@ void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)
 
 	threads ()->attach (worker_fiber);
 	for (ThreadWorker* p = threads () + 1, *end = threads () + thread_count (); p != end; ++p) {
-		ThreadWorker::create (p, WORKER_THREAD_PRIORITY);
+		p->port ().create (p, WORKER_THREAD_PRIORITY);
 	}
 
 	int prio = GetThreadPriority (GetCurrentThread ());
 	SetThreadPriority (GetCurrentThread (), WORKER_THREAD_PRIORITY);
-	threads ()->switch_to ();
+	threads ()->neutral_context ()->switch_to ();
 
 	Port::ExecContext::fiber_proc (nullptr);
 

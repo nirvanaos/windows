@@ -29,9 +29,6 @@ const SIZE_T NEUTRAL_FIBER_STACK_SIZE = 0;
 /// Worker thread priority should be greater than normal thread priority.
 const int WORKER_THREAD_PRIORITY = THREAD_PRIORITY_ABOVE_NORMAL;
 
-/// Boosted thread priority should be greater than worker thread priority.
-const int BOOSTED_THREAD_PRIORITY = THREAD_PRIORITY_HIGHEST;
-
 const DWORD SCHEDULER_ACK_TIMEOUT = 1000;
 
 const SIZE_T PAGE_SIZE = 4096;

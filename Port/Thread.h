@@ -18,18 +18,11 @@ namespace Port {
 class Thread
 {
 	/// Deprecated
-	Thread (const Thread&);
+	Thread (const Thread&) = delete;
 	/// Deprecated
-	Thread& operator = (const Thread&);
+	Thread& operator = (const Thread&) = delete;
 
 public:
-	/// Returns special "neutral" execution context with own stack and CPU state.
-	virtual Core::ExecContext* neutral_context ()
-	{
-		assert (false);
-		return nullptr;
-	}
-
 	static void initialize ()
 	{
 		tls_current_ = TlsAlloc ();
@@ -69,9 +62,9 @@ public:
 	}
 
 	template <class T>
-	static void create (T* p, SIZE_T stack_size = 0, int priority = THREAD_PRIORITY_NORMAL)
+	void create (T* p, SIZE_T stack_size = 0, int priority = THREAD_PRIORITY_NORMAL)
 	{
-		static_cast <Thread*> (p)->create (stack_size, (LPTHREAD_START_ROUTINE)T::thread_proc, p, priority);
+		create (stack_size, (LPTHREAD_START_ROUTINE)T::thread_proc, p, priority);
 	}
 
 	HANDLE handle () const
@@ -85,9 +78,9 @@ public:
 			WaitForSingleObject (handle_, INFINITE);
 	}
 
-	void boost_priority (bool boost)
+	void thread_proc ()
 	{
-		SetThreadPriority (handle_, boost ? Windows::BOOSTED_THREAD_PRIORITY : THREAD_PRIORITY_NORMAL);
+		TlsSetValue (tls_current_, this);
 	}
 
 protected:
@@ -99,11 +92,6 @@ protected:
 	{
 		if (handle_)
 			CloseHandle (handle_);
-	}
-
-	static void thread_proc (Thread* _this)
-	{
-		TlsSetValue (tls_current_, _this);
 	}
 
 private:

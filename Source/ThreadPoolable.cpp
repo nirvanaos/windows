@@ -8,9 +8,9 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-DWORD __stdcall Nirvana::Core::Windows::ThreadPoolable::thread_proc (ThreadPoolable* _this)
+DWORD __stdcall ThreadPoolable::thread_proc (ThreadPoolable* _this)
 {
-	Port::Thread::thread_proc (_this);
+	_this->port ().thread_proc ();
 	_this->completion_port_.thread_proc ();
 	return 0;
 }
