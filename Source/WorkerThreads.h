@@ -17,16 +17,8 @@ class WorkerThreads :
 	public ThreadPool <ThreadWorker>
 {
 public:
-	WorkerThreads ()
-	{
-		Port::Thread::initialize ();
-		CompletionPort::start ();
-	}
-
-	~WorkerThreads ()
-	{
-		Port::Thread::terminate ();
-	}
+	~WorkerThreads ();
+	WorkerThreads ();
 
 	void run (Runnable_ptr startup, DeadlineTime deadline);
 	void shutdown ();

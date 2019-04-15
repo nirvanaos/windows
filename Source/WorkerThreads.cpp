@@ -10,6 +10,19 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+WorkerThreads::WorkerThreads ()
+{
+	SysScheduler::initialize ();
+	Port::Thread::initialize ();
+	CompletionPort::start ();
+}
+
+WorkerThreads::~WorkerThreads ()
+{
+	Port::Thread::terminate ();
+	SysScheduler::terminate ();
+}
+
 void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)
 {
 	MainFiberParam param;
