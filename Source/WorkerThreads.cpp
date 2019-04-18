@@ -4,7 +4,7 @@
 
 #include "WorkerThreads.h"
 #include <CORBA/Exception.h>
-#include <SysScheduler.h>
+#include <Scheduler.h>
 
 namespace Nirvana {
 namespace Core {
@@ -12,7 +12,7 @@ namespace Windows {
 
 WorkerThreads::WorkerThreads ()
 {
-	SysScheduler::initialize ();
+	Scheduler::initialize ();
 	Port::Thread::initialize ();
 	CompletionPort::start ();
 }
@@ -20,7 +20,7 @@ WorkerThreads::WorkerThreads ()
 WorkerThreads::~WorkerThreads ()
 {
 	Port::Thread::terminate ();
-	SysScheduler::terminate ();
+	Scheduler::terminate ();
 }
 
 void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)

@@ -2,7 +2,7 @@
 #define NIRVANA_CORE_WINDOWS_SCHEDULERCLIENT_H_
 
 #include "SchedulerIPC.h"
-#include "SchedulerServant.h"
+#include "SchedulerAbstract.h"
 #include "Mailslot.h"
 #include "MailslotReader.h"
 #include "WorkerThreads.h"
@@ -13,18 +13,12 @@ namespace Core {
 namespace Windows {
 
 class SchedulerClient :
-	public SchedulerServant <SchedulerClient>,
+	public SchedulerAbstract,
 	private SchedulerIPC,
 	public MailslotReader
 {
 public:
 	SchedulerClient (uint64_t protection_domain);
-
-	static void _schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge,
-												 DeadlineTime deadline, ::CORBA::Nirvana::BridgeMarshal <Executor>* executor,
-												 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*);
-
-	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
 
 	void run (Runnable_ptr startup, DeadlineTime deadline)
 	{
@@ -32,8 +26,15 @@ public:
 		MailslotReader::terminate ();
 	}
 
-	void shutdown ()
+	// Implementation of SchedulerAbstract.
+
+	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev);
+
+	virtual void core_free ();
+
+	virtual void shutdown ()
 	{
+		// TODO: Send message to the system domain
 		worker_threads_.shutdown ();
 	}
 

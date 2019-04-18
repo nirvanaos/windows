@@ -9,7 +9,7 @@
 #include "PostOffice.h"
 #include "Mailslot.h"
 #include "ThreadPoolable.h"
-#include "SchedulerServant.h"
+#include "SchedulerAbstract.h"
 #include "WorkerThreads.h"
 #include <SysDomain.h>
 #include <SchedulerImpl.h>
@@ -34,10 +34,10 @@ struct SchedulerItem
 		this->executor = executor;
 	}
 
-	SchedulerItem (::CORBA::Nirvana::BridgeMarshal <Executor>* executor) :
+	SchedulerItem (Executor& executor) :
 		protection_domain (nullptr)
 	{
-		this->executor = (uint64_t)executor;
+		this->executor = (uint64_t)&executor;
 	}
 
 	bool operator < (const SchedulerItem& rhs) const
@@ -52,7 +52,7 @@ struct SchedulerItem
 };
 
 class SchedulerWindows :
-	public SchedulerServant <SchedulerWindows>,
+	public SchedulerAbstract,
 	public SchedulerIPC,
 	public PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, THREAD_PRIORITY_TIME_CRITICAL>,
 	private SchedulerImpl <SchedulerWindows, SchedulerItem>
@@ -72,11 +72,6 @@ public:
 		in_proc_execute_.run (startup, deadline);
 	}
 
-	void shutdown ()
-	{
-		in_proc_execute_.shutdown ();
-	}
-
 	/// Called by SchedulerImpl.
 	void execute (const SchedulerItem& item, DeadlineTime deadline)
 	{
@@ -89,13 +84,16 @@ public:
 			in_proc_execute_.execute (msg);
 	}
 
-	// Implementation of Scheduler interface.
+	// Implementation of SchedulerAbstract.
 
-	static void _schedule (::CORBA::Nirvana::Bridge <Scheduler>* bridge, 
-												 DeadlineTime deadline, ::CORBA::Nirvana::BridgeMarshal <Executor>* executor,
-												 DeadlineTime deadline_prev, ::CORBA::Nirvana::EnvironmentBridge*);
+	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev);
 
-	static void _core_free (::CORBA::Nirvana::Bridge <Scheduler>* bridge, ::CORBA::Nirvana::EnvironmentBridge*);
+	virtual void core_free ();
+
+	virtual void shutdown ()
+	{
+		in_proc_execute_.shutdown ();
+	}
 
 	/// Process mailslot message.
 	void received (void* data, DWORD size);

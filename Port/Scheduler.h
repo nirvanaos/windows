@@ -1,32 +1,37 @@
 #ifndef NIRVANA_CORE_PORT_SCHEDULER_H_
 #define NIRVANA_CORE_PORT_SCHEDULER_H_
 
-#include "../Source/Scheduler_c.h"
+#include "../Source/SchedulerAbstract.h"
 #include <Nirvana/Runnable_c.h>
 
 namespace Nirvana {
 namespace Core {
-
-namespace Windows {
-class SchedulerAbstract;
-}
 
 namespace Port {
 
 class Scheduler
 {
 public:
-	static void run (Runnable_ptr startup, DeadlineTime deadline);
-	
-	static Scheduler_ptr singleton ()
+	static void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime old)
 	{
-		return scheduler_;
+		scheduler_->schedule (deadline, executor, old);
 	}
 
+	static void core_free ()
+	{
+		scheduler_->core_free ();
+	}
+
+	static void shutdown ()
+	{
+		scheduler_->shutdown ();
+	}
+
+	static void run (Runnable_ptr startup, DeadlineTime deadline);
 	static void run_client (uint64_t protection_domain, Runnable_ptr startup, DeadlineTime deadline);
 
 private:
-	static Core::Scheduler_ptr scheduler_;
+	static Windows::SchedulerAbstract* scheduler_;
 };
 
 }
