@@ -3,12 +3,55 @@
 
 #include "../Port/ProtDomainMemory.h"
 #include <BackOff.h>
+#include <Core.h>
+#include <Nirvana/Runnable_s.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
 Windows::AddressSpace ProtDomainMemory::space_;
+
+template <class S>
+class RunnableImpl :
+	public CORBA::Nirvana::Servant <S, Runnable>,
+	public CORBA::Nirvana::LifeCycleStatic <>
+{};
+
+struct ProtDomainMemory::Block::Regions
+{
+	Region begin [PAGES_PER_BLOCK];
+	Region* end;
+
+	Regions () :
+		end (begin)
+	{}
+
+	void add (void* ptr, SIZE_T size)
+	{
+		assert (end < begin + PAGES_PER_BLOCK);
+		Region* p = end++;
+		p->ptr = ptr;
+		p->size = size;
+	}
+};
+
+class ProtDomainMemory::Block::Remap :
+	public RunnableImpl <ProtDomainMemory::Block::Remap>
+{
+public:
+	Remap (Block* block) :
+		block_ (block)
+	{}
+
+	void run ()
+	{
+		block_->remap ();
+	}
+
+private:
+	Block* block_;
+};
 
 DWORD ProtDomainMemory::Block::commit (SIZE_T offset, SIZE_T size)
 { // This operation must be thread-safe.
@@ -138,7 +181,7 @@ void ProtDomainMemory::Block::remap ()
 
 	// If this block is on the top of current stack, we must remap it in different fiber.
 	if (address () <= (BYTE*)&hm && (BYTE*)&hm < address () + ALLOCATION_GRANULARITY) {
-		call_in_fiber ((FiberMethod)&remap_proc, this);
+		run_in_neutral_context (&Remap (this));
 		return;
 	}
 
@@ -200,11 +243,6 @@ void ProtDomainMemory::Block::remap ()
 		CloseHandle (hm);
 		throw;
 	}
-}
-
-void ProtDomainMemory::Block::remap_proc (Block* block)
-{
-	block->remap ();
 }
 
 void ProtDomainMemory::Block::copy (void* src, SIZE_T size, LONG flags)
@@ -342,21 +380,6 @@ inline ProtDomainMemory::StackInfo::StackInfo ()
 	allocation_base = (BYTE*)mbi.AllocationBase;
 }
 
-ProtDomainMemory::ThreadMemory::ThreadMemory () :
-	StackInfo ()
-{ // Prepare stack of current thread to share.
-	// Call stack_prepare in fiber
-	if (!ConvertThreadToFiber (0))
-		throw INTERNAL ();
-	call_in_fiber ((FiberMethod)&stack_prepare, this);
-	_set_se_translator (&se_translator);
-}
-
-ProtDomainMemory::ThreadMemory::~ThreadMemory ()
-{
-	call_in_fiber ((FiberMethod)&stack_unprepare, this);
-}
-
 class ProtDomainMemory::ThreadMemory::StackMemory :
 	protected StackInfo
 {
@@ -376,34 +399,6 @@ public:
 
 		// Temporary copy current stack.
 		real_copy ((const SIZE_T*)stack_limit, (const SIZE_T*)(stack_base), (SIZE_T*)m_tmpbuf);
-	}
-
-	void unprepare ()
-	{
-		// Remove mappings and free memory. But blocks still marekd as reserved.
-		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY) {
-			HANDLE mapping = InterlockedExchangePointer (&space_.allocated_block (p)->mapping, INVALID_HANDLE_VALUE);
-			if (mapping != INVALID_HANDLE_VALUE) {
-				verify (UnmapViewOfFile (p));
-				verify (CloseHandle (mapping));
-			} else if (!mapping)
-				space_.allocated_block (p)->mapping = INVALID_HANDLE_VALUE;
-			else
-				VirtualFree (p, 0, MEM_RELEASE);
-		}
-
-		// Reserve all stack.
-		for (Core::BackOff bo;
-				 !VirtualAlloc (allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE);
-				 bo.sleep ()) {
-			assert (ERROR_INVALID_ADDRESS == GetLastError ());
-		}
-
-		// Mark blocks as free
-		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY)
-			space_.allocated_block (p)->mapping = 0;
-
-		finalize ();
 	}
 
 	~StackMemory ()
@@ -473,6 +468,12 @@ public:
 		}
 	}
 
+	void run ()
+	{
+		prepare ();
+	}
+
+private:
 	void prepare ()
 	{
 		m_finalized = false;
@@ -509,40 +510,80 @@ private:
 	bool m_finalized;
 };
 
-void ProtDomainMemory::ThreadMemory::stack_prepare (const ThreadMemory* param_ptr)
+class ProtDomainMemory::ThreadMemory::StackUnprepare :
+	private StackMemory
 {
-	StackPrepare (*param_ptr).prepare ();
-}
+public:
+	StackUnprepare (const ThreadMemory& thread) :
+		StackMemory (thread)
+	{}
 
-void ProtDomainMemory::ThreadMemory::stack_unprepare (const ThreadMemory* param_ptr)
-{
-	StackMemory (*param_ptr).unprepare ();
-}
-
-void ProtDomainMemory::call_in_fiber (FiberMethod method, void* param)
-{
-	FiberParam fp;
-	fp.source_fiber = GetCurrentFiber ();
-	fp.method = method;
-	fp.param = param;
-	void* fiber = CreateFiber (0, (LPFIBER_START_ROUTINE)fiber_proc, &fp);
-	if (!fiber)
-		throw INTERNAL ();
-	SwitchToFiber (fiber);
-	DeleteFiber (fiber);
-	fp.environment.check ();
-}
-
-void CALLBACK ProtDomainMemory::fiber_proc (FiberParam* param)
-{
-	try {
-		(*param->method) (param->param);
-	} catch (const Exception& ex) {
-		param->environment.set_exception (ex);
-	} catch (...) {
-		param->environment.set_unknown_exception ();
+	void run ()
+	{
+		unprepare ();
 	}
-	SwitchToFiber (param->source_fiber);
+
+private:
+	void unprepare ()
+	{
+		// Remove mappings and free memory. But blocks still marekd as reserved.
+		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY) {
+			HANDLE mapping = InterlockedExchangePointer (&space_.allocated_block (p)->mapping, INVALID_HANDLE_VALUE);
+			if (mapping != INVALID_HANDLE_VALUE) {
+				verify (UnmapViewOfFile (p));
+				verify (CloseHandle (mapping));
+			} else if (!mapping)
+				space_.allocated_block (p)->mapping = INVALID_HANDLE_VALUE;
+			else
+				VirtualFree (p, 0, MEM_RELEASE);
+		}
+
+		// Reserve all stack.
+		for (Core::BackOff bo;
+				 !VirtualAlloc (allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE);
+				 bo.sleep ()) {
+			assert (ERROR_INVALID_ADDRESS == GetLastError ());
+		}
+
+		// Mark blocks as free
+		for (BYTE* p = allocation_base; p < stack_base; p += ALLOCATION_GRANULARITY)
+			space_.allocated_block (p)->mapping = 0;
+
+		finalize ();
+	}
+};
+
+template <class T>
+class ProtDomainMemory::ThreadMemory::Runnable :
+	public RunnableImpl <ProtDomainMemory::ThreadMemory::Runnable <T> >
+{
+public:
+	Runnable (const ThreadMemory& thread) :
+		thread_ (thread)
+	{}
+
+	void run ()
+	{
+		T (thread_).run ();
+	}
+
+private:
+	const ThreadMemory& thread_;
+};
+
+ProtDomainMemory::ThreadMemory::ThreadMemory () :
+	StackInfo ()
+{ // Prepare stack of current thread to share.
+	// Call stack_prepare in fiber
+	if (!ConvertThreadToFiber (0))
+		throw INTERNAL ();
+	run_in_neutral_context (&Runnable <StackPrepare> (*this));
+	_set_se_translator (&se_translator);
+}
+
+ProtDomainMemory::ThreadMemory::~ThreadMemory ()
+{
+	run_in_neutral_context (&Runnable <StackUnprepare> (*this));
 }
 
 LONG CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pex)

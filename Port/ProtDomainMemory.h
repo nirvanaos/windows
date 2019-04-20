@@ -166,11 +166,10 @@ public:
 		~ThreadMemory ();
 
 	private:
-		static void stack_prepare (const ThreadMemory* param);
-		static void stack_unprepare (const ThreadMemory* param);
-
 		class StackMemory;
 		class StackPrepare;
+		class StackUnprepare;
+		template <class T> class Runnable;
 	};
 
 private:
@@ -221,29 +220,13 @@ private:
 		void copy (void* src, SIZE_T size, LONG flags);
 
 	private:
-		struct Regions
-		{
-			Region begin [PAGES_PER_BLOCK];
-			Region* end;
-
-			Regions () :
-				end (begin)
-			{}
-
-			void add (void* ptr, SIZE_T size)
-			{
-				assert (end < begin + PAGES_PER_BLOCK);
-				Region* p = end++;
-				p->ptr = ptr;
-				p->size = size;
-			}
-		};
+		struct Regions;
+		class Remap;
 
 		void remap ();
 		bool copy_page_part (const void* src, SIZE_T size, LONG flags);
 		void prepare_to_share_no_remap (SIZE_T offset, SIZE_T size);
 		void copy (SIZE_T offset, SIZE_T size, const void* src, LONG flags);
-		static void remap_proc (Block* block);
 	};
 
 private:
@@ -268,21 +251,6 @@ private:
 			throw NO_MEMORY ();
 		return mapping;
 	}
-
-	// Thread stack processing
-
-	typedef void (*FiberMethod) (void*);
-	static void call_in_fiber (FiberMethod method, void* param);
-
-	struct FiberParam
-	{
-		void* source_fiber;
-		FiberMethod method;
-		void* param;
-		Environment environment;
-	};
-
-	static void CALLBACK fiber_proc (FiberParam* param);
 
 private:
 	static AddressSpace space_;
