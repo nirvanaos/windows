@@ -2,6 +2,7 @@
 #include <CORBA/Exception.h>
 #include "ThreadMemory.h"
 #include "../Port/config.h"
+#include "../Port/ProtDomainMemory.h"
 
 namespace Nirvana {
 namespace Core {
@@ -13,6 +14,7 @@ void CALLBACK ExecContext::fiber_proc (void*)
 		Windows::ThreadMemory tm;
 		Core::Thread::current ().execution_domain ()->execute_loop ();
 	} else {
+		_set_se_translator (&ProtDomainMemory::se_translator);
 		Core::Thread::current ().execution_domain ()->execute_loop ();
 	}
 }
