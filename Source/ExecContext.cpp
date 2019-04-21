@@ -10,11 +10,11 @@ namespace Port {
 
 void CALLBACK ExecContext::fiber_proc (void*)
 {
+	_set_se_translator (&ProtDomainMemory::se_translator);
 	if (SHARE_STACK) {
 		Windows::ThreadMemory tm;
 		Core::Thread::current ().execution_domain ()->execute_loop ();
 	} else {
-		_set_se_translator (&ProtDomainMemory::se_translator);
 		Core::Thread::current ().execution_domain ()->execute_loop ();
 	}
 }

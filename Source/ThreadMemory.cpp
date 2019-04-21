@@ -241,7 +241,6 @@ ThreadMemory::ThreadMemory () :
 { // Prepare stack of current thread to share.
 	// Call stack_prepare in fiber
 	run_in_neutral_context (&Runnable <StackPrepare> (*this));
-	_set_se_translator (&ProtDomainMemory::se_translator);
 }
 
 ThreadMemory::~ThreadMemory ()

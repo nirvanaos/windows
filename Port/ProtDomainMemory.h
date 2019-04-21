@@ -29,7 +29,7 @@ public:
 	static void initialize ()
 	{
 		space_.initialize ();
-		SetUnhandledExceptionFilter (&exception_filter);
+//		SetUnhandledExceptionFilter (&exception_filter);
 		_set_se_translator (&se_translator);
 	}
 
