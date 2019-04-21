@@ -6,12 +6,17 @@
 #define NIRVANA_CORE_PORT_PROTDOMAINMEMORY_H_
 
 #include "../Source/AddressSpace.h"
-#include <Nirvana/real_copy.h>
 #include <Nirvana/Memory_s.h>
+#include <Nirvana/real_copy.h>
 #include <eh.h>
 
 namespace Nirvana {
 namespace Core {
+
+namespace Windows {
+class ThreadMemory;
+}
+
 namespace Port {
 
 using namespace ::CORBA;
@@ -148,32 +153,9 @@ public:
 	static LONG CALLBACK exception_filter (struct _EXCEPTION_POINTERS* pex);
 	static void se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex);
 
-	struct StackInfo
-	{
-		BYTE* stack_base;
-		BYTE* stack_limit;
-		BYTE* guard_begin;
-		BYTE* allocation_base;
-
-		StackInfo ();
-	};
-
-	class ThreadMemory :
-		protected StackInfo
-	{
-	public:
-		ThreadMemory ();
-		~ThreadMemory ();
-
-	private:
-		class StackMemory;
-		class StackPrepare;
-		class StackUnprepare;
-		template <class T> class Runnable;
-	};
-
 private:
 	friend class Windows::AddressSpace;
+	friend class Windows::ThreadMemory;
 
 	struct Region
 	{

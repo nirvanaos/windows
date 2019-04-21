@@ -16,6 +16,7 @@ void CALLBACK neutral_fiber_proc (void* param)
 {
 	FiberParam* fp = (FiberParam*)param;
 	(fp->runnable->_epv().epv.run) (fp->runnable, &fp->environment);
+	CORBA::release (fp->runnable);
 	SwitchToFiber (fp->source_fiber);
 }
 
@@ -29,7 +30,7 @@ void run_in_neutral_context (Runnable_ptr runnable)
 	Test::FiberParam fp;
 	fp.source_fiber = GetCurrentFiber ();
 	fp.runnable = runnable;
-	void* fiber = CreateFiber (0, Test::neutral_fiber_proc, &fp);
+	void* fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, Test::neutral_fiber_proc, &fp);
 	if (!fiber)
 		throw CORBA::INTERNAL ();
 	SwitchToFiber (fiber);

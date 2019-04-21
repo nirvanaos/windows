@@ -1,10 +1,12 @@
 #include "../Port/ProtDomainMemory.h"
+#include "../Source/ThreadMemory.h"
 #include <gtest/gtest.h>
 
 namespace TestMemory {
 
 using namespace ::Nirvana;
 using namespace ::Nirvana::Core::Port;
+using namespace ::Nirvana::Core::Windows;
 
 class TestMemory :
 	public ::testing::Test
@@ -295,8 +297,12 @@ void stack_test (void* limit, bool first)
 
 TEST_F (TestMemory, Stack)
 {
-	ProtDomainMemory::ThreadMemory tm;
-	stack_test (current_TIB ()->StackLimit, true);
+	ASSERT_TRUE (ConvertThreadToFiber (0));
+	{
+		ThreadMemory tm;
+		stack_test (current_TIB ()->StackLimit, true);
+	}
+	EXPECT_TRUE (ConvertFiberToThread ());
 }
 
 }
