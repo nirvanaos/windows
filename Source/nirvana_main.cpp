@@ -1,5 +1,15 @@
 #include <Heap.h>
 
+namespace Nirvana {
+namespace Core {
+namespace Windows {
+
+int main ();
+
+}
+}
+}
+
 enum class __scrt_module_type
 {
 	dll,
@@ -26,9 +36,7 @@ int __stdcall nirvana_main ()
 		__scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
 
 	__try {
-		Nirvana::Core::Heap::initialize ();
-		Nirvana::Core::Heap::terminate ();
-		int main_result = 0;
+		int main_result = Nirvana::Core::Windows::main ();
 
 		// Finally, we terminate the CRT:
 		__scrt_uninitialize_crt (true, false);
