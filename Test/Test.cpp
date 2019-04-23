@@ -12,7 +12,7 @@ Memory_ptr g_core_heap;
 namespace CORBA {
 namespace Nirvana {
 
-Bridge <ObjectFactory>* const g_object_factory = nullptr;
+Bridge <ObjectFactory>* const ObjectFactory::singleton_ = nullptr;
 
 }
 }
