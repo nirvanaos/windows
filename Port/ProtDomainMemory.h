@@ -234,6 +234,8 @@ private:
 		return mapping;
 	}
 
+	static void fix_image_memory (HMODULE image_base);
+
 private:
 	static AddressSpace space_;
 };
@@ -248,10 +250,6 @@ inline void* ProtDomainMemory::copy (void* dst, void* src, SIZE_T size, LONG fla
 
 	// Source range have to be committed.
 	DWORD src_prot_mask = space_.check_committed (src, size);
-
-	// Current stack location
-	void* stack_begin = &stack_begin;
-	void* stack_end = current_TIB ()->StackBase;
 
 	bool src_in_stack = is_current_stack (src), dst_in_stack = false;
 
