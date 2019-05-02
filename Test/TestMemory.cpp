@@ -305,4 +305,14 @@ TEST_F (TestMemory, Stack)
 	EXPECT_TRUE (ConvertFiberToThread ());
 }
 
+TEST_F (TestMemory, NotShared)
+{
+	static const char test_const [] = "test";
+	char* copy = (char*)ProtDomainMemory::copy (0, (void*)test_const, sizeof (test_const), Memory::ALLOCATE);
+	static char test [sizeof (test_const)];
+	ProtDomainMemory::copy (test, copy, sizeof (test_const), 0);
+	EXPECT_STREQ (test, test_const);
+	ProtDomainMemory::release (copy, sizeof (test_const));
+}
+
 }
