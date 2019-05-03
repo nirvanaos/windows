@@ -816,47 +816,6 @@ void AddressSpace::change_protection (void* ptr, SIZE_T size, LONG flags)
 	}
 }
 
-void AddressSpace::decommit (void* ptr, SIZE_T size)
-{
-	if (!size)
-		return;
-
-	// Memory must be allocated.
-	check_allocated (ptr, size);
-
-	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
-		Block block (*this, p);
-		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-		if (block_end > end)
-			block_end = end;
-		block.decommit (p - block.address (), block_end - p);
-		p = block_end;
-	}
-}
-
-bool AddressSpace::is_copy (const void* p, const void* plocal, SIZE_T size)
-{
-	if ((SIZE_T)p % ALLOCATION_GRANULARITY == (SIZE_T)plocal % ALLOCATION_GRANULARITY) {
-		try {
-			for (BYTE* begin1 = (BYTE*)p, *end1 = begin1 + size, *begin2 = (BYTE*)plocal; begin1 < end1;) {
-				Block block1 (*this, begin1);
-				Port::ProtDomainMemory::Block block2 (begin2);
-				BYTE* block_end1 = block1.address () + ALLOCATION_GRANULARITY;
-				if (block_end1 > end1)
-					block_end1 = end1;
-				if (!block1.is_copy (block2, begin1 - block1.address (), block_end1 - begin1))
-					return false;
-				begin1 = block_end1;
-				begin2 = block2.address () + ALLOCATION_GRANULARITY;
-			}
-			return true;
-		} catch (...) {
-			return false;
-		}
-	} else
-		return false;
-}
-
 }
 }
 }

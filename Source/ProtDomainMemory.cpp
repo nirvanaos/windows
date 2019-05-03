@@ -12,6 +12,40 @@ namespace Port {
 
 Windows::AddressSpace ProtDomainMemory::space_;
 
+void ProtDomainMemory::initialize ()
+{
+	space_.initialize ();
+	//		SetUnhandledExceptionFilter (&exception_filter);
+	_set_se_translator (&se_translator);
+}
+
+void ProtDomainMemory::terminate ()
+{
+	//		SetUnhandledExceptionFilter (0);
+	space_.terminate ();
+}
+
+inline void ProtDomainMemory::protect (void* address, SIZE_T size, DWORD protection)
+{
+	//space_.protect (address, size, protection);
+	DWORD old;
+	verify (VirtualProtect (address, size, protection, &old));
+}
+
+inline void ProtDomainMemory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi)
+{
+	//space_.query (address, mbi);
+	verify (VirtualQuery (address, &mbi, sizeof (mbi)));
+}
+
+inline HANDLE ProtDomainMemory::new_mapping ()
+{
+	HANDLE mapping = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, 0);
+	if (!mapping)
+		throw NO_MEMORY ();
+	return mapping;
+}
+
 struct ProtDomainMemory::Block::Regions
 {
 	Region begin [PAGES_PER_BLOCK];
@@ -394,6 +428,11 @@ void* ProtDomainMemory::allocate (void* dst, SIZE_T size, LONG flags)
 	return ret;
 }
 
+void ProtDomainMemory::release (void* dst, SIZE_T size)
+{
+	space_.release (dst, size);
+}
+
 void ProtDomainMemory::commit (void* ptr, SIZE_T size)
 {
 	if (!size)
@@ -406,6 +445,11 @@ void ProtDomainMemory::commit (void* ptr, SIZE_T size)
 	space_.check_allocated (ptr, size);
 
 	commit_no_check (ptr, size);
+}
+
+void ProtDomainMemory::decommit (void* ptr, SIZE_T size)
+{
+	space_.decommit (ptr, size);
 }
 
 void* ProtDomainMemory::copy (void* dst, void* src, SIZE_T size, LONG flags)
@@ -614,6 +658,65 @@ SIZE_T ProtDomainMemory::query (const void* p, Memory::QueryParam q)
 
 		throw BAD_PARAM ();
 	}
+}
+
+bool ProtDomainMemory::is_readable (const void* p, SIZE_T size)
+{
+	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
+		MEMORY_BASIC_INFORMATION mbi;
+		query (begin, mbi);
+		if (!(mbi.Protect & PageState::MASK_ACCESS))
+			return false;
+		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
+	}
+	return true;
+}
+
+bool ProtDomainMemory::is_private (const void* p, SIZE_T size)
+{
+	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
+		MEMORY_BASIC_INFORMATION mbi;
+		query (begin, mbi);
+		if (mbi.Protect & (PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY))
+			return false;
+		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
+	}
+	return true;
+}
+
+bool ProtDomainMemory::is_writable (const void* p, SIZE_T size)
+{
+	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
+		MEMORY_BASIC_INFORMATION mbi;
+		query (begin, mbi);
+		if (!(mbi.Protect & PageState::MASK_RW))
+			return false;
+		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
+	}
+	return true;
+}
+
+bool ProtDomainMemory::is_copy (const void* p, const void* plocal, SIZE_T size)
+{
+	if ((SIZE_T)p % ALLOCATION_GRANULARITY == (SIZE_T)plocal % ALLOCATION_GRANULARITY) {
+		try {
+			for (BYTE* begin1 = (BYTE*)p, *end1 = begin1 + size, *begin2 = (BYTE*)plocal; begin1 < end1;) {
+				Block block1 (begin1);
+				Block block2 (begin2);
+				BYTE* block_end1 = block1.address () + ALLOCATION_GRANULARITY;
+				if (block_end1 > end1)
+					block_end1 = end1;
+				if (!block1.is_copy (block2, begin1 - block1.address (), block_end1 - begin1))
+					return false;
+				begin1 = block_end1;
+				begin2 = block2.address () + ALLOCATION_GRANULARITY;
+			}
+			return true;
+		} catch (...) {
+			return false;
+		}
+	} else
+		return false;
 }
 
 LONG CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pex)

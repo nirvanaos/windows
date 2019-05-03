@@ -26,55 +26,27 @@ using namespace ::Nirvana::Core::Windows;
 class ProtDomainMemory
 {
 public:
-	static void initialize ()
-	{
-		space_.initialize ();
-//		SetUnhandledExceptionFilter (&exception_filter);
-		_set_se_translator (&se_translator);
-	}
-
-	static void terminate ()
-	{
-		SetUnhandledExceptionFilter (0);
-		space_.terminate ();
-	}
+	static void initialize ();
+	static void terminate ();
 
 	// Memory::
 	static void* allocate (void* dst, SIZE_T size, LONG flags);
 
-	static void release (void* dst, SIZE_T size)
-	{
-		space_.release (dst, size);
-	}
+	static void release (void* dst, SIZE_T size);
 
 	static void commit (void* ptr, SIZE_T size);
 
-	static void decommit (void* ptr, SIZE_T size)
-	{
-		space_.decommit (ptr, size);
-	}
+	static void decommit (void* ptr, SIZE_T size);
 
 	static void* copy (void* dst, void* src, SIZE_T size, LONG flags);
 
-	static bool is_readable (const void* p, SIZE_T size)
-	{
-		return space_.is_readable (p, size);
-	}
+	static bool is_readable (const void* p, SIZE_T size);
 
-	static bool is_writable (const void* p, SIZE_T size)
-	{
-		return space_.is_writable (p, size);
-	}
+	static bool is_writable (const void* p, SIZE_T size);
 
-	static bool is_private (const void* p, SIZE_T size)
-	{
-		return space_.is_private (p, size);
-	}
+	static bool is_private (const void* p, SIZE_T size);
 
-	static bool is_copy (const void* p1, const void* p2, SIZE_T size)
-	{
-		return space_.is_copy (p1, p2, size);
-	}
+	static bool is_copy (const void* p1, const void* p2, SIZE_T size);
 
 	static SIZE_T query (const void* p, Memory::QueryParam q);
 
@@ -145,27 +117,12 @@ private:
 private:
 	static DWORD commit_no_check (void* ptr, SIZE_T size);
 
-	static void protect (void* address, SIZE_T size, DWORD protection)
-	{
-		//space_.protect (address, size, protection);
-		DWORD old;
-		verify (VirtualProtect (address, size, protection, &old));
-	}
+	static void protect (void* address, SIZE_T size, DWORD protection);
 
-	static void query (const void* address, MEMORY_BASIC_INFORMATION& mbi)
-	{
-		//space_.query (address, mbi);
-		verify (VirtualQuery (address, &mbi, sizeof (mbi)));
-	}
+	static void query (const void* address, MEMORY_BASIC_INFORMATION& mbi);
 
 	// Create new mapping
-	static HANDLE new_mapping ()
-	{
-		HANDLE mapping = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, 0);
-		if (!mapping)
-			throw NO_MEMORY ();
-		return mapping;
-	}
+	static HANDLE new_mapping ();
 
 private:
 	static AddressSpace space_;

@@ -261,11 +261,6 @@ public:
 	void change_protection (void* ptr, SIZE_T size, LONG flags);
 	void decommit (void* ptr, SIZE_T size);
 
-	bool is_readable (const void* p, SIZE_T size);
-	bool is_writable (const void* p, SIZE_T size);
-	bool is_private (const void* p, SIZE_T size);
-	bool is_copy (const void* p, const void* plocal, SIZE_T size);
-
 protected:
 	void initialize (DWORD process_id, HANDLE process_handle);
 
@@ -291,40 +286,22 @@ private:
 	size_t directory_size_;
 };
 
-inline bool AddressSpace::is_private (const void* p, SIZE_T size)
+inline void AddressSpace::decommit (void* ptr, SIZE_T size)
 {
-	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
-		MEMORY_BASIC_INFORMATION mbi;
-		query (begin, mbi);
-		if (mbi.Protect & (PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY))
-			return false;
-		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
-	}
-	return true;
-}
+	if (!size)
+		return;
 
-inline bool AddressSpace::is_readable (const void* p, SIZE_T size)
-{
-	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
-		MEMORY_BASIC_INFORMATION mbi;
-		query (begin, mbi);
-		if (!(mbi.Protect & PageState::MASK_ACCESS))
-			return false;
-		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
-	}
-	return true;
-}
+	// Memory must be allocated.
+	check_allocated (ptr, size);
 
-inline bool AddressSpace::is_writable (const void* p, SIZE_T size)
-{
-	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
-		MEMORY_BASIC_INFORMATION mbi;
-		query (begin, mbi);
-		if (!(mbi.Protect & PageState::MASK_RW))
-			return false;
-		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
+	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
+		Block block (*this, p);
+		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		if (block_end > end)
+			block_end = end;
+		block.decommit (p - block.address (), block_end - p);
+		p = block_end;
 	}
-	return true;
 }
 
 }
