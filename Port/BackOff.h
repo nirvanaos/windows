@@ -1,7 +1,8 @@
 #ifndef NIRVANA_CORE_PORT_BACKOFF_H_
 #define NIRVANA_CORE_PORT_BACKOFF_H_
 
-#include "../Source/win32.h"
+extern "C" __declspec (dllimport)
+void __stdcall Sleep (unsigned long dwMilliseconds);
 
 namespace Nirvana {
 namespace Core {

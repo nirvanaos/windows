@@ -3,8 +3,8 @@
 #include <core.h>
 #include <BackOff.h>
 #include "RunnableImpl.h"
-#include "../Port/ProtDomainMemory.h"
-#include <assert.h>
+#include "ProtDomainMemoryBlock.h"
+//#include <assert.h>
 
 namespace Nirvana {
 namespace Core {

@@ -304,6 +304,27 @@ inline void AddressSpace::decommit (void* ptr, SIZE_T size)
 	}
 }
 
+inline bool AddressSpace::Block::is_copy (Block& other, SIZE_T offset, SIZE_T size)
+{
+	const State& st = state (), &other_st = other.state ();
+	if (st.state != State::MAPPED || other_st.state != State::MAPPED)
+		return false;
+	if (!CompareObjectHandles (mapping (), other.mapping ()))
+		return false;
+	SIZE_T page_begin = offset / PAGE_SIZE;
+	auto pst = st.mapped.page_state + page_begin;
+	auto other_pst = other_st.mapped.page_state + page_begin;
+	auto pst_end = st.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+	for (; pst != pst_end; ++pst, ++other_pst) {
+		DWORD ps = *pst, other_ps = *other_pst;
+		if ((ps | other_ps) & PageState::MASK_UNMAPPED)
+			return false;
+		else if (!(ps & PageState::MASK_ACCESS) || !(other_ps & PageState::MASK_ACCESS))
+			return false;
+	}
+	return true;
+}
+
 }
 }
 }
