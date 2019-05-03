@@ -6,7 +6,8 @@
 #define NIRVANA_CORE_WINDOWS_SCHEDULERIPC_H_
 
 #include <Nirvana/Nirvana.h>
-#include "win32.h"
+
+#define OBJ_NAME_PREFIX L"Nirvana"
 
 #define SCHEDULER_MAILSLOT_NAME L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\scheduler_mailslot"
 #define EXECUTE_MAILSLOT_PREFIX L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\execute_mailslot"
@@ -21,13 +22,13 @@ public:
 	struct ProcessStart
 	{
 		uint64_t protection_domain;
-		DWORD process_id;
+		uint32_t process_id;
 	};
 
 	struct ProcessStop
 	{
 		uint64_t protection_domain;
-		DWORD process_id;
+		uint32_t process_id;
 	};
 
 	struct Schedule
@@ -59,9 +60,9 @@ public:
 			ProcessStop process_stop;
 		} msg;
 
-		DWORD size () const
+		uint32_t size () const
 		{
-			static const DWORD sizes [5] = {
+			static const uint32_t sizes [5] = {
 				sizeof (tag) + sizeof (msg.core_free),
 				sizeof (tag) + sizeof (msg.schedule),
 				sizeof (tag) + sizeof (msg.process_start),

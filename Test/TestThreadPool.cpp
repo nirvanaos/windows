@@ -10,6 +10,7 @@ namespace TestThreadPool {
 using namespace ::std;
 using namespace ::Nirvana::Core::Windows;
 
+#define OBJ_NAME_PREFIX L"Nirvana"
 const WCHAR mailslot_prefix [] = L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\unit_test_mailslot";
 
 struct Message

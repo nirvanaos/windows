@@ -3,6 +3,8 @@
 #include <BackOff.h>
 #include <algorithm>
 
+#define OBJ_NAME_PREFIX L"Nirvana"
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {

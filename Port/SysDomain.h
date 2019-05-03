@@ -19,19 +19,19 @@ public:
 		private Windows::SchedulerIPC
 	{
 	public:
-		ProtDomainInfo (DWORD process_id) :
+		ProtDomainInfo (uint32_t process_id) :
 			process_id_ (process_id)
 		{}
 
-		DWORD process_id () const
+		uint32_t process_id () const
 		{
 			return process_id_;
 		}
 
-		void process_start (DWORD id)
+		void process_start (uint32_t id)
 		{
 			if (process_id_ == id) {
-				static const WCHAR prefix [] = EXECUTE_MAILSLOT_PREFIX;
+				static const wchar_t prefix [] = EXECUTE_MAILSLOT_PREFIX;
 				try {
 					execute_mailslot_.open (prefix, id);
 					ProcessStartAck msg = {0};
@@ -50,7 +50,7 @@ public:
 
 	private:
 		Windows::Mailslot execute_mailslot_;
-		DWORD process_id_;
+		uint32_t process_id_;
 	};
 };
 

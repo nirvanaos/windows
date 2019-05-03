@@ -7,9 +7,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include <Nirvana/real_copy.h>
-#include <CORBA/Exception.h>
 #include <stdlib.h>
-#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
@@ -19,7 +17,7 @@ class Mailslot
 {
 public:
 	Mailslot () :
-		mailslot_ (INVALID_HANDLE_VALUE)
+		mailslot_ ((void*)(intptr_t)-1)
 	{}
 
 	~Mailslot ()
@@ -27,12 +25,12 @@ public:
 		close ();
 	}
 
-	bool open (LPCWSTR name);
+	bool open (const wchar_t* name);
 
 	template <size_t PREFIX_SIZE>
-	bool open (const WCHAR (&prefix) [PREFIX_SIZE], DWORD id)
+	bool open (const wchar_t (&prefix) [PREFIX_SIZE], uint32_t id)
 	{
-		WCHAR name [PREFIX_SIZE + 8];
+		wchar_t name [PREFIX_SIZE + 8];
 		_ultow (id, real_copy (prefix, prefix + PREFIX_SIZE - 1, name), 16);
 		return open (name);
 	}
@@ -43,23 +41,12 @@ public:
 		send (&msg, sizeof (msg));
 	}
 
-	void send (const void* msg, DWORD size)
-	{
-		DWORD cb;
-		if (!WriteFile (mailslot_, msg, sizeof (msg), &cb, nullptr))
-			throw ::CORBA::INTERNAL ();
-	}
+	void send (const void* msg, uint32_t size);
 
-	void close ()
-	{
-		if (INVALID_HANDLE_VALUE != mailslot_) {
-			CloseHandle (mailslot_);
-			mailslot_ = INVALID_HANDLE_VALUE;
-		}
-	}
+	void close ();
 
 private:
-	HANDLE mailslot_;
+	void* mailslot_;
 };
 
 }

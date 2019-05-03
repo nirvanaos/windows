@@ -5,8 +5,29 @@
 #ifndef NIRVANA_CORE_PORT_EXECCONTEXT_H_
 #define NIRVANA_CORE_PORT_EXECCONTEXT_H_
 
-#include "../Source/Win32.h"
 #include <Nirvana/Nirvana.h>
+#include <basetsd.h>
+
+typedef void (__stdcall *PFIBER_START_ROUTINE)(void* lpFiberParameter);
+
+extern "C" __declspec (dllimport)
+void* __stdcall CreateFiber (
+			SIZE_T dwStackSize,
+			PFIBER_START_ROUTINE lpStartAddress,
+			void* lpParameter
+		);
+
+extern "C" __declspec (dllimport)
+void __stdcall DeleteFiber (void*);
+
+extern "C" __declspec (dllimport)
+void* __stdcall ConvertThreadToFiber (void* lpParameter);
+
+extern "C" __declspec (dllimport)
+int __stdcall ConvertFiberToThread ();
+
+extern "C" __declspec (dllimport)
+void __stdcall SwitchToFiber (void* lpFiber);
 
 namespace Nirvana {
 namespace Core {
@@ -66,7 +87,7 @@ public:
 		return f;
 	}
 
-	static void CALLBACK fiber_proc (void*);
+	static void __stdcall fiber_proc (void*);
 
 private:
 	void* fiber_;
