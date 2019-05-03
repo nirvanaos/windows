@@ -93,6 +93,8 @@ private:
 
 	static void query (const void* address, MEMORY_BASIC_INFORMATION& mbi);
 
+	static ULong check_committed (void* ptr, UWord size);
+
 	// Create new mapping
 	static HANDLE new_mapping ();
 

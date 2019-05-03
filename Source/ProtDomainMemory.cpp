@@ -148,6 +148,20 @@ void ProtDomainMemory::decommit (void* ptr, UWord size)
 	space_.decommit (ptr, size);
 }
 
+ULong ProtDomainMemory::check_committed (void* ptr, UWord size)
+{
+	ULong state_bits = 0;
+	for (const BYTE* begin = (const BYTE*)ptr, *end = begin + size; begin < end;) {
+		MEMORY_BASIC_INFORMATION mbi;
+		query (begin, mbi);
+		if (!(mbi.Protect & PageState::MASK_ACCESS))
+			throw BAD_PARAM ();
+		state_bits |= mbi.Protect;
+		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
+	}
+	return state_bits;
+}
+
 void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 {
 	if (!size)
@@ -156,15 +170,22 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 	if (flags & ~(Memory::READ_ONLY | Memory::RELEASE | Memory::ALLOCATE | Memory::EXACTLY))
 		throw INV_FLAG ();
 
+	bool src_not_share, dst_not_share = false;
 	// Source range have to be committed.
-	ULong src_prot_mask = space_.check_committed (src, size);
-
-	bool src_in_stack = is_current_stack (src), dst_in_stack = false;
+	
+	ULong src_prot_mask;
+	if (space_.allocated_block (src)) {
+		src_prot_mask = space_.check_committed (src, size);
+		src_not_share = is_current_stack (src);
+	} else {
+		src_prot_mask = check_committed (src, size);
+		src_not_share = true;
+	}
 
 	void* ret = 0;
 	UWord src_align = (UWord)src % ALLOCATION_GRANULARITY;
 	try {
-		if (!dst && Memory::RELEASE != (flags & Memory::RELEASE) && !src_in_stack && round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY) - (BYTE*)src <= ALLOCATION_GRANULARITY) {
+		if (!dst && Memory::RELEASE != (flags & Memory::RELEASE) && !src_not_share && round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY) - (BYTE*)src <= ALLOCATION_GRANULARITY) {
 			// Quick copy one block.
 			Block block (src);
 			block.prepare_to_share (src_align, size, flags);
@@ -204,8 +225,14 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 					}
 				}
 			} else {
-				dst_in_stack = is_current_stack (dst);
-				space_.check_allocated (dst, size);
+				if (space_.allocated_block (dst)) {
+					space_.check_allocated (dst, size);
+					dst_not_share = is_current_stack (dst);
+				} else {
+					if (!is_writable (dst, size))
+						throw BAD_PARAM ();
+					dst_not_share = true;
+				}
 				ret = dst;
 			}
 
@@ -225,7 +252,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 			}
 
 			try {
-				if (!src_in_stack && !dst_in_stack && (UWord)ret % ALLOCATION_GRANULARITY == src_align) {
+				if (!src_not_share && !dst_not_share && (UWord)ret % ALLOCATION_GRANULARITY == src_align) {
 					// Share (regions may overlap).
 					if (ret < src) {
 						BYTE* pd = (BYTE*)ret, *end = pd + size;
@@ -284,7 +311,11 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 					}
 				} else {
 					// Physical copy.
-					ULong state_bits = commit_no_check (ret, size);
+					ULong state_bits;
+					if (dst_not_share)
+						state_bits = check_committed (dst, size);
+					else
+						state_bits = commit_no_check (ret, size);
 					if (state_bits & PageState::MASK_RO)
 						space_.change_protection (dst, size, Memory::READ_WRITE);
 					real_move ((const BYTE*)src, (const BYTE*)src + size, (BYTE*)ret);
