@@ -6,7 +6,14 @@
 #define NIRVANA_CORE_PORT_THREAD_H_
 
 #include <Nirvana/Nirvana.h>
-#include "../Source/win32.h"
+
+extern "C" __declspec (dllimport)
+void* __stdcall TlsGetValue (unsigned long dwTlsIndex);
+
+extern "C" __declspec (dllimport)
+int __stdcall CloseHandle (void* hObject);
+
+typedef unsigned long (__stdcall *PTHREAD_START_ROUTINE) (void* lpThreadParameter);
 
 namespace Nirvana {
 namespace Core {
@@ -23,15 +30,8 @@ class Thread
 	Thread& operator = (const Thread&) = delete;
 
 public:
-	static void initialize ()
-	{
-		tls_current_ = TlsAlloc ();
-	}
-
-	static void terminate ()
-	{
-		TlsFree (tls_current_);
-	}
+	static void initialize ();
+	static void terminate ();
 
 	static Thread* current ()
 	{
@@ -43,45 +43,22 @@ public:
 	//!
 	//! \brief	Attaches current thread to the Thread object.
 
-	void attach ()
-	{
-		assert (!handle_);
-		BOOL ok = DuplicateHandle (GetCurrentProcess (), GetCurrentThread (), GetCurrentProcess (), &handle_, 0, FALSE, DUPLICATE_SAME_ACCESS);
-		assert (ok);
-		TlsSetValue (tls_current_, this);
-	}
-
-	void detach ()
-	{
-		if (handle_) {
-			assert (GetThreadId (handle_) == GetCurrentThreadId ());
-			TlsSetValue (tls_current_, nullptr);
-			CloseHandle (handle_);
-			handle_ = nullptr;
-		}
-	}
+	void attach ();
+	void detach ();
 
 	template <class T>
-	void create (T* p, SIZE_T stack_size = 0, int priority = THREAD_PRIORITY_NORMAL)
+	void create (T* p, size_t stack_size = 0, int priority = 0) // THREAD_PRIORITY_NORMAL = 0
 	{
-		create (stack_size, (LPTHREAD_START_ROUTINE)T::thread_proc, p, priority);
+		create (stack_size, (PTHREAD_START_ROUTINE)T::thread_proc, p, priority);
 	}
 
-	HANDLE handle () const
+	void* handle () const
 	{
 		return handle_;
 	}
 
-	void join () const
-	{
-		if (handle_)
-			WaitForSingleObject (handle_, INFINITE);
-	}
-
-	void thread_proc ()
-	{
-		TlsSetValue (tls_current_, this);
-	}
+	void join () const;
+	void thread_proc ();
 
 protected:
 	Thread () :
@@ -95,12 +72,12 @@ protected:
 	}
 
 private:
-	void create (SIZE_T stack_size, LPTHREAD_START_ROUTINE thread_proc, void* param, int priority);
+	void create (size_t stack_size, PTHREAD_START_ROUTINE thread_proc, void* param, int priority);
 
 private:
-	static DWORD tls_current_;
+	static uint32_t tls_current_;
 
-	HANDLE handle_;
+	void* handle_;
 };
 
 }
