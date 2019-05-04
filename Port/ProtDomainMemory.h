@@ -22,11 +22,28 @@ class AddressSpace;
 namespace Port {
 
 using namespace ::CORBA;
-using namespace ::Nirvana::Core::Windows;
 
 class ProtDomainMemory
 {
+	static const UWord PAGE_SIZE = 4096;
+	static const UWord PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
+	static const UWord ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
 public:
+	static const UWord ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
+	static const UWord SHARING_UNIT = ALLOCATION_UNIT;
+	static const UWord GRANULARITY = ALLOCATION_UNIT;
+	static const UWord SHARING_ASSOCIATIVITY = ALLOCATION_UNIT;
+	static const UWord OPTIMAL_COMMIT_UNIT = ALLOCATION_UNIT;
+
+	static const UWord COMMIT_UNIT = PAGE_SIZE;
+	static const UWord PROTECTION_UNIT = PAGE_SIZE;
+
+	static const UWord FLAGS = 
+		Memory::ACCESS_CHECK |
+		Memory::HARDWARE_PROTECTION |
+		Memory::COPY_ON_WRITE |
+		Memory::SPACE_RESERVATION;
+
 	static void initialize ();
 	static void terminate ();
 
@@ -99,7 +116,7 @@ private:
 	static HANDLE new_mapping ();
 
 private:
-	static AddressSpace space_;
+	static Core::Windows::AddressSpace space_;
 };
 
 }

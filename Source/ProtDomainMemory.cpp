@@ -9,8 +9,9 @@
 
 namespace Nirvana {
 namespace Core {
-
 namespace Port {
+
+using namespace ::Nirvana::Core::Windows;
 
 Windows::AddressSpace ProtDomainMemory::space_;
 
@@ -376,11 +377,7 @@ UWord ProtDomainMemory::query (const void* p, Memory::QueryParam q)
 			return PAGE_SIZE;
 
 		case Memory::FLAGS:
-			return
-				Memory::ACCESS_CHECK |
-				Memory::HARDWARE_PROTECTION |
-				Memory::COPY_ON_WRITE |
-				Memory::SPACE_RESERVATION;
+			return FLAGS;
 		}
 
 		throw BAD_PARAM ();

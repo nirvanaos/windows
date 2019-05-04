@@ -7,6 +7,8 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
+using namespace ::Nirvana::Core::Windows;
+
 ULong ProtDomainMemory::Block::commit (UWord offset, UWord size)
 { // This operation must be thread-safe.
 

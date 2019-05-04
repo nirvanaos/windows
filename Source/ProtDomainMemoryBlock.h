@@ -17,11 +17,11 @@ inline void ProtDomainMemory::protect (void* address, UWord size, ULong protecti
 }
 
 class ProtDomainMemory::Block :
-	public AddressSpace::Block
+	public Core::Windows::AddressSpace::Block
 {
 public:
 	Block (void* addr) :
-		AddressSpace::Block (ProtDomainMemory::space_, addr)
+		Core::Windows::AddressSpace::Block (ProtDomainMemory::space_, addr)
 	{}
 
 	ULong commit (UWord offset, UWord size);
