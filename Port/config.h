@@ -30,6 +30,7 @@ using namespace ::CORBA;
 
 const ULong HEAP_UNIT_MIN = 16;
 const ULong HEAP_UNIT_DEFAULT = 16;
+const ULong HEAP_UNIT_CORE = 16; // Core heap unit.
 const ULong HEAP_UNIT_MAX = 4096;
 
 /**	Размер управляющего блока кучи. 
