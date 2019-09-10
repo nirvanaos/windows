@@ -240,12 +240,14 @@ ThreadMemory::ThreadMemory () :
 	StackInfo ()
 { // Prepare stack of current thread to share.
 	// Call stack_prepare in fiber
-	run_in_neutral_context (&Runnable <StackPrepare> (*this));
+	Runnable <StackPrepare> runnable (*this);
+	run_in_neutral_context (runnable._get_ptr ());
 }
 
 ThreadMemory::~ThreadMemory ()
 {
-	run_in_neutral_context (&Runnable <StackUnprepare> (*this));
+	Runnable <StackUnprepare> runnable (*this);
+	run_in_neutral_context (runnable._get_ptr ());
 }
 
 }

@@ -22,7 +22,8 @@ namespace Windows {
 int main ()
 {
 	Heap::initialize ();
-	::Nirvana::Core::Port::Scheduler::run (&Startup (), std::numeric_limits <DeadlineTime>::max ());
+	Startup runnable;
+	::Nirvana::Core::Port::Scheduler::run (runnable._get_ptr (), std::numeric_limits <DeadlineTime>::max ());
 	Heap::terminate ();
 	return 0;
 }
