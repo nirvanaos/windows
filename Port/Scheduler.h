@@ -27,8 +27,8 @@ public:
 		scheduler_->shutdown ();
 	}
 
-	static void run (Runnable_ptr startup, DeadlineTime deadline);
-	static void run_client (uint64_t protection_domain, Runnable_ptr startup, DeadlineTime deadline);
+	static void run_system_domain (Runnable_ptr startup, DeadlineTime deadline);
+	static void run_protection_domain (uint64_t protection_domain, Runnable_ptr startup, DeadlineTime deadline);
 
 private:
 	static Windows::SchedulerAbstract* scheduler_;

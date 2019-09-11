@@ -23,7 +23,7 @@ int main ()
 {
 	Heap::initialize ();
 	Startup runnable;
-	::Nirvana::Core::Port::Scheduler::run (runnable._get_ptr (), std::numeric_limits <DeadlineTime>::max ());
+	::Nirvana::Core::Port::Scheduler::run_system_domain (runnable._get_ptr (), std::numeric_limits <DeadlineTime>::max ());
 	Heap::terminate ();
 	return 0;
 }
