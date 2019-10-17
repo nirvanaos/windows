@@ -1,3 +1,4 @@
+#include <Nirvana/Nirvana.h>
 #include "../Port/ProtDomainMemory.h"
 #include "../Source/AddressSpace.h"
 #include "../Source/ThreadMemory.h"

@@ -1,7 +1,8 @@
 // Testing Windows API memory management functions
 
-#include <windows.h>
+#include <Nirvana/Nirvana.h>
 #include <gtest/gtest.h>
+#include <windows.h>
 
 #define PAGE_SIZE 4096
 #define ALLOCATION_GRANULARITY (16 * PAGE_SIZE)
