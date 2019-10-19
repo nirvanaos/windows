@@ -1,4 +1,7 @@
 #include <Windows.h>
+#include <vcruntime_startup.h>
+#include <corecrt_startup.h>
+#include <vcruntime/internal_shared.h>
 
 namespace Nirvana {
 namespace Core {
@@ -10,20 +13,6 @@ int main ();
 }
 }
 
-enum class __scrt_module_type
-{
-	dll,
-	exe
-};
-
-extern "C" bool __cdecl __scrt_initialize_crt(__scrt_module_type module_type);
-extern "C" bool __cdecl __scrt_uninitialize_crt(bool is_terminating, bool from_exit);
-extern "C" __declspec(noreturn) void __cdecl __scrt_fastfail (unsigned code);
-extern "C" int __cdecl _seh_filter_exe (
-	unsigned long       const xcptnum,
-	PEXCEPTION_POINTERS const pxcptinfoptrs
-);
-
 extern "C"
 int __stdcall nirvana_main ()
 {
@@ -32,23 +21,24 @@ int __stdcall nirvana_main ()
 	// handling can be called in the current image until after this call:
 	__security_init_cookie ();
 
-	if (!__scrt_initialize_crt (__scrt_module_type::exe))
-		__scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
+	__isa_available_init ();
 
 	__try {
-		int main_result = Nirvana::Core::Windows::main ();
+/*
+		if (_initterm_e (__xi_a, __xi_z) != 0)
+			return 255;
 
-		// Finally, we terminate the CRT:
-		__scrt_uninitialize_crt (true, false);
-
-		return main_result;
+		_initterm (__xc_a, __xc_z);
+*/
+		int const main_result = Nirvana::Core::Windows::main ();
+		exit (main_result);
 
 	} __except (_seh_filter_exe (GetExceptionCode (), GetExceptionInformation ()))
 	{
 		// Note:  We should never reach this except clause.
 		int const main_result = GetExceptionCode ();
 
-		return main_result;
+		_exit (main_result);
 	}
 
 }
