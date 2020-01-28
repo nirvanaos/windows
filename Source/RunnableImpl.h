@@ -10,7 +10,7 @@ namespace Windows {
 template <class S>
 class RunnableImpl :
 	public CORBA::Nirvana::Servant <S, Runnable>,
-	public CORBA::Nirvana::LifeCycleStatic <>
+	public CORBA::Nirvana::LifeCycleStatic
 {};
 
 }

@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERIPC_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERIPC_H_
 
-#include <Nirvana/Nirvana.h>
+#include <core.h>
 
 #define OBJ_NAME_PREFIX L"Nirvana"
 

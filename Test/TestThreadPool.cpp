@@ -1,4 +1,4 @@
-#include <Nirvana/Nirvana.h>
+#include <core.h>
 #include "../Source/PostOffice.h"
 #include "../Source/Mailslot.h"
 #include "../Source/ThreadPoolable.h"

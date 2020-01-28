@@ -5,9 +5,8 @@
 #ifndef NIRVANA_CORE_WINDOWS_THREADPOOL_H_
 #define NIRVANA_CORE_WINDOWS_THREADPOOL_H_
 
-#include <Nirvana/Nirvana.h>
-#include "CompletionPortReceiver.h"
 #include <core.h>
+#include "CompletionPortReceiver.h"
 
 namespace Nirvana {
 namespace Core {

@@ -1,4 +1,5 @@
 // Mock implementation for Nirvana::Core::run_in_neutral_context()
+#include <core.h>
 #include <Nirvana/Runnable_c.h>
 #include <CORBA/CORBA.h>
 #include "../Source/win32.h"

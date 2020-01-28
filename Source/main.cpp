@@ -8,7 +8,7 @@ namespace Core {
 
 class Startup :
 	public ::CORBA::Nirvana::Servant <Startup, Runnable>,
-	public ::CORBA::Nirvana::LifeCycleStatic <>
+	public ::CORBA::Nirvana::LifeCycleStatic
 {
 public:
 	void run ()

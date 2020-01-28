@@ -1,6 +1,6 @@
 // Testing Windows API memory management functions
 
-#include <Nirvana/Nirvana.h>
+#include <core.h>
 #include <gtest/gtest.h>
 #include <windows.h>
 

@@ -55,7 +55,7 @@ class SchedulerWindows :
 	public SchedulerAbstract,
 	public SchedulerIPC,
 	public PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, THREAD_PRIORITY_TIME_CRITICAL>,
-	private SchedulerImpl <SchedulerWindows, SchedulerItem>
+	public SchedulerImpl <SchedulerWindows, SchedulerItem>
 {
 public:
 	typedef SchedulerImpl <SchedulerWindows, SchedulerItem> Base;
