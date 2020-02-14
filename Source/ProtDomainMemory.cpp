@@ -6,6 +6,7 @@
 #include <eh.h>
 #include "ProtDomainMemoryBlock.h"
 #include <Nirvana/real_copy.h>
+#include <CORBA/CORBA.h>
 
 namespace Nirvana {
 namespace Core {
@@ -350,33 +351,33 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 	return ret;
 }
 
-UWord ProtDomainMemory::query (const void* p, Memory::QueryParam q)
+UWord ProtDomainMemory::query (const void* p, MemQuery q)
 {
 	{
 		switch (q) {
 
-		case Memory::ALLOCATION_SPACE_BEGIN:
+		case MemQuery::ALLOCATION_SPACE_BEGIN:
 			{
 				SYSTEM_INFO sysinfo;
 				GetSystemInfo (&sysinfo);
 				return (UWord)sysinfo.lpMinimumApplicationAddress;
 			}
 
-		case Memory::ALLOCATION_SPACE_END:
+		case MemQuery::ALLOCATION_SPACE_END:
 			return (UWord)space_.end ();
 
-		case Memory::ALLOCATION_UNIT:
-		case Memory::SHARING_UNIT:
-		case Memory::GRANULARITY:
-		case Memory::SHARING_ASSOCIATIVITY:
-		case Memory::OPTIMAL_COMMIT_UNIT:
+		case MemQuery::ALLOCATION_UNIT:
+		case MemQuery::SHARING_UNIT:
+		case MemQuery::GRANULARITY:
+		case MemQuery::SHARING_ASSOCIATIVITY:
+		case MemQuery::OPTIMAL_COMMIT_UNIT:
 			return ALLOCATION_GRANULARITY;
 
-		case Memory::PROTECTION_UNIT:
-		case Memory::COMMIT_UNIT:
+		case MemQuery::PROTECTION_UNIT:
+		case MemQuery::COMMIT_UNIT:
 			return PAGE_SIZE;
 
-		case Memory::FLAGS:
+		case MemQuery::FLAGS:
 			return FLAGS;
 		}
 

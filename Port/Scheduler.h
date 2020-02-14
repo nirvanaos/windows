@@ -2,7 +2,7 @@
 #define NIRVANA_CORE_PORT_SCHEDULER_H_
 
 #include "../Source/SchedulerAbstract.h"
-#include <Nirvana/Runnable_c.h>
+#include <Nirvana/Runnable.h>
 
 namespace Nirvana {
 namespace Core {

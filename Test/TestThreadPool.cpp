@@ -2,7 +2,6 @@
 #include "../Source/PostOffice.h"
 #include "../Source/Mailslot.h"
 #include "../Source/ThreadPoolable.h"
-#include <Mock/MockMemory.h>
 #include <gtest/gtest.h>
 #include <atomic>
 
@@ -64,7 +63,7 @@ protected:
 	{
 		// Code here will be called immediately after the constructor (right
 		// before each test).
-		::Nirvana::Core::g_core_heap = ::Nirvana::Test::mock_memory ();
+		::Nirvana::Core::g_core_heap = ::Nirvana::g_default_heap;
 	}
 
 	virtual void TearDown ()

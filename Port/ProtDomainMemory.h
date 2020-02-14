@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_PORT_PROTDOMAINMEMORY_H_
 #define NIRVANA_CORE_PORT_PROTDOMAINMEMORY_H_
 
-#include <Nirvana/Memory_c.h>
+#include <Nirvana/Memory.h>
 
 struct _EXCEPTION_POINTERS;
 typedef void *HANDLE;
@@ -66,7 +66,7 @@ public:
 
 	static bool is_copy (const void* p1, const void* p2, UWord size);
 
-	static UWord query (const void* p, Memory::QueryParam q);
+	static UWord query (const void* p, MemQuery q);
 
 	//! For usage in proxies.
 	static void prepare_to_share (void* src, UWord size, Long flags);

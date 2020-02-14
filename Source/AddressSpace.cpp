@@ -1,6 +1,7 @@
 #include "../Port/ProtDomainMemory.h"
 #include "AddressSpace.h"
 #include <BackOff.h>
+#include <CORBA/CORBA.h>
 #include <algorithm>
 
 #define OBJ_NAME_PREFIX L"Nirvana"
