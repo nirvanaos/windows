@@ -20,7 +20,7 @@ class SchedulerClient :
 public:
 	SchedulerClient (uint64_t protection_domain);
 
-	void run (Runnable_ptr startup, DeadlineTime deadline)
+	void run (Runnable* startup, DeadlineTime deadline)
 	{
 		worker_threads_.run (startup, deadline);
 		MailslotReader::terminate ();

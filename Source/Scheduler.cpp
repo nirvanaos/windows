@@ -8,7 +8,7 @@ namespace Port {
 
 Windows::SchedulerAbstract* Scheduler::scheduler_ = nullptr;
 
-void Scheduler::run_system_domain (Runnable_ptr startup, DeadlineTime deadline)
+void Scheduler::run_system_domain (Runnable* startup, DeadlineTime deadline)
 {
 	Windows::SchedulerWindows impl;
 	scheduler_ = &impl;
@@ -18,7 +18,7 @@ void Scheduler::run_system_domain (Runnable_ptr startup, DeadlineTime deadline)
 #endif
 }
 
-void Scheduler::run_protection_domain (uint64_t protection_domain, Runnable_ptr startup, DeadlineTime deadline)
+void Scheduler::run_protection_domain (uint64_t protection_domain, Runnable* startup, DeadlineTime deadline)
 {
 	Windows::SchedulerClient impl (protection_domain);
 	scheduler_ = &impl;

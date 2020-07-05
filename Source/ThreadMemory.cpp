@@ -220,7 +220,7 @@ private:
 
 template <class T>
 class ThreadMemory::Runnable :
-	public RunnableImpl <ThreadMemory::Runnable <T> >
+	public ImplStatic <::Nirvana::Core::Runnable>
 {
 public:
 	Runnable (const ThreadMemory& thread) :
@@ -241,13 +241,13 @@ ThreadMemory::ThreadMemory () :
 { // Prepare stack of current thread to share.
 	// Call stack_prepare in fiber
 	Runnable <StackPrepare> runnable (*this);
-	run_in_neutral_context (runnable._get_ptr ());
+	run_in_neutral_context (&runnable);
 }
 
 ThreadMemory::~ThreadMemory ()
 {
 	Runnable <StackUnprepare> runnable (*this);
-	run_in_neutral_context (runnable._get_ptr ());
+	run_in_neutral_context (&runnable);
 }
 
 }

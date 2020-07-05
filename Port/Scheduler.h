@@ -2,7 +2,7 @@
 #define NIRVANA_CORE_PORT_SCHEDULER_H_
 
 #include "../Source/SchedulerAbstract.h"
-#include <Nirvana/Runnable.h>
+#include <Runnable.h>
 
 namespace Nirvana {
 namespace Core {
@@ -27,8 +27,8 @@ public:
 		scheduler_->shutdown ();
 	}
 
-	static void run_system_domain (Runnable_ptr startup, DeadlineTime deadline);
-	static void run_protection_domain (uint64_t protection_domain, Runnable_ptr startup, DeadlineTime deadline);
+	static void run_system_domain (Runnable* startup, DeadlineTime deadline);
+	static void run_protection_domain (uint64_t protection_domain, Runnable* startup, DeadlineTime deadline);
 
 private:
 	static Windows::SchedulerAbstract* scheduler_;

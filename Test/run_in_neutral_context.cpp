@@ -8,7 +8,7 @@ namespace Test {
 
 struct FiberParam
 {
-	Nirvana::Runnable_ptr runnable;
+	Nirvana::Runnable* runnable;
 	void* source_fiber;
 	CORBA::Nirvana::Environment environment;
 };

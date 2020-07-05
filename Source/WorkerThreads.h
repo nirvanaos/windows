@@ -20,7 +20,7 @@ public:
 	~WorkerThreads ();
 	WorkerThreads ();
 
-	void run (Runnable_ptr startup, DeadlineTime deadline);
+	void run (Runnable* startup, DeadlineTime deadline);
 	void shutdown ();
 
 private:
@@ -28,7 +28,7 @@ private:
 	{
 		ExecDomain* main_context;
 		ThreadPoolable* worker_thread;
-		Runnable_ptr startup;
+		Runnable* startup;
 		DeadlineTime deadline;
 	};
 

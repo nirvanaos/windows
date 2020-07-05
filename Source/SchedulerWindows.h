@@ -66,7 +66,7 @@ public:
 		in_proc_execute_ (thread_count ())
 	{}
 
-	void run (Runnable_ptr startup, DeadlineTime deadline)
+	void run (Runnable* startup, DeadlineTime deadline)
 	{
 		Office::initialize (SCHEDULER_MAILSLOT_NAME);
 		in_proc_execute_.run (startup, deadline);
@@ -124,7 +124,7 @@ private:
 			worker_threads_.post (*this, reinterpret_cast <OVERLAPPED*> (buffer), 0);
 		}
 
-		void run (Runnable_ptr startup, DeadlineTime deadline)
+		void run (Runnable* startup, DeadlineTime deadline)
 		{
 			worker_threads_.run (startup, deadline);
 		}

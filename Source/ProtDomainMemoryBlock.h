@@ -3,7 +3,7 @@
 
 #include "../Port/ProtDomainMemory.h"
 #include "AddressSpace.h"
-#include "RunnableImpl.h"
+#include <Runnable.h>
 
 namespace Nirvana {
 namespace Core {
@@ -66,7 +66,7 @@ struct ProtDomainMemory::Block::Regions
 };
 
 class ProtDomainMemory::Block::Remap :
-	public Windows::RunnableImpl <ProtDomainMemory::Block::Remap>
+	public ImplStatic <Runnable>
 {
 public:
 	Remap (Block* block) :

@@ -23,7 +23,7 @@ WorkerThreads::~WorkerThreads ()
 	Scheduler::terminate ();
 }
 
-void WorkerThreads::run (Runnable_ptr startup, DeadlineTime deadline)
+void WorkerThreads::run (Runnable* startup, DeadlineTime deadline)
 {
 	MainFiberParam param;
 	
