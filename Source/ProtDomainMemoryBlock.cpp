@@ -138,7 +138,7 @@ void ProtDomainMemory::Block::remap ()
 	// If this block is on the top of current stack, we must remap it in different fiber.
 	if (address () <= (BYTE*)&hm && (BYTE*)&hm < address () + ALLOCATION_GRANULARITY) {
 		Remap runnable (this);
-		run_in_neutral_context (&runnable);
+		run_in_neutral_context (runnable);
 		return;
 	}
 

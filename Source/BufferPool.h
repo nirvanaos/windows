@@ -44,7 +44,7 @@ protected:
 	void initialize (CompletionPort& port, DWORD buffer_size);
 	virtual void terminate ();
 
-	DWORD buffer_size () const
+	size_t buffer_size () const
 	{
 		return buffer_size_;
 	}
@@ -70,7 +70,7 @@ protected:
 private:
 	OVERLAPPED* begin_;
 	OVERLAPPED* end_;
-	DWORD buffer_size_;
+	size_t buffer_size_;
 };
 
 }

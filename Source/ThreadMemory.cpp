@@ -241,13 +241,13 @@ ThreadMemory::ThreadMemory () :
 { // Prepare stack of current thread to share.
 	// Call stack_prepare in fiber
 	Runnable <StackPrepare> runnable (*this);
-	run_in_neutral_context (&runnable);
+	run_in_neutral_context (runnable);
 }
 
 ThreadMemory::~ThreadMemory ()
 {
 	Runnable <StackUnprepare> runnable (*this);
-	run_in_neutral_context (&runnable);
+	run_in_neutral_context (runnable);
 }
 
 }

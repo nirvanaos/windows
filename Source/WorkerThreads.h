@@ -20,7 +20,7 @@ public:
 	~WorkerThreads ();
 	WorkerThreads ();
 
-	void run (Runnable* startup, DeadlineTime deadline);
+	void run (Runnable& startup, DeadlineTime deadline);
 	void shutdown ();
 
 private:

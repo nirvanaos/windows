@@ -23,7 +23,7 @@ bool MailslotReader::initialize (LPCWSTR mailslot_name, DWORD max_msg_size, Comp
 
 void MailslotReader::enqueue_buffer (OVERLAPPED* ovl)
 {
-	if (!ReadFile (handle_, data (ovl), buffer_size (), nullptr, ovl)) {
+	if (!ReadFile (handle_, data (ovl), (DWORD)buffer_size (), nullptr, ovl)) {
 		DWORD err = GetLastError ();
 		if (ERROR_IO_PENDING != err)
 			throw ::CORBA::INTERNAL ();
