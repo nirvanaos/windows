@@ -25,7 +25,7 @@ const AddressSpace::Block::State& AddressSpace::Block::state ()
 {
 	if (State::INVALID == state_.state) {
 		MEMORY_BASIC_INFORMATION mbi;
-		for (BackOff bo; true; bo.sleep ()) {
+		for (/*BackOff bo*/; true; /*bo ()*/) {
 			// Concurrency
 			space_.query (address_, mbi);
 			HANDLE hm = mapping ();
@@ -86,17 +86,19 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 		ptrdiff_t realloc_end = (BYTE*)mbi.BaseAddress + mbi.RegionSize - address_ - ALLOCATION_GRANULARITY;
 		verify (VirtualFreeEx (space_.process (), reserved_begin, 0, MEM_RELEASE));
 		if (realloc_begin > 0) {
-			for (BackOff bo;
-					 !VirtualAllocEx (space_.process (), reserved_begin, realloc_begin, MEM_RESERVE, mbi.AllocationProtect);
-					 bo.sleep ()) {
+			for (/*BackOff bo*/;
+				!VirtualAllocEx (space_.process (), reserved_begin, realloc_begin, MEM_RESERVE, mbi.AllocationProtect);
+				/*bo ()*/) {
+				// Temporary released block was accidentally allocated by other thread and will be released soon.
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
 			}
 		}
 		if (realloc_end > 0) {
 			BYTE* end = address_ + ALLOCATION_GRANULARITY;
-			for (BackOff bo;
-					 !VirtualAllocEx (space_.process (), end, realloc_end, MEM_RESERVE, mbi.AllocationProtect);
-					 bo.sleep ()) {
+			for (/*BackOff bo*/;
+				!VirtualAllocEx (space_.process (), end, realloc_end, MEM_RESERVE, mbi.AllocationProtect);
+				/*bo ()*/) {
+				// Temporary released block was accidentally allocated by other thread and will be released soon.
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
 			}
 		}
@@ -112,9 +114,10 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 		throw INTERNAL ();
 	}
 
-	for (BackOff bo;
-			 !MapViewOfFile2 (mapping, space_.process (), 0, address_, ALLOCATION_GRANULARITY, 0, protection);
-			 bo.sleep ()) {
+	for (/*BackOff bo*/;
+		!MapViewOfFile2 (mapping, space_.process (), 0, address_, ALLOCATION_GRANULARITY, 0, protection);
+		/*bo ()*/) {
+		// Temporary released block was accidentally allocated by other thread and will be released soon.
 		assert (ERROR_INVALID_ADDRESS == GetLastError ());
 	}
 }
@@ -132,10 +135,10 @@ void AddressSpace::Block::unmap (HANDLE reserve, bool no_close_handle)
 		if (!no_close_handle)
 			verify (CloseHandle (mapping));
 		if (reserve) {
-			for (BackOff bo;
-					 !VirtualAllocEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RESERVE, PAGE_NOACCESS);
-					 bo.sleep ()
-					 ) {
+			for (/*BackOff bo*/;
+				!VirtualAllocEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RESERVE, PAGE_NOACCESS);
+				/*bo ()*/) {
+				// Temporary released block was accidentally allocated by other thread and will be released soon.
 				assert (ERROR_INVALID_ADDRESS == GetLastError ());
 			}
 		}
@@ -590,15 +593,19 @@ void* AddressSpace::reserve (SIZE_T size, LONG flags, void* dst)
 	if (dst && !(flags & Memory::EXACTLY))
 		dst = round_down (dst, ALLOCATION_GRANULARITY);
 	size = round_up (size, ALLOCATION_GRANULARITY);
-	for (BackOff bo; true; bo.sleep ()) {	// Loop to handle possible concurrency.
+	for (BackOff bo; true; bo ()) {	// Loop to handle possible concurrency.
+		// Allocate memory block
 		p = (BYTE*)VirtualAllocEx (process_, dst, size, MEM_RESERVE, PAGE_NOACCESS);
 		if (!p) {
-			if (dst && (flags & Memory::EXACTLY))
-				return 0;
+			if (flags & Memory::EXACTLY)
+				return nullptr;
 			else
 				throw NO_MEMORY ();
 		}
 
+		// The allocated block may be temporary free for remapping.
+		// In this case memory mapping will be not zero.
+		// To ensure that it is a new allocated block, mark memory mapping with INVALID_HANDLE_VALUE.
 		BYTE* pb = p;
 		BYTE* end = p + size;
 		for (; pb < end; pb += ALLOCATION_GRANULARITY) {
@@ -607,6 +614,9 @@ void* AddressSpace::reserve (SIZE_T size, LONG flags, void* dst)
 		}
 		if (pb >= end)
 			break;
+
+		// Concurrency collision. This memory is already allocated and temporary unmapped for remapping.
+		// Release memory and try again.
 		while (pb > p)
 			block (pb -= ALLOCATION_GRANULARITY).mapping = 0;
 		verify (VirtualFreeEx (process_, p, 0, MEM_RELEASE));
@@ -652,9 +662,10 @@ void AddressSpace::release (void* dst, SIZE_T size)
 			SSIZE_T realloc = begin - (BYTE*)begin_mbi.AllocationBase;
 			if (realloc > 0) {
 				verify (VirtualFreeEx (process_, begin_mbi.AllocationBase, 0, MEM_RELEASE));
-				for (BackOff bo; 
-						 !VirtualAllocEx (process_, begin_mbi.AllocationBase, realloc, MEM_RESERVE, PAGE_NOACCESS);
-						 bo.sleep ()) {
+				for (/*BackOff bo*/;
+					!VirtualAllocEx (process_, begin_mbi.AllocationBase, realloc, MEM_RESERVE, PAGE_NOACCESS);
+					/*bo ()*/) {
+					// Temporary released block was accidentally allocated by other thread and will be released soon.
 					assert (ERROR_INVALID_ADDRESS == GetLastError ());
 				}
 			}
@@ -665,9 +676,10 @@ void AddressSpace::release (void* dst, SIZE_T size)
 			if (realloc > 0) {
 				if ((BYTE*)end_mbi.AllocationBase >= begin)
 					verify (VirtualFreeEx (process_, end_mbi.AllocationBase, 0, MEM_RELEASE));
-				for (BackOff bo;
-						 !VirtualAllocEx (process_, end, realloc, MEM_RESERVE, PAGE_NOACCESS);
-						 bo.sleep ()) {
+				for (/*BackOff bo*/;
+					!VirtualAllocEx (process_, end, realloc, MEM_RESERVE, PAGE_NOACCESS);
+					/*bo ()*/) {
+					// Temporary released block was accidentally allocated by other thread and will be released soon.
 					assert (ERROR_INVALID_ADDRESS == GetLastError ());
 				}
 			}
@@ -705,17 +717,21 @@ void AddressSpace::release (void* dst, SIZE_T size)
 void* AddressSpace::map (HANDLE mapping, MappingType protection)
 {
 	assert (mapping);
-	for (BackOff bo; true; bo.sleep ()) {
+	for (BackOff bo; true; bo ()) {
 		void* p = MapViewOfFile2 (mapping, process_, 0, 0, ALLOCATION_GRANULARITY, 0, protection);
 		if (!p)
 			throw NO_MEMORY ();
 		try {
+			// The allocated block may be temporary unmapped for remapping.
+			// In this case memory mapping will be not zero.
 			if (!InterlockedCompareExchangePointer (&block (p).mapping, mapping, 0))
 				return p;
 		} catch (...) {
 			UnmapViewOfFile2 (process_, p, 0);
 			throw;
 		}
+		// Concurrency collision. This memory is already allocated and temporary unmapped for remapping.
+		// Release memory and try again.
 		UnmapViewOfFile2 (process_, p, 0);
 	}
 }

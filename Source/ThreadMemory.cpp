@@ -204,9 +204,10 @@ private:
 		}
 
 		// Reserve all stack.
-		for (Core::BackOff bo;
-				 !VirtualAlloc (allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE);
-				 bo.sleep ()) {
+		for (/*BackOff bo*/;
+			!VirtualAlloc (allocation_base, stack_base - allocation_base, MEM_RESERVE, PAGE_READWRITE);
+			/*bo ()*/) {
+			// Temporary released block was accidentally allocated by other thread and will be released soon.
 			assert (ERROR_INVALID_ADDRESS == GetLastError ());
 		}
 
