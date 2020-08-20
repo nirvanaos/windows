@@ -4,12 +4,8 @@
 #ifndef NIRVANA_CORE_CONFIG_H_
 #define NIRVANA_CORE_CONFIG_H_
 
-#include <CORBA/basic_types.h>
-
 namespace Nirvana {
 namespace Core {
-
-using namespace ::CORBA;
 
 // Heap parameters
 
@@ -28,10 +24,10 @@ using namespace ::CORBA;
 	¬ данной реализации размер блока по умолчанию равен 16 байт.
 */
 
-const ULong HEAP_UNIT_MIN = 16;
-const ULong HEAP_UNIT_DEFAULT = 16;
-const ULong HEAP_UNIT_CORE = 16; // Core heap unit.
-const ULong HEAP_UNIT_MAX = 4096;
+const size_t HEAP_UNIT_MIN = 4;
+const size_t HEAP_UNIT_DEFAULT = 16;
+const size_t HEAP_UNIT_CORE = 16; // Core heap unit.
+const size_t HEAP_UNIT_MAX = 4096;
 
 /**	–азмер управл€ющего блока кучи. 
 –азмер должен быть кратен гранул€рности пам€ти домена защиты - максимальному
@@ -41,21 +37,21 @@ const ULong HEAP_UNIT_MAX = 4096;
 ƒл€ Windows размер заголовка равен 64K. ƒл€ систем с меньшими размерами ALLOCATION_UNIT
 и SHARING_UNIT его можно сделать меньше.
 */
-const ULong HEAP_DIRECTORY_SIZE = 0x10000;
+const size_t HEAP_DIRECTORY_SIZE = 0x10000;
 
 /** Use exceptions to handle uncommitted pages in heap directory.
 When set to `false`, heap algorithm uses `Memory::is_readable ()`
 to detect uncommitted pages. `true` provides better performance, but maybe not for all platforms.
 */
-const Boolean HEAP_DIRECTORY_USE_EXCEPTION = true;
+const bool HEAP_DIRECTORY_USE_EXCEPTION = true;
 
 /** Maximum count of levels in PriorityQueue.
 To provide best performance with a probabilistic time complexity of
 O(logN) where N is the maximum number of elements, the queue should
 have PRIORITY_QUEUE_LEVELS = logN. Too large value degrades the performance.
 */
-const ULong SYNC_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For syncronization domain.
-const ULong SYS_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For system-wide scheduler.
+const unsigned SYNC_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For syncronization domain.
+const unsigned SYS_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For system-wide scheduler.
 
 const bool SHARE_STACK = false;
 
