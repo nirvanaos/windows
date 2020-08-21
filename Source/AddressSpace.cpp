@@ -32,6 +32,7 @@ const AddressSpace::Block::State& AddressSpace::Block::state ()
 			assert (hm);
 			if (!hm || INVALID_HANDLE_VALUE == hm || mbi.Type == MEM_MAPPED)
 				break;
+			// Memory block is in temporary state because of remapping.
 		}
 
 		DWORD page_state_bits = mbi.Protect;
