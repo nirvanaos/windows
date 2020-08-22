@@ -78,7 +78,7 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 		:
 		InterlockedExchangePointer (&info_.mapping, mapping);
 
-	if (old == INVALID_HANDLE_VALUE) {
+	if (old == INVALID_HANDLE_VALUE) { // Block is reserved
 		MEMORY_BASIC_INFORMATION mbi;
 		space_.query (address_, mbi);
 		assert (MEM_RESERVE == mbi.State);

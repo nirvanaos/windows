@@ -42,7 +42,7 @@ protected:
 	// Create new mapping
 	static HANDLE new_mapping ()
 	{
-		return CreateFileMappingW (0, 0, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, 0);
+		return CreateFileMappingW (INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, nullptr);
 	}
 
 };
@@ -504,14 +504,95 @@ TEST_F (TestAPI, Commit)
 	EXPECT_TRUE (CloseHandle (mh));
 }
 
-PTOP_LEVEL_EXCEPTION_FILTER g_exception_filter;
-
-class MyException
+TEST_F (TestAPI, Placeholder)
 {
-public:
-	MyException ()
-	{}
+	HANDLE process = GetCurrentProcess ();
+	MEMORY_BASIC_INFORMATION mbi;
 
-};
+	// Reserve 3 regions
+	uint8_t* placeholder = (uint8_t*)VirtualAlloc2 (process, nullptr, 3 * ALLOCATION_GRANULARITY, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+	ASSERT_TRUE (placeholder);
+
+	EXPECT_EQ (VirtualQuery (placeholder, &mbi, sizeof (mbi)), sizeof (mbi));
+	EXPECT_EQ (mbi.AllocationBase, placeholder);
+	EXPECT_EQ (mbi.RegionSize, 3 * ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.State, MEM_RESERVE);
+	EXPECT_EQ (mbi.Protect, 0);
+	EXPECT_EQ (mbi.Type, MEM_PRIVATE);
+
+	// Split to 3 regions
+	EXPECT_TRUE (VirtualFreeEx (process, placeholder + ALLOCATION_GRANULARITY, ALLOCATION_GRANULARITY, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
+
+	EXPECT_EQ (VirtualQuery (placeholder, &mbi, sizeof (mbi)), sizeof (mbi));
+	EXPECT_EQ (mbi.AllocationBase, placeholder);
+	EXPECT_EQ (mbi.RegionSize, ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.State, MEM_RESERVE);
+	EXPECT_EQ (mbi.Protect, 0);
+	EXPECT_EQ (mbi.Type, MEM_PRIVATE);
+
+	EXPECT_EQ (VirtualQuery (placeholder + ALLOCATION_GRANULARITY, &mbi, sizeof (mbi)), sizeof (mbi));
+	EXPECT_EQ (mbi.AllocationBase, placeholder + ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.RegionSize, ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.State, MEM_RESERVE);
+	EXPECT_EQ (mbi.Protect, 0);
+	EXPECT_EQ (mbi.Type, MEM_PRIVATE);
+
+	EXPECT_EQ (VirtualQuery (placeholder + 2 * ALLOCATION_GRANULARITY, &mbi, sizeof (mbi)), sizeof (mbi));
+	EXPECT_EQ (mbi.AllocationBase, placeholder + 2 * ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.RegionSize, ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.State, MEM_RESERVE);
+	EXPECT_EQ (mbi.Protect, 0);
+	EXPECT_EQ (mbi.Type, MEM_PRIVATE);
+
+	EXPECT_FALSE (VirtualAlloc2 (process, placeholder + ALLOCATION_GRANULARITY, ALLOCATION_GRANULARITY, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0));
+
+	// Map middle region
+	HANDLE mh = new_mapping ();
+	EXPECT_EQ (MapViewOfFile3 (mh, process, placeholder + ALLOCATION_GRANULARITY, 0, ALLOCATION_GRANULARITY, 
+		MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, nullptr, 0), placeholder + ALLOCATION_GRANULARITY);
+
+	EXPECT_EQ (VirtualQuery (placeholder + ALLOCATION_GRANULARITY, &mbi, sizeof (mbi)), sizeof (mbi));
+	EXPECT_EQ (mbi.AllocationBase, placeholder + ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.RegionSize, ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.State, MEM_RESERVE);
+	EXPECT_EQ (mbi.Protect, 0);
+	EXPECT_EQ (mbi.Type, MEM_MAPPED);
+
+	// Commit
+	static const ULONG PROTECTION = PAGE_READWRITE; // PAGE_EXECUTE_READWRITE does not work with placeholders!
+
+	EXPECT_EQ (VirtualAlloc2 (process, placeholder + ALLOCATION_GRANULARITY, PAGE_SIZE, MEM_COMMIT,
+		PROTECTION, nullptr, 0), placeholder + ALLOCATION_GRANULARITY);
+
+	EXPECT_EQ (VirtualQuery (placeholder + ALLOCATION_GRANULARITY, &mbi, sizeof (mbi)), sizeof (mbi));
+	EXPECT_EQ (mbi.AllocationBase, placeholder + ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.RegionSize, PAGE_SIZE);
+	EXPECT_EQ (mbi.State, MEM_COMMIT);
+	EXPECT_EQ (mbi.Protect, PROTECTION);
+	EXPECT_EQ (mbi.Type, MEM_MAPPED);
+
+	placeholder [ALLOCATION_GRANULARITY] = 1;
+
+	// Remap
+	EXPECT_TRUE (UnmapViewOfFile2 (process, placeholder + ALLOCATION_GRANULARITY, MEM_PRESERVE_PLACEHOLDER));
+	CloseHandle (mh);
+
+	EXPECT_EQ (VirtualQuery (placeholder + ALLOCATION_GRANULARITY, &mbi, sizeof (mbi)), sizeof (mbi));
+	EXPECT_EQ (mbi.AllocationBase, placeholder + ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.RegionSize, ALLOCATION_GRANULARITY);
+	EXPECT_EQ (mbi.State, MEM_RESERVE);
+	EXPECT_EQ (mbi.Protect, 0);
+	EXPECT_EQ (mbi.Type, MEM_PRIVATE);
+
+	mh = new_mapping ();
+	EXPECT_EQ (MapViewOfFile3 (mh, process, placeholder + ALLOCATION_GRANULARITY, 0, ALLOCATION_GRANULARITY,
+		MEM_REPLACE_PLACEHOLDER, PAGE_EXECUTE_READWRITE, nullptr, 0), placeholder + ALLOCATION_GRANULARITY);
+
+	// Release
+	EXPECT_TRUE (VirtualFreeEx (process, placeholder, 0, MEM_RELEASE));
+	EXPECT_TRUE (UnmapViewOfFile2 (process, placeholder + ALLOCATION_GRANULARITY, 0));
+	CloseHandle (mh);
+	EXPECT_TRUE (VirtualFreeEx (process, placeholder + 2 * ALLOCATION_GRANULARITY, 0, MEM_RELEASE));
+}
 
 }
