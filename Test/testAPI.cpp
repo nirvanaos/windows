@@ -546,10 +546,12 @@ TEST_F (TestAPI, Placeholder)
 
 	EXPECT_FALSE (VirtualAlloc2 (process, placeholder + ALLOCATION_GRANULARITY, ALLOCATION_GRANULARITY, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0));
 
+	static const ULONG PROTECTION = PAGE_EXECUTE_READWRITE;
+
 	// Map middle region
 	HANDLE mh = new_mapping ();
 	EXPECT_EQ (MapViewOfFile3 (mh, process, placeholder + ALLOCATION_GRANULARITY, 0, ALLOCATION_GRANULARITY, 
-		MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, nullptr, 0), placeholder + ALLOCATION_GRANULARITY);
+		MEM_REPLACE_PLACEHOLDER, PROTECTION, nullptr, 0), placeholder + ALLOCATION_GRANULARITY);
 
 	EXPECT_EQ (VirtualQuery (placeholder + ALLOCATION_GRANULARITY, &mbi, sizeof (mbi)), sizeof (mbi));
 	EXPECT_EQ (mbi.AllocationBase, placeholder + ALLOCATION_GRANULARITY);
@@ -559,8 +561,6 @@ TEST_F (TestAPI, Placeholder)
 	EXPECT_EQ (mbi.Type, MEM_MAPPED);
 
 	// Commit
-	static const ULONG PROTECTION = PAGE_READWRITE; // PAGE_EXECUTE_READWRITE does not work with placeholders!
-
 	EXPECT_EQ (VirtualAlloc2 (process, placeholder + ALLOCATION_GRANULARITY, PAGE_SIZE, MEM_COMMIT,
 		PROTECTION, nullptr, 0), placeholder + ALLOCATION_GRANULARITY);
 
@@ -571,7 +571,7 @@ TEST_F (TestAPI, Placeholder)
 	EXPECT_EQ (mbi.Protect, PROTECTION);
 	EXPECT_EQ (mbi.Type, MEM_MAPPED);
 
-	placeholder [ALLOCATION_GRANULARITY] = 1;
+	//placeholder [ALLOCATION_GRANULARITY] = 1;
 
 	// Remap
 	EXPECT_TRUE (UnmapViewOfFile2 (process, placeholder + ALLOCATION_GRANULARITY, MEM_PRESERVE_PLACEHOLDER));
