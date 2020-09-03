@@ -1,5 +1,5 @@
-#ifndef NIRVANA_CORE_WINDOWS_PROTDOMAINMEMORYBLOCK_H_
-#define NIRVANA_CORE_WINDOWS_PROTDOMAINMEMORYBLOCK_H_
+#ifndef NIRVANA_CORE_WINDOWS_PROTDOMAINMEMORYINTERNAL_H_
+#define NIRVANA_CORE_WINDOWS_PROTDOMAINMEMORYINTERNAL_H_
 
 #include "../Port/ProtDomainMemory.h"
 #include "AddressSpace.h"
@@ -39,7 +39,6 @@ public:
 
 private:
 	struct Regions;
-	class Remap;
 
 	void remap ();
 	bool copy_page_part (const void* src, size_t size, UWord flags);
@@ -63,23 +62,6 @@ struct ProtDomainMemory::Block::Regions
 		p->ptr = ptr;
 		p->size = size;
 	}
-};
-
-class ProtDomainMemory::Block::Remap :
-	public ImplStatic <Runnable>
-{
-public:
-	Remap (Block* block) :
-		block_ (block)
-	{}
-
-	void run ()
-	{
-		block_->remap ();
-	}
-
-private:
-	Block* block_;
 };
 
 }
