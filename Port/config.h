@@ -53,8 +53,6 @@ have PRIORITY_QUEUE_LEVELS = logN. Too large value degrades the performance.
 const unsigned SYNC_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For syncronization domain.
 const unsigned SYS_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For system-wide scheduler.
 
-const bool SHARE_STACK = false;
-
 }
 }
 

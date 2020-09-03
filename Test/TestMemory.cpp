@@ -1,7 +1,6 @@
 #include <core.h>
 #include "../Port/ProtDomainMemory.h"
 #include "../Source/AddressSpace.h"
-#include "../Source/ThreadMemory.h"
 #include <gtest/gtest.h>
 
 namespace TestMemory {
@@ -296,16 +295,6 @@ void stack_test (void* limit, bool first)
 		else
 			return;
 	stack_test (limit, first);
-}
-
-TEST_F (TestMemory, Stack)
-{
-	ASSERT_TRUE (ConvertThreadToFiber (0));
-	{
-		ThreadMemory tm;
-		stack_test (current_TIB ()->StackLimit, true);
-	}
-	EXPECT_TRUE (ConvertFiberToThread ());
 }
 
 TEST_F (TestMemory, NotShared)
