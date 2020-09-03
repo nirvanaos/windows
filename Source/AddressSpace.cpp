@@ -91,6 +91,11 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 		// Both results are normal.
 	} else if (old) {
 		// Block is committed.
+		if (commit) {
+			// We don't need the new handle to commit. Close it and return.
+			CloseHandle (mapping);
+			return;
+		}
 #ifdef _DEBUG
 		{
 			MEMORY_BASIC_INFORMATION mbi;
@@ -98,11 +103,6 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 			assert (MEM_COMMIT == mbi.State);
 		}
 #endif
-		if (commit) {
-			// We don't need the new handle to commit. Close it and return.
-			CloseHandle (mapping);
-			return;
-		}
 		verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
 		verify (CloseHandle (old));
 	} else {
@@ -516,7 +516,7 @@ AddressSpace::BlockInfo& AddressSpace::block (const void* address)
 	size_t i0 = idx / SECOND_LEVEL_BLOCK;
 	size_t i1 = idx % SECOND_LEVEL_BLOCK;
 	if (!VirtualAlloc (directory_ + i0, sizeof (BlockInfo*), MEM_COMMIT, PAGE_READWRITE))
-		throw NO_MEMORY ();
+		throw CORBA::NO_MEMORY ();
 	BlockInfo** pp = directory_ + i0;
 	p = *pp;
 	if (!p) {
@@ -524,7 +524,7 @@ AddressSpace::BlockInfo& AddressSpace::block (const void* address)
 		offset.QuadPart = ALLOCATION_GRANULARITY * i0;
 		p = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, offset.HighPart, offset.LowPart, ALLOCATION_GRANULARITY);
 		if (!p)
-			throw NO_MEMORY ();
+			throw CORBA::NO_MEMORY ();
 		BlockInfo* cur = (BlockInfo*)InterlockedCompareExchangePointer ((void* volatile*)pp, p, 0);
 		if (cur) {
 			UnmapViewOfFile (p);
