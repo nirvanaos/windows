@@ -21,22 +21,20 @@ class AddressSpace;
 
 namespace Port {
 
-using namespace ::CORBA;
-
 class ProtDomainMemory
 {
-	static const UWord PAGE_SIZE = 4096;
-	static const UWord PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
-	static const UWord ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
+	static const size_t PAGE_SIZE = 4096;
+	static const size_t PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
+	static const size_t ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
 public:
-	static const UWord ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
-	static const UWord SHARING_UNIT = ALLOCATION_UNIT;
-	static const UWord GRANULARITY = ALLOCATION_UNIT;
-	static const UWord SHARING_ASSOCIATIVITY = ALLOCATION_UNIT;
-	static const UWord OPTIMAL_COMMIT_UNIT = ALLOCATION_UNIT;
+	static const size_t ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
+	static const size_t SHARING_UNIT = ALLOCATION_UNIT;
+	static const size_t GRANULARITY = ALLOCATION_UNIT;
+	static const size_t SHARING_ASSOCIATIVITY = ALLOCATION_UNIT;
+	static const size_t OPTIMAL_COMMIT_UNIT = ALLOCATION_UNIT;
 
-	static const UWord COMMIT_UNIT = PAGE_SIZE;
-	static const UWord PROTECTION_UNIT = PAGE_SIZE;
+	static const size_t COMMIT_UNIT = PAGE_SIZE;
+	static const size_t PROTECTION_UNIT = PAGE_SIZE;
 
 	static const UWord FLAGS = 
 		Memory::ACCESS_CHECK |
@@ -48,30 +46,30 @@ public:
 	static void terminate ();
 
 	// Memory::
-	static void* allocate (void* dst, UWord size, Long flags);
+	static void* allocate (void* dst, size_t size, UWord flags);
 
-	static void release (void* dst, UWord size);
+	static void release (void* dst, size_t size);
 
-	static void commit (void* ptr, UWord size);
+	static void commit (void* ptr, size_t size);
 
-	static void decommit (void* ptr, UWord size);
+	static void decommit (void* ptr, size_t size);
 
-	static void* copy (void* dst, void* src, UWord size, Long flags);
+	static void* copy (void* dst, void* src, size_t size, UWord flags);
 
-	static bool is_readable (const void* p, UWord size);
+	static bool is_readable (const void* p, size_t size);
 
-	static bool is_writable (const void* p, UWord size);
+	static bool is_writable (const void* p, size_t size);
 
-	static bool is_private (const void* p, UWord size);
+	static bool is_private (const void* p, size_t size);
 
-	static bool is_copy (const void* p1, const void* p2, UWord size);
+	static bool is_copy (const void* p1, const void* p2, size_t size);
 
-	static UWord query (const void* p, MemQuery q);
+	static uintptr_t query (const void* p, MemQuery q);
 
 	//! For usage in proxies.
-	static void prepare_to_share (void* src, UWord size, Long flags);
+	static void prepare_to_share (void* src, size_t size, UWord flags);
 
-	static Long __stdcall exception_filter (struct _EXCEPTION_POINTERS* pex);
+	static long __stdcall exception_filter (struct _EXCEPTION_POINTERS* pex);
 	static void se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex);
 
 private:
@@ -81,20 +79,20 @@ private:
 	struct Region
 	{
 		void* ptr;
-		UWord size;
+		size_t size;
 
-		UWord subtract (void* begin, void* end)
+		size_t subtract (void* begin, void* end)
 		{
-			Octet* my_end = (Octet*)ptr + size;
+			uint8_t* my_end = (uint8_t*)ptr + size;
 			if (ptr < begin) {
 				if (my_end >= end)
 					size = 0;
 				if (my_end > begin)
-					size -= my_end - (Octet*)begin;
+					size -= my_end - (uint8_t*)begin;
 			} else if (end >= my_end)
 				size = 0;
 			else if (end > ptr) {
-				size -= (Octet*)end - (Octet*)ptr;
+				size -= (uint8_t*)end - (uint8_t*)ptr;
 				ptr = end;
 			}
 			return size;
@@ -104,13 +102,13 @@ private:
 	class Block;
 
 private:
-	static ULong commit_no_check (void* ptr, UWord size);
+	static uint32_t commit_no_check (void* ptr, size_t size);
 
-	static void protect (void* address, UWord size, ULong protection);
+	static void protect (void* address, size_t size, uint32_t protection);
 
 	static void query (const void* address, MEMORY_BASIC_INFORMATION& mbi);
 
-	static ULong check_committed (void* ptr, UWord size);
+	static uint32_t check_committed (void* ptr, size_t size);
 
 	// Create new mapping
 	static HANDLE new_mapping ();

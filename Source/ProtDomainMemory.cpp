@@ -13,6 +13,7 @@ namespace Core {
 namespace Port {
 
 using namespace ::Nirvana::Core::Windows;
+using namespace CORBA;
 
 Windows::AddressSpace ProtDomainMemory::space_;
 
@@ -35,30 +36,29 @@ inline void ProtDomainMemory::query (const void* address, MEMORY_BASIC_INFORMATI
 	verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 }
 
-inline HANDLE ProtDomainMemory::new_mapping ()
+HANDLE ProtDomainMemory::new_mapping ()
 {
 	HANDLE mapping = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, 0);
 	if (!mapping)
-		throw NO_MEMORY ();
+		throw CORBA::NO_MEMORY ();
 	return mapping;
 }
 
-
-ULong ProtDomainMemory::commit_no_check (void* ptr, UWord size)
+uint32_t ProtDomainMemory::commit_no_check (void* ptr, size_t size)
 {
-	ULong mask = 0;
+	uint32_t state_bits = 0; // Page states bit mask
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
 		Block block (p);
 		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
-		mask |= block.commit (p - block.address (), block_end - p);
+		state_bits |= block.commit (p - block.address (), block_end - p);
 		p = block_end;
 	}
-	return mask;
+	return state_bits;
 }
 
-void ProtDomainMemory::prepare_to_share (void* src, UWord size, Long flags)
+void ProtDomainMemory::prepare_to_share (void* src, size_t size, UWord flags)
 {
 	if (!size)
 		return;
@@ -75,7 +75,7 @@ void ProtDomainMemory::prepare_to_share (void* src, UWord size, Long flags)
 	}
 }
 
-void* ProtDomainMemory::allocate (void* dst, UWord size, Long flags)
+void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 {
 	if (!size)
 		throw BAD_PARAM ();
@@ -85,6 +85,7 @@ void* ProtDomainMemory::allocate (void* dst, UWord size, Long flags)
 
 	void* ret;
 	try {
+		/*
 		if (!dst && size <= ALLOCATION_GRANULARITY && !(Memory::RESERVED & flags)) {
 			// Optimization: quick allocate
 
@@ -104,7 +105,7 @@ void* ProtDomainMemory::allocate (void* dst, UWord size, Long flags)
 			}
 
 		} else {
-
+		*/
 			if (!(ret = space_.reserve (size, flags, dst)))
 				return 0;
 
@@ -116,7 +117,7 @@ void* ProtDomainMemory::allocate (void* dst, UWord size, Long flags)
 					throw;
 				}
 			}
-		}
+/*		}*/
 	} catch (const NO_MEMORY&) {
 		if (flags & Memory::EXACTLY)
 			ret = 0;
@@ -126,12 +127,12 @@ void* ProtDomainMemory::allocate (void* dst, UWord size, Long flags)
 	return ret;
 }
 
-void ProtDomainMemory::release (void* dst, UWord size)
+void ProtDomainMemory::release (void* dst, size_t size)
 {
 	space_.release (dst, size);
 }
 
-void ProtDomainMemory::commit (void* ptr, UWord size)
+void ProtDomainMemory::commit (void* ptr, size_t size)
 {
 	if (!size)
 		return;
@@ -145,14 +146,14 @@ void ProtDomainMemory::commit (void* ptr, UWord size)
 	commit_no_check (ptr, size);
 }
 
-void ProtDomainMemory::decommit (void* ptr, UWord size)
+void ProtDomainMemory::decommit (void* ptr, size_t size)
 {
 	space_.decommit (ptr, size);
 }
 
-ULong ProtDomainMemory::check_committed (void* ptr, UWord size)
+uint32_t ProtDomainMemory::check_committed (void* ptr, size_t size)
 {
-	ULong state_bits = 0;
+	uint32_t state_bits = 0;
 	for (const BYTE* begin = (const BYTE*)ptr, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
 		query (begin, mbi);
@@ -164,7 +165,7 @@ ULong ProtDomainMemory::check_committed (void* ptr, UWord size)
 	return state_bits;
 }
 
-void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
+void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 {
 	if (!size)
 		return dst;
@@ -175,7 +176,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 	bool src_not_share, dst_not_share = false;
 	// Source range have to be committed.
 	
-	ULong src_prot_mask;
+	uint32_t src_prot_mask;
 	if (space_.allocated_block (src)) {
 		src_prot_mask = space_.check_committed (src, size);
 		src_not_share = is_current_stack (src);
@@ -185,14 +186,16 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 	}
 
 	void* ret = 0;
-	UWord src_align = (UWord)src % ALLOCATION_GRANULARITY;
+	uintptr_t src_align = (uintptr_t)src % ALLOCATION_GRANULARITY;
 	try {
+		/*
 		if (!dst && Memory::RELEASE != (flags & Memory::RELEASE) && !src_not_share && round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY) - (BYTE*)src <= ALLOCATION_GRANULARITY) {
 			// Quick copy one block.
 			Block block (src);
 			block.prepare_to_share (src_align, size, flags);
 			ret = space_.copy (block, src_align, size, flags);
 		} else {
+		*/
 			Region allocated = {0, 0};
 			if (!dst || (flags & Memory::ALLOCATE)) {
 				if (dst) {
@@ -254,7 +257,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 			}
 
 			try {
-				if (!src_not_share && !dst_not_share && (UWord)ret % ALLOCATION_GRANULARITY == src_align) {
+				if (!src_not_share && !dst_not_share && (uintptr_t)ret % ALLOCATION_GRANULARITY == src_align) {
 					// Share (regions may overlap).
 					if (ret < src) {
 						BYTE* pd = (BYTE*)ret, *end = pd + size;
@@ -263,11 +266,11 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 							// Copy overlapped part with Memory::DECOMMIT.
 							BYTE* first_part_end = round_up (end - ((BYTE*)src + size - end), ALLOCATION_GRANULARITY);
 							assert (first_part_end < end);
-							Long first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
+							UWord first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
 							while (pd < first_part_end) {
 								Block block (pd);
 								BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-								UWord cb = block_end - pd;
+								size_t cb = block_end - pd;
 								block.copy (ps, cb, first_part_flags);
 								pd = block_end;
 								ps += cb;
@@ -278,7 +281,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 							BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
 							if (block_end > end)
 								block_end = end;
-							UWord cb = block_end - pd;
+							size_t cb = block_end - pd;
 							block.copy (ps, cb, flags);
 							pd = block_end;
 							ps += cb;
@@ -290,11 +293,11 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 							// Copy overlapped part with Memory::DECOMMIT.
 							BYTE* first_part_begin = round_down ((BYTE*)ret + ((BYTE*)ret - (BYTE*)src), ALLOCATION_GRANULARITY);
 							assert (first_part_begin > ret);
-							Long first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
+							UWord first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
 							while (pd > first_part_begin) {
 								BYTE* block_begin = round_down (pd - 1, ALLOCATION_GRANULARITY);
 								Block block (block_begin);
-								UWord cb = pd - block_begin;
+								size_t cb = pd - block_begin;
 								ps -= cb;
 								block.copy (ps, cb, first_part_flags);
 								pd = block_begin;
@@ -305,7 +308,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 							if (block_begin < ret)
 								block_begin = (BYTE*)ret;
 							Block block (block_begin);
-							UWord cb = pd - block_begin;
+							size_t cb = pd - block_begin;
 							ps -= cb;
 							block.copy (ps, cb, flags);
 							pd = block_begin;
@@ -313,7 +316,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 					}
 				} else {
 					// Physical copy.
-					ULong state_bits;
+					uint32_t state_bits;
 					if (dst_not_share)
 						state_bits = check_committed (dst, size);
 					else
@@ -340,7 +343,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 				release (allocated.ptr, allocated.size);
 				throw;
 			}
-		}
+/*		}*/
 	} catch (const NO_MEMORY&) {
 		if (Memory::EXACTLY & flags)
 			ret = 0;
@@ -351,7 +354,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, UWord size, Long flags)
 	return ret;
 }
 
-UWord ProtDomainMemory::query (const void* p, MemQuery q)
+uintptr_t ProtDomainMemory::query (const void* p, MemQuery q)
 {
 	{
 		switch (q) {
@@ -360,11 +363,11 @@ UWord ProtDomainMemory::query (const void* p, MemQuery q)
 			{
 				SYSTEM_INFO sysinfo;
 				GetSystemInfo (&sysinfo);
-				return (UWord)sysinfo.lpMinimumApplicationAddress;
+				return (uintptr_t)sysinfo.lpMinimumApplicationAddress;
 			}
 
 		case MemQuery::ALLOCATION_SPACE_END:
-			return (UWord)space_.end ();
+			return (uintptr_t)space_.end ();
 
 		case MemQuery::ALLOCATION_UNIT:
 		case MemQuery::SHARING_UNIT:
@@ -385,7 +388,7 @@ UWord ProtDomainMemory::query (const void* p, MemQuery q)
 	}
 }
 
-bool ProtDomainMemory::is_readable (const void* p, UWord size)
+bool ProtDomainMemory::is_readable (const void* p, size_t size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
@@ -397,7 +400,7 @@ bool ProtDomainMemory::is_readable (const void* p, UWord size)
 	return true;
 }
 
-bool ProtDomainMemory::is_private (const void* p, UWord size)
+bool ProtDomainMemory::is_private (const void* p, size_t size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
@@ -409,7 +412,7 @@ bool ProtDomainMemory::is_private (const void* p, UWord size)
 	return true;
 }
 
-bool ProtDomainMemory::is_writable (const void* p, UWord size)
+bool ProtDomainMemory::is_writable (const void* p, size_t size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
@@ -421,9 +424,9 @@ bool ProtDomainMemory::is_writable (const void* p, UWord size)
 	return true;
 }
 
-bool ProtDomainMemory::is_copy (const void* p, const void* plocal, UWord size)
+bool ProtDomainMemory::is_copy (const void* p, const void* plocal, size_t size)
 {
-	if ((UWord)p % ALLOCATION_GRANULARITY == (UWord)plocal % ALLOCATION_GRANULARITY) {
+	if ((uintptr_t)p % ALLOCATION_GRANULARITY == (uintptr_t)plocal % ALLOCATION_GRANULARITY) {
 		try {
 			for (BYTE* begin1 = (BYTE*)p, *end1 = begin1 + size, *begin2 = (BYTE*)plocal; begin1 < end1;) {
 				Block block1 (begin1);
@@ -444,7 +447,7 @@ bool ProtDomainMemory::is_copy (const void* p, const void* plocal, UWord size)
 		return false;
 }
 
-Long CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pex)
+long CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pex)
 {
 	if (
 		pex->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION

@@ -10,15 +10,13 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-using namespace ::CORBA;
-
 AddressSpace::Block::Block (AddressSpace& space, void* address) :
 	space_ (space),
 	address_ (round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
 	info_ (*space.allocated_block (address))
 {
 	if (!&info_)
-		throw BAD_PARAM ();
+		throw CORBA::BAD_PARAM ();
 }
 
 const AddressSpace::Block::State& AddressSpace::Block::state ()
@@ -78,49 +76,41 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 		:
 		InterlockedExchangePointer (&info_.mapping, mapping);
 
-	if (old == INVALID_HANDLE_VALUE) { // Block is reserved
-		MEMORY_BASIC_INFORMATION mbi;
-		space_.query (address_, mbi);
-		assert (MEM_RESERVE == mbi.State);
-		BYTE* reserved_begin = (BYTE*)mbi.AllocationBase;
-		ptrdiff_t realloc_begin = address_ - reserved_begin;
-		ptrdiff_t realloc_end = (BYTE*)mbi.BaseAddress + mbi.RegionSize - address_ - ALLOCATION_GRANULARITY;
-		verify (VirtualFreeEx (space_.process (), reserved_begin, 0, MEM_RELEASE));
-		if (realloc_begin > 0) {
-			for (/*BackOff bo*/;
-				!VirtualAllocEx (space_.process (), reserved_begin, realloc_begin, MEM_RESERVE, mbi.AllocationProtect);
-				/*bo ()*/) {
-				// Temporary released block was accidentally allocated by other thread and will be released soon.
-				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-			}
+	if (old == INVALID_HANDLE_VALUE) {
+		// Block is reserved.
+#ifdef _DEBUG
+		{
+			MEMORY_BASIC_INFORMATION mbi;
+			space_.query (address_, mbi);
+			assert (MEM_RESERVE == mbi.State);
 		}
-		if (realloc_end > 0) {
-			BYTE* end = address_ + ALLOCATION_GRANULARITY;
-			for (/*BackOff bo*/;
-				!VirtualAllocEx (space_.process (), end, realloc_end, MEM_RESERVE, mbi.AllocationProtect);
-				/*bo ()*/) {
-				// Temporary released block was accidentally allocated by other thread and will be released soon.
-				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-			}
-		}
+#endif
+		// If the reserved placeholder size is more than block, we must split it.
+		VirtualFreeEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
+		// VirtualFreeEx will return TRUE if placeholder was splitted or FALSE if the placeholder is one block.
+		// Both results are normal.
 	} else if (old) {
+		// Block is committed.
+#ifdef _DEBUG
+		{
+			MEMORY_BASIC_INFORMATION mbi;
+			space_.query (address_, mbi);
+			assert (MEM_COMMIT == mbi.State);
+		}
+#endif
 		if (commit) {
+			// We don't need the new handle to commit. Close it and return.
 			CloseHandle (mapping);
 			return;
 		}
-		verify (UnmapViewOfFile2 (space_.process (), address_, 0));
+		verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
 		verify (CloseHandle (old));
 	} else {
 		info_.mapping = 0;
-		throw INTERNAL ();
+		throw CORBA::INTERNAL ();
 	}
 
-	for (/*BackOff bo*/;
-		!MapViewOfFile2 (mapping, space_.process (), 0, address_, ALLOCATION_GRANULARITY, 0, protection);
-		/*bo ()*/) {
-		// Temporary released block was accidentally allocated by other thread and will be released soon.
-		assert (ERROR_INVALID_ADDRESS == GetLastError ());
-	}
+	verify (MapViewOfFile3 (mapping, space_.process (), address_, 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
 }
 
 void AddressSpace::Block::unmap (HANDLE reserve, bool no_close_handle)
@@ -129,26 +119,18 @@ void AddressSpace::Block::unmap (HANDLE reserve, bool no_close_handle)
 	if (!mapping) {
 		if (reserve)
 			info_.mapping = 0;
-		throw INTERNAL ();
+		throw CORBA::INTERNAL ();
 	}
 	if (INVALID_HANDLE_VALUE != mapping) {
-		verify (UnmapViewOfFile2 (space_.process (), address_, 0));
+		verify (UnmapViewOfFile2 (space_.process (), address_, reserve ? MEM_PRESERVE_PLACEHOLDER : 0));
 		if (!no_close_handle)
 			verify (CloseHandle (mapping));
-		if (reserve) {
-			for (/*BackOff bo*/;
-				!VirtualAllocEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RESERVE, PAGE_NOACCESS);
-				/*bo ()*/) {
-				// Temporary released block was accidentally allocated by other thread and will be released soon.
-				assert (ERROR_INVALID_ADDRESS == GetLastError ());
-			}
-		}
 	}
 }
 
-bool AddressSpace::Block::has_data_outside_of (SIZE_T offset, SIZE_T size, DWORD mask)
+bool AddressSpace::Block::has_data_outside_of (size_t offset, size_t size, DWORD mask)
 {
-	SIZE_T offset_end = offset + size;
+	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	if (offset || size < ALLOCATION_GRANULARITY) {
 		auto page_state = state ().mapped.page_state;
@@ -168,10 +150,10 @@ bool AddressSpace::Block::has_data_outside_of (SIZE_T offset, SIZE_T size, DWORD
 	return false;
 }
 
-void AddressSpace::Block::copy (Block& src, SIZE_T offset, SIZE_T size, LONG flags)
+void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, UWord flags)
 {
 	assert (size);
-	SIZE_T offset_end = offset + size;
+	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	HANDLE src_mapping = src.mapping ();
 	assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
@@ -184,7 +166,7 @@ void AddressSpace::Block::copy (Block& src, SIZE_T offset, SIZE_T size, LONG fla
 	else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
 		// Change mapping, if possible
 		if (has_data_outside_of (offset, size))
-			throw INTERNAL ();
+			throw CORBA::INTERNAL ();
 		remap = true;
 	} else
 		remap = false;
@@ -192,7 +174,7 @@ void AddressSpace::Block::copy (Block& src, SIZE_T offset, SIZE_T size, LONG fla
 	copy (remap, src.can_move (offset, size, flags), src, offset, size, flags);
 }
 
-void AddressSpace::Block::copy (bool remap, bool move, Block& src, SIZE_T offset, SIZE_T size, LONG flags)
+void AddressSpace::Block::copy (bool remap, bool move, Block& src, size_t offset, size_t size, UWord flags)
 {
 	DWORD dst_page_state [PAGES_PER_BLOCK];
 	DWORD* dst_ps_begin = dst_page_state + offset / PAGE_SIZE;
@@ -230,7 +212,7 @@ void AddressSpace::Block::copy (bool remap, bool move, Block& src, SIZE_T offset
 		if (!no_duplicate_handle) {
 			HANDLE mapping;
 			if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), space_.process (), &mapping, 0, FALSE, DUPLICATE_SAME_ACCESS))
-				throw NO_MEMORY ();
+				throw CORBA::NO_MEMORY ();
 			try {
 				map (mapping, move ? MAP_PRIVATE : MAP_SHARED);
 			} catch (...) {
@@ -267,7 +249,7 @@ void AddressSpace::Block::copy (bool remap, bool move, Block& src, SIZE_T offset
 		} while (region_end < block_end && state == *region_end);
 
 		BYTE* ptr = address () + (region_begin - dst_page_state) * PAGE_SIZE;
-		SIZE_T size = (region_end - region_begin) * PAGE_SIZE;
+		size_t size = (region_end - region_begin) * PAGE_SIZE;
 		space_.protect (ptr, size, state);
 		invalidate_state ();
 
@@ -275,13 +257,13 @@ void AddressSpace::Block::copy (bool remap, bool move, Block& src, SIZE_T offset
 	} while (region_begin < block_end);
 }
 
-void AddressSpace::Block::change_protection (SIZE_T offset, SIZE_T size, LONG flags)
+void AddressSpace::Block::change_protection (size_t offset, size_t size, UWord flags)
 {
-	SIZE_T offset_end = offset + size;
+	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	assert (size);
 
-	static const SIZE_T STATES_CNT = 3;
+	static const size_t STATES_CNT = 3;
 
 	static const DWORD states_RW [STATES_CNT] = {
 		PageState::RW_MAPPED_PRIVATE,
@@ -325,7 +307,7 @@ void AddressSpace::Block::change_protection (SIZE_T offset, SIZE_T size, LONG fl
 		if (!(protect_mask & state)) {
 
 			DWORD new_state = state;
-			for (SIZE_T i = 0; i < STATES_CNT; ++i) {
+			for (size_t i = 0; i < STATES_CNT; ++i) {
 				if (states_src [i] == state) {
 					new_state = states_dst [i];
 					break;
@@ -334,7 +316,7 @@ void AddressSpace::Block::change_protection (SIZE_T offset, SIZE_T size, LONG fl
 
 			if (new_state != state) {
 				BYTE* ptr = address () + (region_begin - page_state) * PAGE_SIZE;
-				SIZE_T size = (region_end - region_begin) * PAGE_SIZE;
+				size_t size = (region_end - region_begin) * PAGE_SIZE;
 				space_.protect (ptr, size, new_state);
 			}
 		}
@@ -343,23 +325,23 @@ void AddressSpace::Block::change_protection (SIZE_T offset, SIZE_T size, LONG fl
 	} while (region_begin < state_end);
 }
 
-DWORD AddressSpace::Block::check_committed (SIZE_T offset, SIZE_T size)
+DWORD AddressSpace::Block::check_committed (size_t offset, size_t size)
 {
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
 	const State& bs = state ();
 	if (bs.state != State::MAPPED)
-		throw BAD_PARAM ();
+		throw CORBA::BAD_PARAM ();
 	for (auto ps = bs.mapped.page_state + offset / PAGE_SIZE, end = bs.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps)
 		if (!(PageState::MASK_ACCESS & *ps))
-			throw BAD_PARAM ();
+			throw CORBA::BAD_PARAM ();
 	return bs.page_state_bits;
 }
 
-void AddressSpace::Block::decommit (SIZE_T offset, SIZE_T size)
+void AddressSpace::Block::decommit (size_t offset, size_t size)
 {
 	offset = round_up (offset, PAGE_SIZE);
-	SIZE_T offset_end = round_down (offset + size, PAGE_SIZE);
+	size_t offset_end = round_down (offset + size, PAGE_SIZE);
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	if (offset < offset_end) {
 		if (!offset && offset_end == ALLOCATION_GRANULARITY)
@@ -400,8 +382,8 @@ void AddressSpace::Block::decommit (SIZE_T offset, SIZE_T size)
 						while (region_end < state_end && !((PageState::MASK_MAY_BE_SHARED | PageState::DECOMMITTED) & *region_end));
 
 						BYTE* ptr = address () + (region_begin - page_state) * PAGE_SIZE;
-						SIZE_T size = (region_end - region_begin) * PAGE_SIZE;
-						verify (VirtualAllocEx (space_.process (), ptr, size, MEM_RESET, PageState::DECOMMITTED));
+						size_t size = (region_end - region_begin) * PAGE_SIZE;
+						verify (VirtualAlloc2 (space_.process (), ptr, size, MEM_RESET, PageState::DECOMMITTED, nullptr, 0));
 					} else {
 						do
 							++region_end;
@@ -434,11 +416,11 @@ void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
 		size.QuadPart = directory_size_ * sizeof (BlockInfo);
 		mapping_ = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_READWRITE | SEC_RESERVE, size.HighPart, size.LowPart, name);
 		if (!mapping_)
-			throw INITIALIZE ();
+			throw CORBA::INITIALIZE ();
 	} else {
 		mapping_ = OpenFileMappingW (FILE_MAP_ALL_ACCESS, FALSE, name);
 		if (!mapping_)
-			throw INITIALIZE ();
+			throw CORBA::INITIALIZE ();
 	}
 
 #ifdef _WIN64
@@ -447,7 +429,7 @@ void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
 	directory_ = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 #endif
 	if (!directory_)
-		throw INITIALIZE ();
+		throw CORBA::INITIALIZE ();
 }
 
 void AddressSpace::terminate ()
@@ -554,7 +536,7 @@ AddressSpace::BlockInfo& AddressSpace::block (const void* address)
 	p = directory_ + idx;
 #endif
 	if (!VirtualAlloc (p, sizeof (BlockInfo), MEM_COMMIT, PAGE_READWRITE))
-		throw NO_MEMORY ();
+		throw CORBA::NO_MEMORY ();
 	return *p;
 }
 
@@ -585,50 +567,55 @@ AddressSpace::BlockInfo* AddressSpace::allocated_block (const void* address)
 	return p;
 }
 
-void* AddressSpace::reserve (SIZE_T size, LONG flags, void* dst)
+void* AddressSpace::reserve (size_t size, UWord flags, void* dst)
 {
 	if (!size)
-		throw BAD_PARAM ();
+		throw CORBA::BAD_PARAM ();
 
 	BYTE* p;
-	if (dst && !(flags & Memory::EXACTLY))
-		dst = round_down (dst, ALLOCATION_GRANULARITY);
-	size = round_up (size, ALLOCATION_GRANULARITY);
-	for (BackOff bo; true; bo ()) {	// Loop to handle possible concurrency.
-		// Allocate memory block
-		p = (BYTE*)VirtualAllocEx (process_, dst, size, MEM_RESERVE, PAGE_NOACCESS);
-		if (!p) {
-			if (flags & Memory::EXACTLY)
-				return nullptr;
-			else
-				throw NO_MEMORY ();
-		}
-
-		// The allocated block may be temporary free for remapping.
-		// In this case memory mapping will be not zero.
-		// To ensure that it is a new allocated block, mark memory mapping with INVALID_HANDLE_VALUE.
-		BYTE* pb = p;
-		BYTE* end = p + size;
-		for (; pb < end; pb += ALLOCATION_GRANULARITY) {
-			if (InterlockedCompareExchangePointer (&block (pb).mapping, INVALID_HANDLE_VALUE, 0))
-				break;
-		}
-		if (pb >= end)
-			break;
-
-		// Concurrency collision. This memory is already allocated and temporary unmapped for remapping.
-		// Release memory and try again.
-		while (pb > p)
-			block (pb -= ALLOCATION_GRANULARITY).mapping = 0;
-		verify (VirtualFreeEx (process_, p, 0, MEM_RELEASE));
+	BYTE* tgt;
+	if (dst) {
+		tgt = round_down ((BYTE*)dst, ALLOCATION_GRANULARITY);
+		if (flags & Memory::EXACTLY)
+			size = round_up ((BYTE*)dst + size - tgt, ALLOCATION_GRANULARITY);
+		else
+			size = round_up (size, ALLOCATION_GRANULARITY);
+	} else {
+		tgt = nullptr;
+		size = round_up (size, ALLOCATION_GRANULARITY);
 	}
+	p = (BYTE*)VirtualAlloc2 (process_, dst, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+	if (!p) {
+		if (flags & Memory::EXACTLY)
+			return nullptr;
+		else
+			throw CORBA::NO_MEMORY ();
+	}
+
+	{
+		BYTE* pb = p;
+		try {
+			for (BYTE* end = p + size; pb < end; pb += ALLOCATION_GRANULARITY) {
+				assert (block (pb).mapping == nullptr);
+				block (pb).mapping = INVALID_HANDLE_VALUE;
+			}
+		} catch (...) {
+			while (pb > p) {
+				pb -= ALLOCATION_GRANULARITY;
+				block (pb).mapping = nullptr;
+			}
+			VirtualFreeEx (process_, p, 0, MEM_RELEASE);
+			throw;
+		}
+	}
+
 	if (dst && (flags & Memory::EXACTLY))
 		return dst;
 	else
 		return p;
 }
 
-void AddressSpace::release (void* dst, SIZE_T size)
+void AddressSpace::release (void* dst, size_t size)
 {
 	if (!(dst && size))
 		return;
@@ -637,9 +624,10 @@ void AddressSpace::release (void* dst, SIZE_T size)
 	BYTE* end = round_up ((BYTE*)dst + size, ALLOCATION_GRANULARITY);
 
 	// Check allocation.
-	for (BYTE* p = begin; p != end; p += ALLOCATION_GRANULARITY)
+	for (BYTE* p = begin; p != end; p += ALLOCATION_GRANULARITY) {
 		if (!allocated_block (p))
-			throw BAD_PARAM ();
+			throw CORBA::BAD_PARAM ();
+	}
 
 	{ // Define allocation margins if memory is reserved.
 		MEMORY_BASIC_INFORMATION begin_mbi = {0}, end_mbi = {0};
@@ -661,29 +649,14 @@ void AddressSpace::release (void* dst, SIZE_T size)
 		// Split reserved blocks at begin and end if need.
 		if (begin_mbi.BaseAddress) {
 			SSIZE_T realloc = begin - (BYTE*)begin_mbi.AllocationBase;
-			if (realloc > 0) {
-				verify (VirtualFreeEx (process_, begin_mbi.AllocationBase, 0, MEM_RELEASE));
-				for (/*BackOff bo*/;
-					!VirtualAllocEx (process_, begin_mbi.AllocationBase, realloc, MEM_RESERVE, PAGE_NOACCESS);
-					/*bo ()*/) {
-					// Temporary released block was accidentally allocated by other thread and will be released soon.
-					assert (ERROR_INVALID_ADDRESS == GetLastError ());
-				}
-			}
+			if (realloc > 0)
+				verify (VirtualFreeEx (process_, begin_mbi.AllocationBase, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 
 		if (end_mbi.BaseAddress) {
 			SSIZE_T realloc = (BYTE*)end_mbi.BaseAddress + end_mbi.RegionSize - end;
-			if (realloc > 0) {
-				if ((BYTE*)end_mbi.AllocationBase >= begin)
-					verify (VirtualFreeEx (process_, end_mbi.AllocationBase, 0, MEM_RELEASE));
-				for (/*BackOff bo*/;
-					!VirtualAllocEx (process_, end, realloc, MEM_RESERVE, PAGE_NOACCESS);
-					/*bo ()*/) {
-					// Temporary released block was accidentally allocated by other thread and will be released soon.
-					assert (ERROR_INVALID_ADDRESS == GetLastError ());
-				}
-			}
+			if (realloc > 0)
+				verify (VirtualFreeEx (process_, end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 	}
 
@@ -693,11 +666,9 @@ void AddressSpace::release (void* dst, SIZE_T size)
 		assert (mapping);
 		if (INVALID_HANDLE_VALUE == mapping) {
 			MEMORY_BASIC_INFORMATION mbi;
-			if (!VirtualQueryEx (process_, p, &mbi, sizeof (mbi)))
-				throw INTERNAL ();
-			assert (mbi.State == MEM_RESERVE || mbi.State == MEM_FREE);
-			if (mbi.State == MEM_RESERVE)
-				verify (VirtualFreeEx (process_, p, 0, MEM_RELEASE));
+			query (p, mbi);
+			assert (mbi.State == MEM_RESERVE);
+			verify (VirtualFreeEx (process_, p, 0, MEM_RELEASE));
 			BYTE* region_end = (BYTE*)mbi.BaseAddress + mbi.RegionSize;
 			if (region_end > end)
 				region_end = end;
@@ -715,75 +686,24 @@ void AddressSpace::release (void* dst, SIZE_T size)
 	}
 }
 
-void* AddressSpace::map (HANDLE mapping, MappingType protection)
-{
-	assert (mapping);
-	for (BackOff bo; true; bo ()) {
-		void* p = MapViewOfFile2 (mapping, process_, 0, 0, ALLOCATION_GRANULARITY, 0, protection);
-		if (!p)
-			throw NO_MEMORY ();
-		try {
-			// The allocated block may be temporary unmapped for remapping.
-			// In this case memory mapping will be not zero.
-			if (!InterlockedCompareExchangePointer (&block (p).mapping, mapping, 0))
-				return p;
-		} catch (...) {
-			UnmapViewOfFile2 (process_, p, 0);
-			throw;
-		}
-		// Concurrency collision. This memory is already allocated and temporary unmapped for remapping.
-		// Release memory and try again.
-		UnmapViewOfFile2 (process_, p, 0);
-	}
-}
-
-void* AddressSpace::copy (Block& src, SIZE_T offset, SIZE_T size, LONG flags)
-{
-	bool move = src.can_move (offset, size, flags);
-
-	BYTE* p;
-	if (!move || !is_current_process ()) {
-		HANDLE mapping;
-		if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), process_, &mapping, 0, FALSE, DUPLICATE_SAME_ACCESS))
-			throw NO_MEMORY ();
-
-		try {
-			p = (BYTE*)map (mapping, move ? MAP_PRIVATE : MAP_SHARED);
-		} catch (...) {
-			CloseHandle (mapping);
-			throw;
-		}
-	} else
-		p = (BYTE*)map (src.mapping (), MAP_PRIVATE);
-
-	try {
-		Block (*this, p).copy (false, move, src, offset, size, flags);
-	} catch (...) {
-		release (p, size);
-		throw;
-	}
-
-	return p;
-}
-
-void AddressSpace::check_allocated (void* ptr, SIZE_T size)
+void AddressSpace::check_allocated (void* ptr, size_t size)
 {
 	if (!size)
 		return;
 	if (!ptr)
-		throw BAD_PARAM ();
+		throw CORBA::BAD_PARAM ();
 
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end; p += ALLOCATION_GRANULARITY)
 		if (!allocated_block (p))
-			throw BAD_PARAM ();
+			throw CORBA::BAD_PARAM ();
 }
 
-DWORD AddressSpace::check_committed (void* ptr, SIZE_T size)
+DWORD AddressSpace::check_committed (void* ptr, size_t size)
 {
 	if (!size)
 		return 0;
 	if (!ptr)
-		throw BAD_PARAM ();
+		throw CORBA::BAD_PARAM ();
 
 	DWORD mask;
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
@@ -797,12 +717,12 @@ DWORD AddressSpace::check_committed (void* ptr, SIZE_T size)
 	return mask;
 }
 
-void AddressSpace::change_protection (void* ptr, SIZE_T size, LONG flags)
+void AddressSpace::change_protection (void* ptr, size_t size, UWord flags)
 {
 	if (!size)
 		return;
 	if (!ptr)
-		throw BAD_PARAM ();
+		throw CORBA::BAD_PARAM ();
 
 	BYTE* begin = (BYTE*)ptr;
 	BYTE* end = begin + size;

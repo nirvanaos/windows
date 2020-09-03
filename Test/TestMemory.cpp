@@ -9,6 +9,7 @@ namespace TestMemory {
 using namespace ::Nirvana;
 using namespace ::Nirvana::Core::Port;
 using namespace ::Nirvana::Core::Windows;
+using namespace ::CORBA;
 
 class TestMemory :
 	public ::testing::Test
@@ -43,13 +44,13 @@ TEST_F (TestMemory, Allocate)
 	size_t BLOCK_SIZE = 0x10000000;	// 256M
 
 	static const size_t ITER_CNT = 2;
-	static const Flags iter_flags [ITER_CNT] = {
+	static const UWord iter_flags [ITER_CNT] = {
 		Memory::READ_WRITE | Memory::RESERVED,
 		Memory::READ_WRITE
 	};
 	for (int iteration = 0; iteration < ITER_CNT; ++iteration) {
 
-		LONG flags = iter_flags [iteration];
+		UWord flags = iter_flags [iteration];
 
 		// Allocate and release memory.
 		BYTE* block = (BYTE*)ProtDomainMemory::allocate (0, BLOCK_SIZE, flags);

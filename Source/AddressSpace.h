@@ -131,7 +131,7 @@ public:
 	struct BlockInfo
 	{
 		// Currently we are using only one field. But we create structure for possible future extensions.
-		HANDLE mapping;
+		volatile HANDLE mapping;
 	};
 
 	BlockInfo& block (const void* address);
@@ -153,17 +153,17 @@ public:
 			return address_;
 		}
 
-		HANDLE& mapping ()
+		volatile HANDLE& mapping ()
 		{
 			return info_.mapping;
 		}
 
-		void copy (Block& src, SIZE_T offset, SIZE_T size, LONG flags);
+		void copy (Block& src, size_t offset, size_t size, UWord flags);
 		void unmap (HANDLE reserve = INVALID_HANDLE_VALUE, bool no_close_handle = false);
-		DWORD check_committed (SIZE_T offset, SIZE_T size);
-		void change_protection (SIZE_T offset, SIZE_T size, LONG flags);
-		void decommit (SIZE_T offset, SIZE_T size);
-		bool is_copy (Block& other, SIZE_T offset, SIZE_T size);
+		DWORD check_committed (size_t offset, size_t size);
+		void change_protection (size_t offset, size_t size, UWord flags);
+		void decommit (size_t offset, size_t size);
+		bool is_copy (Block& other, size_t offset, size_t size);
 
 		struct State
 		{
@@ -220,13 +220,13 @@ public:
 
 		void map (HANDLE mapping, MappingType protection, bool commit = false);
 
-		bool has_data_outside_of (SIZE_T offset, SIZE_T size, DWORD mask = PageState::MASK_ACCESS);
+		bool has_data_outside_of (size_t offset, size_t size, DWORD mask = PageState::MASK_ACCESS);
 
 	private:
 		friend class AddressSpace;
-		void copy (bool remap, bool move, Block& src, SIZE_T offset, SIZE_T size, LONG flags);
+		void copy (bool remap, bool move, Block& src, size_t offset, size_t size, UWord flags);
 
-		bool can_move (SIZE_T offset, SIZE_T size, LONG flags)
+		bool can_move (size_t offset, size_t size, UWord flags)
 		{
 			bool move = false;
 			if (flags & Memory::DECOMMIT) {
@@ -245,21 +245,18 @@ public:
 		State state_;
 	};
 
-	void* reserve (SIZE_T size, LONG flags = 0, void* dst = 0);
-	void release (void* ptr, SIZE_T size);
-
-	// Quick copy for block sizes <= ALLOCATION_GRANULARITY
-	void* copy (Block& src, SIZE_T offset, SIZE_T size, LONG flags);
+	void* reserve (size_t size, UWord flags = 0, void* dst = 0);
+	void release (void* ptr, size_t size);
 
 	void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) const
 	{
 		verify (VirtualQueryEx (process_, address, &mbi, sizeof (mbi)));
 	}
 
-	void check_allocated (void* ptr, SIZE_T size);
-	DWORD check_committed (void* ptr, SIZE_T size);
-	void change_protection (void* ptr, SIZE_T size, LONG flags);
-	void decommit (void* ptr, SIZE_T size);
+	void check_allocated (void* ptr, size_t size);
+	DWORD check_committed (void* ptr, size_t size);
+	void change_protection (void* ptr, size_t size, UWord flags);
+	void decommit (void* ptr, size_t size);
 
 protected:
 	void initialize (DWORD process_id, HANDLE process_handle);
@@ -268,7 +265,7 @@ private:
 	friend class Port::ProtDomainMemory;
 
 	void* map (HANDLE mapping, MappingType protection);
-	void protect (void* address, SIZE_T size, DWORD protection)
+	void protect (void* address, size_t size, DWORD protection)
 	{
 		DWORD old;
 		verify (VirtualProtectEx (process_, address, size, protection, &old));
@@ -286,7 +283,7 @@ private:
 	size_t directory_size_;
 };
 
-inline void AddressSpace::decommit (void* ptr, SIZE_T size)
+inline void AddressSpace::decommit (void* ptr, size_t size)
 {
 	if (!size)
 		return;
@@ -304,14 +301,14 @@ inline void AddressSpace::decommit (void* ptr, SIZE_T size)
 	}
 }
 
-inline bool AddressSpace::Block::is_copy (Block& other, SIZE_T offset, SIZE_T size)
+inline bool AddressSpace::Block::is_copy (Block& other, size_t offset, size_t size)
 {
 	const State& st = state (), &other_st = other.state ();
 	if (st.state != State::MAPPED || other_st.state != State::MAPPED)
 		return false;
 	if (!CompareObjectHandles (mapping (), other.mapping ()))
 		return false;
-	SIZE_T page_begin = offset / PAGE_SIZE;
+	size_t page_begin = offset / PAGE_SIZE;
 	auto pst = st.mapped.page_state + page_begin;
 	auto other_pst = other_st.mapped.page_state + page_begin;
 	auto pst_end = st.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;

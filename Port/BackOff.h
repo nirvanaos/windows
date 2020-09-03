@@ -13,7 +13,7 @@ class BackOff
 protected:
 	static void sleep (unsigned hint)
 	{
-		::Sleep (hint);
+		::Sleep (hint ? 1 : 0);
 	}
 };
 

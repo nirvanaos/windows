@@ -8,12 +8,12 @@ namespace Port {
 
 using namespace ::Nirvana::Core::Windows;
 
-ULong ProtDomainMemory::Block::commit (UWord offset, UWord size)
+DWORD ProtDomainMemory::Block::commit (size_t offset, size_t size)
 { // This operation must be thread-safe.
 
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
-	ULong ret = 0;	// Page state bits in committed region
+	DWORD ret = 0;	// Page state bits in committed region
 	HANDLE old_mapping = mapping ();
 	if (INVALID_HANDLE_VALUE == old_mapping) {
 		HANDLE hm = new_mapping ();
@@ -31,7 +31,7 @@ ULong ProtDomainMemory::Block::commit (UWord offset, UWord size)
 		auto region_begin = bs.mapped.page_state + offset / PAGE_SIZE, state_end = bs.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
 		do {
 			auto region_end = region_begin;
-			ULong state = *region_begin;
+			DWORD state = *region_begin;
 			if (!(PageState::MASK_ACCESS & state)) {
 				do {
 					++region_end;
@@ -61,7 +61,7 @@ ULong ProtDomainMemory::Block::commit (UWord offset, UWord size)
 						protect (p->ptr, p->size, PageState::DECOMMITTED);
 						verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
 					}
-					throw NO_MEMORY ();
+					throw CORBA::NO_MEMORY ();
 				}
 			}
 		}
@@ -69,11 +69,11 @@ ULong ProtDomainMemory::Block::commit (UWord offset, UWord size)
 	return ret;
 }
 
-bool ProtDomainMemory::Block::need_remap_to_share (UWord offset, UWord size)
+bool ProtDomainMemory::Block::need_remap_to_share (size_t offset, size_t size)
 {
 	const State& st = state ();
 	if (st.state != State::MAPPED)
-		throw BAD_PARAM ();
+		throw CORBA::BAD_PARAM ();
 	if (st.page_state_bits & PageState::MASK_UNMAPPED) {
 		if (0 == offset && size == ALLOCATION_GRANULARITY)
 			return true;
@@ -87,7 +87,7 @@ bool ProtDomainMemory::Block::need_remap_to_share (UWord offset, UWord size)
 	return false;
 }
 
-void ProtDomainMemory::Block::prepare_to_share_no_remap (UWord offset, UWord size)
+void ProtDomainMemory::Block::prepare_to_share_no_remap (size_t offset, size_t size)
 {
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
@@ -98,14 +98,14 @@ void ProtDomainMemory::Block::prepare_to_share_no_remap (UWord offset, UWord siz
 		auto region_begin = st.mapped.page_state + offset / PAGE_SIZE, block_end = st.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
 		do {
 			auto region_end = region_begin;
-			ULong state = *region_begin;
+			DWORD state = *region_begin;
 			do
 				++region_end;
 			while (region_end < block_end && state == *region_end);
 
 			if (PageState::RW_MAPPED_PRIVATE == state) {
 				BYTE* ptr = address () + (region_begin - st.mapped.page_state) * PAGE_SIZE;
-				UWord size = (region_end - region_begin) * PAGE_SIZE;
+				size_t size = (region_end - region_begin) * PAGE_SIZE;
 				protect (ptr, size, PageState::RW_MAPPED_SHARED);
 			}
 
@@ -118,10 +118,10 @@ void ProtDomainMemory::Block::prepare_to_share_no_remap (UWord offset, UWord siz
 		// We have to commit all pages in the block.
 		for (auto end = st.mapped.page_state + PAGES_PER_BLOCK, begin = st.mapped.page_state, p = end;;) {
 			auto prev = p - 1;
-			ULong s;
+			DWORD s;
 			if (s = *prev) {
 				if (p < end && !VirtualAlloc (address () + (p - begin) * PAGE_SIZE, (end - p) * PAGE_SIZE, MEM_COMMIT, s))
-					throw NO_MEMORY ();
+					throw CORBA::NO_MEMORY ();
 				break;
 			}
 			if ((p = prev) == begin)
@@ -141,13 +141,15 @@ void ProtDomainMemory::Block::remap ()
 		return;
 	}
 
+	// Create a new memory section.
 	hm = new_mapping ();
 	try {
-		BYTE* ptmp = (BYTE*)space_.map (hm, AddressSpace::MAP_PRIVATE);
+		// Map memory section to temporary address.
+		BYTE* ptmp = (BYTE*)MapViewOfFile3 (hm, space_.process (), nullptr, 0, ALLOCATION_GRANULARITY, 0, AddressSpace::MAP_PRIVATE, nullptr, 0);
 		if (!ptmp)
-			throw NO_MEMORY ();
-		assert (hm == space_.allocated_block (ptmp)->mapping);
+			throw CORBA::NO_MEMORY ();
 
+		// Copy data to the temporary address.
 		Regions read_only, read_write;
 		try {
 			auto page_state = state ().mapped.page_state;
@@ -159,11 +161,11 @@ void ProtDomainMemory::Block::remap ()
 						++region_end;
 					while (region_end < block_end && (PageState::MASK_ACCESS & *region_end));
 
-					UWord offset = (region_begin - page_state) * PAGE_SIZE;
+					size_t offset = (region_begin - page_state) * PAGE_SIZE;
 					LONG_PTR* dst = (LONG_PTR*)(ptmp + offset);
-					UWord size = (region_end - region_begin) * PAGE_SIZE;
+					size_t size = (region_end - region_begin) * PAGE_SIZE;
 					if (!VirtualAlloc (dst, size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE))
-						throw NO_MEMORY ();
+						throw CORBA::NO_MEMORY ();
 					const LONG_PTR* src = (LONG_PTR*)(address () + offset);
 					real_copy (src, src + size / sizeof (LONG_PTR), dst);
 					if (PageState::MASK_RO & *region_begin)
@@ -179,15 +181,14 @@ void ProtDomainMemory::Block::remap ()
 				region_begin = region_end;
 			} while (region_begin < block_end);
 		} catch (...) {
-			space_.allocated_block (ptmp)->mapping = 0;
 			verify (UnmapViewOfFile (ptmp));
 			throw;
 		}
 
-		space_.allocated_block (ptmp)->mapping = 0;
+		// Unmap memory section from the temporary address.
 		verify (UnmapViewOfFile (ptmp));
 
-		// Change to new mapping
+		// Change this block mapping to the new.
 		map (hm, AddressSpace::MAP_PRIVATE);
 
 		// Change protection.
@@ -201,10 +202,10 @@ void ProtDomainMemory::Block::remap ()
 	}
 }
 
-void ProtDomainMemory::Block::copy (void* src, UWord size, Long flags)
+void ProtDomainMemory::Block::copy (void* src, size_t size, UWord flags)
 {
 	assert (size);
-	UWord offset = (UWord)src % ALLOCATION_GRANULARITY;
+	size_t offset = (uintptr_t)src % ALLOCATION_GRANULARITY;
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
 	Block src_block (src);
@@ -218,9 +219,9 @@ void ProtDomainMemory::Block::copy (void* src, UWord size, Long flags)
 				} else
 					src_block.remap ();
 			} else {
-				UWord page_off = offset % PAGE_SIZE;
+				size_t page_off = offset % PAGE_SIZE;
 				if (page_off) {
-					UWord page_tail = PAGE_SIZE - page_off;
+					size_t page_tail = PAGE_SIZE - page_off;
 					if (copy_page_part (src, page_tail, flags)) {
 						offset += page_tail;
 						size -= page_tail;
@@ -249,7 +250,7 @@ void ProtDomainMemory::Block::copy (void* src, UWord size, Long flags)
 	AddressSpace::Block::copy (src_block, offset, size, flags);
 }
 
-void ProtDomainMemory::Block::copy (UWord offset, UWord size, const void* src, Long flags)
+void ProtDomainMemory::Block::copy (size_t offset, size_t size, const void* src, UWord flags)
 {
 	if (PageState::MASK_RO & commit (offset, size))
 		change_protection (offset, size, Memory::READ_WRITE);
@@ -258,10 +259,10 @@ void ProtDomainMemory::Block::copy (UWord offset, UWord size, const void* src, L
 		change_protection (offset, size, Memory::READ_ONLY);
 }
 
-bool ProtDomainMemory::Block::copy_page_part (const void* src, UWord size, Long flags)
+bool ProtDomainMemory::Block::copy_page_part (const void* src, size_t size, UWord flags)
 {
-	UWord offset = (UWord)src % ALLOCATION_GRANULARITY;
-	ULong s = state ().mapped.page_state [offset / PAGE_SIZE];
+	uintptr_t offset = (uintptr_t)src % ALLOCATION_GRANULARITY;
+	DWORD s = state ().mapped.page_state [offset / PAGE_SIZE];
 	if (PageState::MASK_UNMAPPED & s) {
 		BYTE* dst = address () + offset;
 		if (PageState::MASK_RO & s)

@@ -9,7 +9,7 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-inline void ProtDomainMemory::protect (void* address, UWord size, ULong protection)
+inline void ProtDomainMemory::protect (void* address, size_t size, uint32_t protection)
 {
 	//space_.protect (address, size, protection);
 	DWORD old;
@@ -24,10 +24,10 @@ public:
 		Core::Windows::AddressSpace::Block (ProtDomainMemory::space_, addr)
 	{}
 
-	ULong commit (UWord offset, UWord size);
-	bool need_remap_to_share (UWord offset, UWord size);
+	DWORD commit (size_t offset, size_t size);
+	bool need_remap_to_share (size_t offset, size_t size);
 
-	void prepare_to_share (UWord offset, UWord size, Long flags)
+	void prepare_to_share (size_t offset, size_t size, UWord flags)
 	{
 		if (need_remap_to_share (offset, size))
 			remap ();
@@ -35,16 +35,16 @@ public:
 			prepare_to_share_no_remap (offset, size);
 	}
 
-	void copy (void* src, UWord size, Long flags);
+	void copy (void* src, size_t size, UWord flags);
 
 private:
 	struct Regions;
 	class Remap;
 
 	void remap ();
-	bool copy_page_part (const void* src, UWord size, Long flags);
-	void prepare_to_share_no_remap (UWord offset, UWord size);
-	void copy (UWord offset, UWord size, const void* src, Long flags);
+	bool copy_page_part (const void* src, size_t size, UWord flags);
+	void prepare_to_share_no_remap (size_t offset, size_t size);
+	void copy (size_t offset, size_t size, const void* src, UWord flags);
 };
 
 struct ProtDomainMemory::Block::Regions
@@ -56,7 +56,7 @@ struct ProtDomainMemory::Block::Regions
 		end (begin)
 	{}
 
-	void add (void* ptr, UWord size)
+	void add (void* ptr, size_t size)
 	{
 		assert (end < begin + PAGES_PER_BLOCK);
 		Region* p = end++;

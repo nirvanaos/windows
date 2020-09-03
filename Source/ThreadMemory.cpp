@@ -1,7 +1,6 @@
 #include "ThreadMemory.h"
 #include <Nirvana/real_copy.h>
 #include <core.h>
-#include <BackOff.h>
 #include "RunnableImpl.h"
 #include "ProtDomainMemoryBlock.h"
 //#include <assert.h>
@@ -21,8 +20,8 @@ inline StackInfo::StackInfo ()
 	stack_base = (BYTE*)ptib->StackBase;
 	stack_limit = (BYTE*)ptib->StackLimit;
 	assert (stack_limit < stack_base);
-	assert (!((SIZE_T)stack_base % PAGE_SIZE));
-	assert (!((SIZE_T)stack_limit % PAGE_SIZE));
+	assert (!((size_t)stack_base % PAGE_SIZE));
+	assert (!((size_t)stack_limit % PAGE_SIZE));
 
 	MEMORY_BASIC_INFORMATION mbi;
 #ifdef _DEBUG
@@ -52,7 +51,7 @@ public:
 	StackMemory (const StackInfo& thread) :
 		StackInfo (thread)
 	{
-		SIZE_T cur_stack_size = stack_base - stack_limit;
+		size_t cur_stack_size = stack_base - stack_limit;
 
 		m_tmpbuf = (BYTE*)ProtDomainMemory::space_.reserve (cur_stack_size);
 		if (!m_tmpbuf)
@@ -63,13 +62,13 @@ public:
 		}
 
 		// Temporary copy current stack.
-		real_copy ((const SIZE_T*)stack_limit, (const SIZE_T*)(stack_base), (SIZE_T*)m_tmpbuf);
+		real_copy ((const size_t*)stack_limit, (const size_t*)(stack_base), (size_t*)m_tmpbuf);
 	}
 
 	~StackMemory ()
 	{
 		// Release temporary buffer
-		SIZE_T cur_stack_size = stack_base - stack_limit;
+		size_t cur_stack_size = stack_base - stack_limit;
 		if (m_tmpbuf) {
 			verify (VirtualFree (m_tmpbuf, cur_stack_size, MEM_DECOMMIT));
 			ProtDomainMemory::release (m_tmpbuf, cur_stack_size);
@@ -85,7 +84,7 @@ private:
 
 void ThreadMemory::StackMemory::finalize ()
 {
-	SIZE_T cur_stack_size = stack_base - stack_limit;
+	size_t cur_stack_size = stack_base - stack_limit;
 
 	// Commit current stack
 	if (!VirtualAlloc (stack_limit, cur_stack_size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE))
@@ -95,8 +94,8 @@ void ThreadMemory::StackMemory::finalize ()
 	if (!VirtualAlloc (guard_begin, stack_limit - guard_begin, MEM_COMMIT, PAGE_GUARD | PageState::RW_MAPPED_PRIVATE))
 		throw NO_MEMORY ();
 
-	// Copy current stack contents back.
-	real_copy ((SIZE_T*)m_tmpbuf, (SIZE_T*)m_tmpbuf + cur_stack_size / sizeof (SIZE_T), (SIZE_T*)stack_limit);
+	// Copy current stack content back.
+	real_copy ((size_t*)m_tmpbuf, (size_t*)m_tmpbuf + cur_stack_size / sizeof (size_t), (size_t*)stack_limit);
 }
 
 class ThreadMemory::StackPrepare :

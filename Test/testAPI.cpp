@@ -400,7 +400,7 @@ TEST_F (TestAPI, SparseMapping)
 	EXPECT_TRUE (CloseHandle (file));
 }
 
-// Best directory implementation for 32-bit system.
+// Single level directory implementation for 32-bit system.
 TEST_F (TestAPI, SharedMapping)
 {
 	SYSTEM_INFO si;
@@ -432,7 +432,7 @@ TEST_F (TestAPI, SharedMapping)
 	EXPECT_TRUE (CloseHandle (mapping));
 }
 
-// Best directory implementation for 64-bit system.
+// Two level directory implementation for 64-bit system.
 TEST_F (TestAPI, SharedMapping2)
 {
 	SYSTEM_INFO si;
@@ -571,7 +571,7 @@ TEST_F (TestAPI, Placeholder)
 	EXPECT_EQ (mbi.Protect, PROTECTION);
 	EXPECT_EQ (mbi.Type, MEM_MAPPED);
 
-	//placeholder [ALLOCATION_GRANULARITY] = 1;
+	placeholder [ALLOCATION_GRANULARITY] = 1;
 
 	// Remap
 	EXPECT_TRUE (UnmapViewOfFile2 (process, placeholder + ALLOCATION_GRANULARITY, MEM_PRESERVE_PLACEHOLDER));
@@ -586,7 +586,7 @@ TEST_F (TestAPI, Placeholder)
 
 	mh = new_mapping ();
 	EXPECT_EQ (MapViewOfFile3 (mh, process, placeholder + ALLOCATION_GRANULARITY, 0, ALLOCATION_GRANULARITY,
-		MEM_REPLACE_PLACEHOLDER, PAGE_EXECUTE_READWRITE, nullptr, 0), placeholder + ALLOCATION_GRANULARITY);
+		MEM_REPLACE_PLACEHOLDER, PROTECTION, nullptr, 0), placeholder + ALLOCATION_GRANULARITY);
 
 	// Release
 	EXPECT_TRUE (VirtualFreeEx (process, placeholder, 0, MEM_RELEASE));
