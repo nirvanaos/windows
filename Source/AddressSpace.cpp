@@ -232,7 +232,7 @@ void AddressSpace::Block::copy (bool remap, bool move, Block& src, size_t offset
 			src.decommit (offset, size);
 	}
 
-	// Manage protection of copyed pages
+	// Manage protection of copied pages
 	const DWORD* cur_ps = state ().mapped.page_state;
 	const DWORD* region_begin = dst_page_state, *block_end = dst_page_state + PAGES_PER_BLOCK;
 	do {
