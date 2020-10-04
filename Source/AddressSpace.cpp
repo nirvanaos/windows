@@ -113,18 +113,17 @@ void AddressSpace::Block::map (HANDLE mapping, MappingType protection, bool comm
 	verify (MapViewOfFile3 (mapping, space_.process (), address_, 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
 }
 
-void AddressSpace::Block::unmap (HANDLE reserve, bool no_close_handle)
+void AddressSpace::Block::unmap (HANDLE reserve)
 {
 	HANDLE mapping = InterlockedExchangePointer (&info_.mapping, reserve);
 	if (!mapping) {
 		if (reserve)
 			info_.mapping = 0;
-		throw CORBA::INTERNAL ();
+		throw_INTERNAL ();
 	}
 	if (INVALID_HANDLE_VALUE != mapping) {
 		verify (UnmapViewOfFile2 (space_.process (), address_, reserve ? MEM_PRESERVE_PLACEHOLDER : 0));
-		if (!no_close_handle)
-			verify (CloseHandle (mapping));
+		verify (CloseHandle (mapping));
 	}
 }
 
@@ -166,7 +165,7 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, UWord fl
 	else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
 		// Change mapping, if possible
 		if (has_data_outside_of (offset, size))
-			throw CORBA::INTERNAL ();
+			throw_INTERNAL ();
 		remap = true;
 	} else
 		remap = false;
@@ -182,7 +181,6 @@ void AddressSpace::Block::copy (bool remap, bool move, Block& src, size_t offset
 	std::fill (dst_page_state, dst_ps_begin, PageState::DECOMMITTED);
 	std::fill (dst_ps_end, dst_page_state + PAGES_PER_BLOCK, PageState::DECOMMITTED);
 
-	bool no_duplicate_handle = false;
 	if (move) {
 		// Decide target page states based on source page states.
 		auto src_page_state = src.state ().mapped.page_state;
@@ -203,33 +201,19 @@ void AddressSpace::Block::copy (bool remap, bool move, Block& src, size_t offset
 			++src_ps;
 
 		} while (++dst_ps != dst_ps_end);
-
-		no_duplicate_handle = space_.is_current_process ();
 	} else
 		std::fill (dst_ps_begin, dst_ps_end, Memory::READ_ONLY & flags ? PageState::RO_MAPPED_SHARED : PageState::RW_MAPPED_SHARED);
 
 	if (remap) {
-		if (!no_duplicate_handle) {
-			HANDLE mapping;
-			if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), space_.process (), &mapping, 0, FALSE, DUPLICATE_SAME_ACCESS))
-				throw CORBA::NO_MEMORY ();
-			try {
-				map (mapping, move ? MAP_PRIVATE : MAP_SHARED);
-			} catch (...) {
-				CloseHandle (mapping);
-				throw;
-			}
-		} else
-			map (src.mapping (), MAP_PRIVATE);
-	}
-
-	if (Memory::DECOMMIT & flags) {
-		if ((Memory::RELEASE & ~Memory::DECOMMIT) & flags)
-			src.unmap (0, no_duplicate_handle);
-		else if (move)
-			src.unmap (INVALID_HANDLE_VALUE, no_duplicate_handle);
-		else
-			src.decommit (offset, size);
+		HANDLE mapping;
+		if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), space_.process (), &mapping, 0, FALSE, DUPLICATE_SAME_ACCESS))
+			throw_NO_MEMORY ();
+		try {
+			map (mapping, move ? MAP_PRIVATE : MAP_SHARED);
+		} catch (...) {
+			CloseHandle (mapping);
+			throw;
+		}
 	}
 
 	// Manage protection of copied pages
@@ -331,10 +315,10 @@ DWORD AddressSpace::Block::check_committed (size_t offset, size_t size)
 
 	const State& bs = state ();
 	if (bs.state != State::MAPPED)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 	for (auto ps = bs.mapped.page_state + offset / PAGE_SIZE, end = bs.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps)
 		if (!(PageState::MASK_ACCESS & *ps))
-			throw CORBA::BAD_PARAM ();
+			throw_BAD_PARAM ();
 	return bs.page_state_bits;
 }
 
@@ -416,11 +400,11 @@ void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
 		size.QuadPart = directory_size_ * sizeof (BlockInfo);
 		mapping_ = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_READWRITE | SEC_RESERVE, size.HighPart, size.LowPart, name);
 		if (!mapping_)
-			throw CORBA::INITIALIZE ();
+			throw_INITIALIZE ();
 	} else {
 		mapping_ = OpenFileMappingW (FILE_MAP_ALL_ACCESS, FALSE, name);
 		if (!mapping_)
-			throw CORBA::INITIALIZE ();
+			throw_INITIALIZE ();
 	}
 
 #ifdef _WIN64
@@ -429,7 +413,7 @@ void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
 	directory_ = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 #endif
 	if (!directory_)
-		throw CORBA::INITIALIZE ();
+		throw_INITIALIZE ();
 }
 
 void AddressSpace::terminate ()
@@ -516,7 +500,7 @@ AddressSpace::BlockInfo& AddressSpace::block (const void* address)
 	size_t i0 = idx / SECOND_LEVEL_BLOCK;
 	size_t i1 = idx % SECOND_LEVEL_BLOCK;
 	if (!VirtualAlloc (directory_ + i0, sizeof (BlockInfo*), MEM_COMMIT, PAGE_READWRITE))
-		throw CORBA::NO_MEMORY ();
+		throw_NO_MEMORY ();
 	BlockInfo** pp = directory_ + i0;
 	p = *pp;
 	if (!p) {
@@ -524,7 +508,7 @@ AddressSpace::BlockInfo& AddressSpace::block (const void* address)
 		offset.QuadPart = ALLOCATION_GRANULARITY * i0;
 		p = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, offset.HighPart, offset.LowPart, ALLOCATION_GRANULARITY);
 		if (!p)
-			throw CORBA::NO_MEMORY ();
+			throw_NO_MEMORY ();
 		BlockInfo* cur = (BlockInfo*)InterlockedCompareExchangePointer ((void* volatile*)pp, p, 0);
 		if (cur) {
 			UnmapViewOfFile (p);
@@ -536,7 +520,7 @@ AddressSpace::BlockInfo& AddressSpace::block (const void* address)
 	p = directory_ + idx;
 #endif
 	if (!VirtualAlloc (p, sizeof (BlockInfo), MEM_COMMIT, PAGE_READWRITE))
-		throw CORBA::NO_MEMORY ();
+		throw_NO_MEMORY ();
 	return *p;
 }
 
@@ -570,7 +554,7 @@ AddressSpace::BlockInfo* AddressSpace::allocated_block (const void* address)
 void* AddressSpace::reserve (size_t size, UWord flags, void* dst)
 {
 	if (!size)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 
 	BYTE* p;
 	BYTE* tgt;
@@ -589,7 +573,7 @@ void* AddressSpace::reserve (size_t size, UWord flags, void* dst)
 		if (flags & Memory::EXACTLY)
 			return nullptr;
 		else
-			throw CORBA::NO_MEMORY ();
+			throw_NO_MEMORY ();
 	}
 
 	{
@@ -626,7 +610,7 @@ void AddressSpace::release (void* dst, size_t size)
 	// Check allocation.
 	for (BYTE* p = begin; p != end; p += ALLOCATION_GRANULARITY) {
 		if (!allocated_block (p))
-			throw CORBA::BAD_PARAM ();
+			throw_BAD_PARAM ();
 	}
 
 	{ // Define allocation margins if memory is reserved.
@@ -691,11 +675,11 @@ void AddressSpace::check_allocated (void* ptr, size_t size)
 	if (!size)
 		return;
 	if (!ptr)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end; p += ALLOCATION_GRANULARITY)
 		if (!allocated_block (p))
-			throw CORBA::BAD_PARAM ();
+			throw_BAD_PARAM ();
 }
 
 DWORD AddressSpace::check_committed (void* ptr, size_t size)
@@ -703,7 +687,7 @@ DWORD AddressSpace::check_committed (void* ptr, size_t size)
 	if (!size)
 		return 0;
 	if (!ptr)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 
 	DWORD mask;
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
@@ -722,7 +706,7 @@ void AddressSpace::change_protection (void* ptr, size_t size, UWord flags)
 	if (!size)
 		return;
 	if (!ptr)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 
 	BYTE* begin = (BYTE*)ptr;
 	BYTE* end = begin + size;

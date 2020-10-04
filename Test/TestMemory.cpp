@@ -282,21 +282,6 @@ TEST_F (TestMemory, SmallBlock)
 	ProtDomainMemory::release (block, sizeof (int));
 }
 
-void stack_test (void* limit, bool first)
-{
-	BYTE data [4096];
-	data [0] = 1;
-	MEMORY_BASIC_INFORMATION mbi;
-	ASSERT_TRUE (VirtualQuery (data, &mbi, sizeof (mbi)));
-	ASSERT_EQ (mbi.Protect, PageState::RW_MAPPED_PRIVATE);
-	if (current_TIB ()->StackLimit != limit)
-		if (first)
-			first = false;
-		else
-			return;
-	stack_test (limit, first);
-}
-
 TEST_F (TestMemory, NotShared)
 {
 	static const char test_const [] = "test";

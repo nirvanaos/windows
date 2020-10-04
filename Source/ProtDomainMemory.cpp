@@ -127,7 +127,7 @@ void ProtDomainMemory::Block::prepare_to_share_no_remap (size_t offset, size_t s
 			DWORD s;
 			if (s = *prev) {
 				if (p < end && !VirtualAlloc (address () + (p - begin) * PAGE_SIZE, (end - p) * PAGE_SIZE, MEM_COMMIT, s))
-					throw CORBA::NO_MEMORY ();
+					throw_NO_MEMORY ();
 				break;
 			}
 			if ((p = prev) == begin)
@@ -144,7 +144,7 @@ void ProtDomainMemory::Block::remap ()
 		// Map memory section to temporary address.
 		BYTE* ptmp = (BYTE*)MapViewOfFile3 (hm, space_.process (), nullptr, 0, ALLOCATION_GRANULARITY, 0, AddressSpace::MAP_PRIVATE, nullptr, 0);
 		if (!ptmp)
-			throw CORBA::NO_MEMORY ();
+			throw_NO_MEMORY ();
 
 		// Copy data to the temporary address.
 		Regions read_only, read_write;
@@ -199,8 +199,10 @@ void ProtDomainMemory::Block::remap ()
 	}
 }
 
-void ProtDomainMemory::Block::copy (void* src, size_t size, UWord flags)
+void ProtDomainMemory::Block::virtual_copy (void* src, size_t size, UWord flags)
 {
+	// NOTE: Memory::DECOMMIT and Memory::RELEASE flags used only for optimozation.
+	// We don't perform actual decommit or release here.
 	assert (size);
 	size_t offset = (uintptr_t)src % ALLOCATION_GRANULARITY;
 	assert (offset + size <= ALLOCATION_GRANULARITY);
@@ -215,24 +217,12 @@ void ProtDomainMemory::Block::copy (void* src, size_t size, UWord flags)
 					return;
 				} else
 					src_block.remap ();
-			} else {
-				size_t page_off = offset % PAGE_SIZE;
-				if (page_off) {
-					size_t page_tail = PAGE_SIZE - page_off;
-					if (copy_page_part (src, page_tail, flags)) {
-						offset += page_tail;
-						size -= page_tail;
-						assert (!(offset % PAGE_SIZE));
-					}
-				}
-				page_off = (offset + size) % PAGE_SIZE;
-				if (page_off && copy_page_part ((const BYTE*)src + size - page_off, page_off, flags)) {
-					size -= page_off;
-					assert (!((offset + size) % PAGE_SIZE));
-				}
-				if (!size)
-					return;
+				// If no unmapped pages at target region, we don't need to do anything.
+			} else if (need_remap_to_share (offset, size)) {
+				// Real copy
+				copy (offset, size, src, flags);
 			}
+			return;
 		} else if (has_data_outside_of (offset, size)) {
 			// Real copy
 			copy (offset, size, src, flags);
@@ -249,27 +239,30 @@ void ProtDomainMemory::Block::copy (void* src, size_t size, UWord flags)
 
 void ProtDomainMemory::Block::copy (size_t offset, size_t size, const void* src, UWord flags)
 {
-	if (PageState::MASK_RO & commit (offset, size))
-		change_protection (offset, size, Memory::READ_WRITE);
-	real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
-	if (flags & Memory::READ_ONLY)
-		change_protection (offset, size, Memory::READ_ONLY);
-}
+	assert (size);
+	assert (offset + size <= ALLOCATION_GRANULARITY);
 
-bool ProtDomainMemory::Block::copy_page_part (const void* src, size_t size, UWord flags)
-{
-	uintptr_t offset = (uintptr_t)src % ALLOCATION_GRANULARITY;
-	DWORD s = state ().mapped.page_state [offset / PAGE_SIZE];
-	if (PageState::MASK_UNMAPPED & s) {
-		BYTE* dst = address () + offset;
-		if (PageState::MASK_RO & s)
-			protect (dst, size, PageState::RW_UNMAPPED);
-		real_copy ((const BYTE*)src, (const BYTE*)src + size, dst);
-		if ((PageState::MASK_RO & s) && (flags & Memory::READ_ONLY))
-			protect (dst, size, PageState::RO_UNMAPPED);
-		return true;
+	DWORD page_state = commit (offset, size);
+	if (PageState::MASK_RO & page_state) {
+		// Some target pages are read-only
+		if (flags & Memory::READ_ONLY) {
+			// Map memory section to temporary address.
+			BYTE* ptmp = (BYTE*)MapViewOfFile3 (mapping (), space_.process (), nullptr, 0, ALLOCATION_GRANULARITY, 0, AddressSpace::MAP_PRIVATE, nullptr, 0);
+			if (!ptmp)
+				throw_NO_MEMORY ();
+			real_copy ((const BYTE*)src, (const BYTE*)src + size, ptmp + offset);
+			verify (UnmapViewOfFile (ptmp));
+			if (PageState::MASK_RW & page_state)
+				change_protection (offset, size, Memory::READ_ONLY);
+		} else {
+			change_protection (offset, size, Memory::READ_WRITE);
+			real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
+		}
+	} else {
+		real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
+		if (flags & Memory::READ_ONLY)
+			change_protection (offset, size, Memory::READ_ONLY);
 	}
-	return false;
 }
 
 void ProtDomainMemory::initialize ()
@@ -295,7 +288,7 @@ HANDLE ProtDomainMemory::new_mapping ()
 {
 	HANDLE mapping = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, 0);
 	if (!mapping)
-		throw CORBA::NO_MEMORY ();
+		throw_NO_MEMORY ();
 	return mapping;
 }
 
@@ -318,7 +311,7 @@ void ProtDomainMemory::prepare_to_share (void* src, size_t size, UWord flags)
 	if (!size)
 		return;
 	if (!src)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 
 	for (BYTE* p = (BYTE*)src, *end = p + size; p < end;) {
 		Block block (p);
@@ -333,10 +326,10 @@ void ProtDomainMemory::prepare_to_share (void* src, size_t size, UWord flags)
 void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 {
 	if (!size)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 
 	if (flags & ~(Memory::RESERVED | Memory::EXACTLY | Memory::ZERO_INIT))
-		throw CORBA::INV_FLAG ();
+		throw_INV_FLAG ();
 
 	void* ret;
 	try {
@@ -371,7 +364,7 @@ void ProtDomainMemory::commit (void* ptr, size_t size)
 		return;
 
 	if (!ptr)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 
 	// Memory must be allocated.
 	space_.check_allocated (ptr, size);
@@ -391,7 +384,7 @@ uint32_t ProtDomainMemory::check_committed (void* ptr, size_t size)
 		MEMORY_BASIC_INFORMATION mbi;
 		query (begin, mbi);
 		if (!(mbi.Protect & PageState::MASK_ACCESS))
-			throw CORBA::BAD_PARAM ();
+			throw_BAD_PARAM ();
 		state_bits |= mbi.Protect;
 		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
 	}
@@ -404,21 +397,24 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 		return dst;
 
 	if (flags & ~(Memory::READ_ONLY | Memory::RELEASE | Memory::ALLOCATE | Memory::EXACTLY))
-		throw CORBA::INV_FLAG ();
+		throw_INV_FLAG ();
 
-	bool src_not_share, dst_not_share = false;
+	bool src_own = false, dst_own = false;
+
+	// release_flags can be 0, Memory::RELEASE, Memory::DECOMMIT.
+	UWord release_flags = flags & Memory::RELEASE;
+
 	// Source range have to be committed.
-	
 	uint32_t src_prot_mask;
 	if (space_.allocated_block (src)) {
 		src_prot_mask = space_.check_committed (src, size);
-		src_not_share = is_current_stack (src);
+		src_own = true;
 	} else {
+		if (release_flags)
+			throw_BAD_PARAM (); // Can't release memory that is not own.
 		src_prot_mask = check_committed (src, size);
-		src_not_share = true;
 	}
 
-	void* ret = 0;
 	uintptr_t src_align = (uintptr_t)src % ALLOCATION_GRANULARITY;
 	try {
 		Region allocated = {0, 0};
@@ -426,142 +422,163 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 			if (dst) {
 				if (dst == src) {
 					if ((Memory::EXACTLY & flags) && Memory::RELEASE != (flags & Memory::RELEASE))
-						return 0;
+						return nullptr;
+					dst = nullptr;
 				} else {
 					// Try reserve space exactly at dst.
 					// Target region can overlap with source.
 					allocated.ptr = dst;
 					allocated.size = size;
-					if (
-						allocated.subtract (round_down (src, ALLOCATION_GRANULARITY), round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY))
-						&&
-						space_.reserve (allocated.size, flags | Memory::EXACTLY, allocated.ptr)
-						)
-						ret = dst;
-					else if (flags & Memory::EXACTLY)
-						return 0;
+					allocated.subtract (round_down (src, ALLOCATION_GRANULARITY), round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY));
+					dst = space_.reserve (allocated.size, flags | Memory::EXACTLY, allocated.ptr);
+					if (!dst && (flags & Memory::EXACTLY))
+						return nullptr;
 				}
 			}
-			if (!ret) {
-				if (Memory::RELEASE == (flags & Memory::RELEASE))
-					ret = src;
+			if (!dst) {
+				if (Memory::RELEASE == release_flags)
+					dst = src; // Memory::RELEASE is specified, so we can use source block as destination
 				else {
-					BYTE* res = (BYTE*)space_.reserve (size + src_align, flags);
-					if (!res)
-						return 0;
-					ret = res + src_align;
-					allocated.ptr = ret;
-					allocated.size = size;
+					size_t cb_res = size + src_align;
+					BYTE* res = (BYTE*)space_.reserve (cb_res, flags);
+					if (!res) {
+						assert (flags & Memory::EXACTLY);
+						return nullptr;
+					}
+					dst = res + src_align;
+					allocated.ptr = res;
+					allocated.size = cb_res;
 				}
 			}
+			assert (dst);
+			dst_own = true;
 		} else {
 			if (space_.allocated_block (dst)) {
 				space_.check_allocated (dst, size);
-				dst_not_share = is_current_stack (dst);
+				dst_own = true;
 			} else {
 				if (!is_writable (dst, size))
-					throw CORBA::BAD_PARAM ();
-				dst_not_share = true;
+					throw_NO_PERMISSION ();
 			}
-			ret = dst;
 		}
 
-		assert (ret);
+		assert (dst);
 
-		if (ret == src) { // Special case - change protection.
-			if ((Memory::ALLOCATE & flags) && Memory::RELEASE != (flags & Memory::RELEASE)) {
-				dst = 0;
-				if (flags & Memory::EXACTLY)
-					return 0;
-			} else {
-				// Change protection
-				if (src_prot_mask & ((flags & Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO))
-					space_.change_protection (src, size, flags);
-				return src;
-			}
+		if (dst == src) { // Special case - change protection.
+			// We allow to change protection of the not-allocated memory.
+			// This is necessary for core services like module load.
+			if (src_prot_mask & ((flags & Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO))
+				space_.change_protection (src, size, flags);
+			return src;
 		}
 
 		try {
-			if (!src_not_share && !dst_not_share && (uintptr_t)ret % ALLOCATION_GRANULARITY == src_align) {
-				// Share (regions may overlap).
-				if (ret < src) {
-					BYTE* pd = (BYTE*)ret, *end = pd + size;
-					BYTE* ps = (BYTE*)src;
-					if (end > src) {
-						// Copy overlapped part with Memory::DECOMMIT.
-						BYTE* first_part_end = round_up (end - ((BYTE*)src + size - end), ALLOCATION_GRANULARITY);
-						assert (first_part_end < end);
-						UWord first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
-						while (pd < first_part_end) {
-							Block block (pd);
-							BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-							size_t cb = block_end - pd;
-							block.copy (ps, cb, first_part_flags);
-							pd = block_end;
-							ps += cb;
+			if (dst_own) {
+				if (src_own && (uintptr_t)dst % ALLOCATION_GRANULARITY == src_align) {
+					// Share (regions may overlap).
+					if (dst < src) {
+						BYTE* d_p = (BYTE*)dst, * d_end = d_p + size;
+						BYTE* s_p = (BYTE*)src;
+						if (d_end > src) {
+							// Copy overlapped part with Memory::DECOMMIT.
+							BYTE* first_part_end = round_up (d_end - ((BYTE*)src + size - d_end), ALLOCATION_GRANULARITY);
+							assert (first_part_end < d_end);
+							UWord first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
+							while (d_p < first_part_end) {
+								Block block (d_p);
+								BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+								size_t cb = block_end - d_p;
+								block.virtual_copy (s_p, cb, first_part_flags);
+								d_p = block_end;
+								s_p += cb;
+							}
 						}
-					}
-					while (pd < end) {
-						Block block (pd);
-						BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-						if (block_end > end)
-							block_end = end;
-						size_t cb = block_end - pd;
-						block.copy (ps, cb, flags);
-						pd = block_end;
-						ps += cb;
+						while (d_p < d_end) {
+							Block block (d_p);
+							BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+							if (block_end > d_end)
+								block_end = d_end;
+							size_t cb = block_end - d_p;
+							block.virtual_copy (s_p, cb, flags);
+							d_p = block_end;
+							s_p += cb;
+						}
+					} else {
+						BYTE* s_end = (BYTE*)src + size;
+						BYTE* d_p = (BYTE*)dst + size, * s_p = (BYTE*)src + size;
+						if (dst < s_end) {
+							// Copy overlapped part with Memory::DECOMMIT.
+							BYTE* first_part_begin = round_down ((BYTE*)dst + ((BYTE*)dst - (BYTE*)src), ALLOCATION_GRANULARITY);
+							assert (first_part_begin > dst);
+							UWord first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
+							while (d_p > first_part_begin) {
+								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
+								Block block (block_begin);
+								size_t cb = d_p - block_begin;
+								s_p -= cb;
+								block.virtual_copy (s_p, cb, first_part_flags);
+								d_p = block_begin;
+							}
+						}
+						while (d_p > dst) {
+							BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
+							if (block_begin < dst)
+								block_begin = (BYTE*)dst;
+							Block block (block_begin);
+							size_t cb = d_p - block_begin;
+							s_p -= cb;
+							block.virtual_copy (s_p, cb, flags);
+							d_p = block_begin;
+						}
 					}
 				} else {
-					BYTE* src_end = (BYTE*)src + size;
-					BYTE* pd = (BYTE*)ret + size, *ps = (BYTE*)src + size;
-					if (ret < src_end) {
-						// Copy overlapped part with Memory::DECOMMIT.
-						BYTE* first_part_begin = round_down ((BYTE*)ret + ((BYTE*)ret - (BYTE*)src), ALLOCATION_GRANULARITY);
-						assert (first_part_begin > ret);
-						UWord first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
-						while (pd > first_part_begin) {
-							BYTE* block_begin = round_down (pd - 1, ALLOCATION_GRANULARITY);
-							Block block (block_begin);
-							size_t cb = pd - block_begin;
-							ps -= cb;
-							block.copy (ps, cb, first_part_flags);
-							pd = block_begin;
+					// Physical copy.
+					uint32_t dst_prot_mask = commit_no_check (dst, size);
+					if ((dst_prot_mask & PageState::MASK_RO) || (flags & Memory::READ_ONLY)) {
+						if (dst < src) {
+							BYTE* d_p = (BYTE*)dst, *d_end = d_p + size;
+							BYTE* s_p = (BYTE*)src;
+							while (d_p < d_end) {
+								Block block (d_p);
+								BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+								if (block_end > d_end)
+									block_end = d_end;
+								size_t cb = block_end - d_p;
+								block.copy (d_p - block.address (), cb, s_p, flags);
+								d_p = block_end;
+								s_p += cb;
+							}
+						} else {
+							BYTE* s_end = (BYTE*)src + size;
+							BYTE* d_p = (BYTE*)dst + size, * s_p = (BYTE*)src + size;
+							while (d_p > dst) {
+								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
+								if (block_begin < dst)
+									block_begin = (BYTE*)dst;
+								Block block (block_begin);
+								size_t cb = d_p - block_begin;
+								s_p -= cb;
+								block.copy (block_begin - block.address (), cb, s_p, flags);
+								d_p = block_begin;
+							}
 						}
-					}
-					while (pd > ret) {
-						BYTE* block_begin = round_down (pd - 1, ALLOCATION_GRANULARITY);
-						if (block_begin < ret)
-							block_begin = (BYTE*)ret;
-						Block block (block_begin);
-						size_t cb = pd - block_begin;
-						ps -= cb;
-						block.copy (ps, cb, flags);
-						pd = block_begin;
-					}
+					} else
+						real_move ((const BYTE*)src, (const BYTE*)src + size, (BYTE*)dst);
 				}
 			} else {
-				// Physical copy.
-				uint32_t state_bits;
-				if (dst_not_share)
-					state_bits = check_committed (dst, size);
-				else
-					state_bits = commit_no_check (ret, size);
-				if (state_bits & PageState::MASK_RO)
-					space_.change_protection (dst, size, Memory::READ_WRITE);
-				real_move ((const BYTE*)src, (const BYTE*)src + size, (BYTE*)ret);
-				if (flags & Memory::READ_ONLY)
-					space_.change_protection (ret, size, Memory::READ_ONLY);
+				// Physical copy not own memory.
+				real_move ((const BYTE*)src, (const BYTE*)src + size, (BYTE*)dst);
+			}
 
-				if ((flags & Memory::DECOMMIT) && ret != src) {
-					// Release or decommit source. Regions can overlap.
-					Region reg = {src, size};
-					if (flags & (Memory::RELEASE & ~Memory::DECOMMIT)) {
-						if (reg.subtract (round_up (ret, ALLOCATION_GRANULARITY), round_down ((BYTE*)ret + size, ALLOCATION_GRANULARITY)))
-							release (reg.ptr, reg.size);
-					} else {
-						if (reg.subtract (round_up (ret, PAGE_SIZE), round_down ((BYTE*)ret + size, PAGE_SIZE)))
-							decommit (reg.ptr, reg.size);
-					}
+			if (flags & Memory::DECOMMIT) {
+				// Release or decommit source. Regions can overlap.
+				Region reg = {src, size};
+				if (flags & (Memory::RELEASE & ~Memory::DECOMMIT)) {
+					if (reg.subtract (round_up (dst, ALLOCATION_GRANULARITY), round_down ((BYTE*)dst + size, ALLOCATION_GRANULARITY)))
+						release (reg.ptr, reg.size);
+				} else {
+					if (reg.subtract (round_up (dst, PAGE_SIZE), round_down ((BYTE*)dst + size, PAGE_SIZE)))
+						decommit (reg.ptr, reg.size);
 				}
 			}
 		} catch (...) {
@@ -570,12 +587,12 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 		}
 	} catch (const CORBA::NO_MEMORY&) {
 		if (Memory::EXACTLY & flags)
-			ret = 0;
+			dst = nullptr;
 		else
 			throw;
 	}
 
-	return ret;
+	return dst;
 }
 
 uintptr_t ProtDomainMemory::query (const void* p, MemQuery q)
@@ -608,7 +625,7 @@ uintptr_t ProtDomainMemory::query (const void* p, MemQuery q)
 			return FLAGS;
 		}
 
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 	}
 }
 
@@ -725,14 +742,14 @@ void ProtDomainMemory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* 
 			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
 				throw CORBA::MEM_NOT_COMMITTED ();
 			else if (pex->ExceptionRecord->ExceptionInformation [0] && !(mbi.Protect & PageState::MASK_RW))
-				throw CORBA::NO_PERMISSION ();
+				throw_NO_PERMISSION ();
 			else
 				return;
 		} else
 			throw CORBA::MEM_NOT_ALLOCATED ();
 	}
 
-	throw CORBA::UNKNOWN ();
+	throw_UNKNOWN ();
 }
 
 }

@@ -35,15 +35,14 @@ public:
 			prepare_to_share_no_remap (offset, size);
 	}
 
-	void copy (void* src, size_t size, UWord flags);
+	void virtual_copy (void* src, size_t size, UWord flags);
+	void copy (size_t offset, size_t size, const void* src, UWord flags);
 
 private:
 	struct Regions;
 
 	void remap ();
-	bool copy_page_part (const void* src, size_t size, UWord flags);
 	void prepare_to_share_no_remap (size_t offset, size_t size);
-	void copy (size_t offset, size_t size, const void* src, UWord flags);
 };
 
 struct ProtDomainMemory::Block::Regions

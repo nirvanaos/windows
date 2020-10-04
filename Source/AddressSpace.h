@@ -67,21 +67,21 @@ class PageState
 public:
 	enum
 	{
-		/// <summary>Page not committed (entire block never was shared).</summary>
+		/// Page not committed (entire block never was shared).
 		NOT_COMMITTED = 0,
-		/// <summary>Decommitted.</summary>
+		/// Decommitted.
 		DECOMMITTED = PAGE_NOACCESS,
-		/// <summary>The page is mapped and never was shared.</summary>
+		/// The page is mapped and never was shared.
 		RW_MAPPED_PRIVATE = PAGE_READWRITE,
-		/// <summary>The page is mapped and was shared.</summary>
+		/// The page is mapped and was shared.
 		RW_MAPPED_SHARED = PAGE_EXECUTE_WRITECOPY,
-		/// <summary>The page is write-copyed (private, disconnected from mapping).</summary>
+		/// The page is write-copyed (private, disconnected from mapping).
 		RW_UNMAPPED = PAGE_EXECUTE_READWRITE,
-		/// <summary>The read-only mapped page never was shared.</summary>
+		/// The read-only mapped page never was shared.
 		RO_MAPPED_PRIVATE = PAGE_READONLY,
-		/// <summary>The read-only mapped page was shared.</summary>
+		/// The read-only mapped page was shared.
 		RO_MAPPED_SHARED = PAGE_EXECUTE,
-		/// <summary>The page is not mapped. Page was write-copyed, than access was changed from <c>PAGE_READWRITE</c> to <c>PAGE_READONLY</c>.</summary>
+		/// The page is not mapped. Page was write-copyed, than access was changed from <c>PAGE_READWRITE</c> to <c>PAGE_READONLY</c>.
 		RO_UNMAPPED = PAGE_EXECUTE_READ,
 
 		// Page state masks.
@@ -159,7 +159,7 @@ public:
 		}
 
 		void copy (Block& src, size_t offset, size_t size, UWord flags);
-		void unmap (HANDLE reserve = INVALID_HANDLE_VALUE, bool no_close_handle = false);
+		void unmap (HANDLE reserve = INVALID_HANDLE_VALUE);
 		DWORD check_committed (size_t offset, size_t size);
 		void change_protection (size_t offset, size_t size, UWord flags);
 		void decommit (size_t offset, size_t size);
