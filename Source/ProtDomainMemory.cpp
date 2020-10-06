@@ -142,7 +142,7 @@ void ProtDomainMemory::Block::remap ()
 	HANDLE hm = new_mapping ();
 	try {
 		// Map memory section to temporary address.
-		BYTE* ptmp = (BYTE*)MapViewOfFile3 (hm, space_.process (), nullptr, 0, ALLOCATION_GRANULARITY, 0, AddressSpace::MAP_PRIVATE, nullptr, 0);
+		BYTE* ptmp = (BYTE*)MapViewOfFile (hm, FILE_MAP_WRITE, 0, 0, ALLOCATION_GRANULARITY);
 		if (!ptmp)
 			throw_NO_MEMORY ();
 
@@ -199,7 +199,7 @@ void ProtDomainMemory::Block::remap ()
 	}
 }
 
-void ProtDomainMemory::Block::virtual_copy (void* src, size_t size, UWord flags)
+void ProtDomainMemory::Block::aligned_copy (void* src, size_t size, UWord flags)
 {
 	// NOTE: Memory::DECOMMIT and Memory::RELEASE flags used only for optimozation.
 	// We don't perform actual decommit or release here.
@@ -217,12 +217,14 @@ void ProtDomainMemory::Block::virtual_copy (void* src, size_t size, UWord flags)
 					return;
 				} else
 					src_block.remap ();
-				// If no unmapped pages at target region, we don't need to do anything.
-			} else if (need_remap_to_share (offset, size)) {
+				
+			} else if (!need_remap_to_share (offset, size))
+				return; // If no unmapped pages at target region, we don't need to do anything.
+			else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED)) {
 				// Real copy
 				copy (offset, size, src, flags);
+				return;
 			}
-			return;
 		} else if (has_data_outside_of (offset, size)) {
 			// Real copy
 			copy (offset, size, src, flags);
@@ -242,12 +244,12 @@ void ProtDomainMemory::Block::copy (size_t offset, size_t size, const void* src,
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
-	DWORD page_state = commit (offset, size);
+	DWORD page_state = check_committed (offset, size);
 	if (PageState::MASK_RO & page_state) {
 		// Some target pages are read-only
 		if (flags & Memory::READ_ONLY) {
 			// Map memory section to temporary address.
-			BYTE* ptmp = (BYTE*)MapViewOfFile3 (mapping (), space_.process (), nullptr, 0, ALLOCATION_GRANULARITY, 0, AddressSpace::MAP_PRIVATE, nullptr, 0);
+			BYTE* ptmp = (BYTE*)MapViewOfFile (mapping (), FILE_MAP_WRITE, 0, 0, ALLOCATION_GRANULARITY);
 			if (!ptmp)
 				throw_NO_MEMORY ();
 			real_copy ((const BYTE*)src, (const BYTE*)src + size, ptmp + offset);
@@ -439,13 +441,14 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 				if (Memory::RELEASE == release_flags)
 					dst = src; // Memory::RELEASE is specified, so we can use source block as destination
 				else {
-					size_t cb_res = size + src_align;
+					size_t dst_align = src_own ? src_align : 0;
+					size_t cb_res = size + dst_align;
 					BYTE* res = (BYTE*)space_.reserve (cb_res, flags);
 					if (!res) {
 						assert (flags & Memory::EXACTLY);
 						return nullptr;
 					}
-					dst = res + src_align;
+					dst = res + dst_align;
 					allocated.ptr = res;
 					allocated.size = cb_res;
 				}
@@ -488,7 +491,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 								Block block (d_p);
 								BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
 								size_t cb = block_end - d_p;
-								block.virtual_copy (s_p, cb, first_part_flags);
+								block.aligned_copy (s_p, cb, first_part_flags);
 								d_p = block_end;
 								s_p += cb;
 							}
@@ -499,7 +502,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 							if (block_end > d_end)
 								block_end = d_end;
 							size_t cb = block_end - d_p;
-							block.virtual_copy (s_p, cb, flags);
+							block.aligned_copy (s_p, cb, flags);
 							d_p = block_end;
 							s_p += cb;
 						}
@@ -516,7 +519,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 								Block block (block_begin);
 								size_t cb = d_p - block_begin;
 								s_p -= cb;
-								block.virtual_copy (s_p, cb, first_part_flags);
+								block.aligned_copy (s_p, cb, first_part_flags);
 								d_p = block_begin;
 							}
 						}
@@ -527,7 +530,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 							Block block (block_begin);
 							size_t cb = d_p - block_begin;
 							s_p -= cb;
-							block.virtual_copy (s_p, cb, flags);
+							block.aligned_copy (s_p, cb, flags);
 							d_p = block_begin;
 						}
 					}

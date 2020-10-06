@@ -279,11 +279,11 @@ void AddressSpace::Block::change_protection (size_t offset, size_t size, UWord f
 		offset_end = round_up (offset_end, PAGE_SIZE);
 	}
 
-	auto page_state = state ().mapped.page_state;
+	const DWORD* page_state = state ().mapped.page_state;
 	auto region_begin = page_state + offset / PAGE_SIZE, state_end = page_state + offset_end / PAGE_SIZE;
-	do {
+	while (region_begin < state_end) {
 		auto region_end = region_begin;
-		DWORD state = *region_begin;
+		const DWORD state = *region_begin;
 		do
 			++region_end;
 		while (region_end < state_end && state == *region_end);
@@ -306,7 +306,7 @@ void AddressSpace::Block::change_protection (size_t offset, size_t size, UWord f
 		}
 
 		region_begin = region_end;
-	} while (region_begin < state_end);
+	}
 }
 
 DWORD AddressSpace::Block::check_committed (size_t offset, size_t size)

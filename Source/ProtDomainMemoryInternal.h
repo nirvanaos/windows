@@ -35,7 +35,7 @@ public:
 			prepare_to_share_no_remap (offset, size);
 	}
 
-	void virtual_copy (void* src, size_t size, UWord flags);
+	void aligned_copy (void* src, size_t size, UWord flags);
 	void copy (size_t offset, size_t size, const void* src, UWord flags);
 
 private:
