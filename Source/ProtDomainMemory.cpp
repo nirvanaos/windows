@@ -54,11 +54,15 @@ DWORD ProtDomainMemory::Block::commit (size_t offset, size_t size)
 		} while (region_begin < state_end);
 
 		if (regions.end != regions.begin) {
+
+			// If the memory section is shared, we mustn't commit pages.
+			// If the page is not committed and we commit it, it will become committed in another block.
 			if (bs.page_state_bits & PageState::MASK_MAY_BE_SHARED) {
 				remap ();
 				ret = ((ret & PageState::MASK_RW) ? PageState::RW_MAPPED_PRIVATE : 0)
 					| ((ret & PageState::MASK_RO) ? PageState::RO_MAPPED_PRIVATE : 0);
 			}
+
 			for (const Region* p = regions.begin; p != regions.end; ++p) {
 				if (!VirtualAlloc (p->ptr, p->size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE)) {
 					// Error, decommit back and throw the exception.
@@ -67,7 +71,7 @@ DWORD ProtDomainMemory::Block::commit (size_t offset, size_t size)
 						protect (p->ptr, p->size, PageState::DECOMMITTED);
 						verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
 					}
-					throw CORBA::NO_MEMORY ();
+					throw_NO_MEMORY ();
 				}
 			}
 		}
@@ -79,7 +83,7 @@ bool ProtDomainMemory::Block::need_remap_to_share (size_t offset, size_t size)
 {
 	const State& st = state ();
 	if (st.state != State::MAPPED)
-		throw CORBA::BAD_PARAM ();
+		throw_BAD_PARAM ();
 	if (st.page_state_bits & PageState::MASK_UNMAPPED) {
 		if (0 == offset && size == ALLOCATION_GRANULARITY)
 			return true;
@@ -162,7 +166,7 @@ void ProtDomainMemory::Block::remap ()
 					LONG_PTR* dst = (LONG_PTR*)(ptmp + offset);
 					size_t size = (region_end - region_begin) * PAGE_SIZE;
 					if (!VirtualAlloc (dst, size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE))
-						throw CORBA::NO_MEMORY ();
+						throw_NO_MEMORY ();
 					const LONG_PTR* src = (LONG_PTR*)(address () + offset);
 					real_copy (src, src + size / sizeof (LONG_PTR), dst);
 					if (PageState::MASK_RO & *region_begin)
@@ -371,7 +375,9 @@ void ProtDomainMemory::commit (void* ptr, size_t size)
 	// Memory must be allocated.
 	space_.check_allocated (ptr, size);
 
-	commit_no_check (ptr, size);
+	uint32_t prot_mask = commit_no_check (ptr, size);
+	if (prot_mask & PageState::MASK_RO)
+		space_.change_protection (ptr, size, Memory::READ_WRITE);
 }
 
 void ProtDomainMemory::decommit (void* ptr, size_t size)
