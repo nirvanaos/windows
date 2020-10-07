@@ -322,67 +322,6 @@ DWORD AddressSpace::Block::check_committed (size_t offset, size_t size)
 	return bs.page_state_bits;
 }
 
-void AddressSpace::Block::decommit (size_t offset, size_t size)
-{
-	offset = round_up (offset, PAGE_SIZE);
-	size_t offset_end = round_down (offset + size, PAGE_SIZE);
-	assert (offset_end <= ALLOCATION_GRANULARITY);
-	if (offset < offset_end) {
-		if (!offset && offset_end == ALLOCATION_GRANULARITY)
-			unmap ();
-		else if (state ().state == State::MAPPED) {
-			bool can_unmap = true;
-			auto page_state = state ().mapped.page_state;
-			if (offset) {
-				for (auto ps = page_state, end = page_state + offset / PAGE_SIZE; ps < end; ++ps) {
-					if (PageState::MASK_ACCESS & *ps) {
-						can_unmap = false;
-						break;
-					}
-				}
-			}
-			if (can_unmap && offset_end < ALLOCATION_GRANULARITY) {
-				for (auto ps = page_state + offset_end / PAGE_SIZE, end = page_state + PAGES_PER_BLOCK; ps < end; ++ps) {
-					if (PageState::MASK_ACCESS & *ps) {
-						can_unmap = false;
-						break;
-					}
-				}
-			}
-
-			if (can_unmap)
-				unmap ();
-			else {
-				// Decommit pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
-				space_.protect (address () + offset, offset_end - offset, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
-
-				// Discard private pages.
-				auto region_begin = page_state + offset / PAGE_SIZE, state_end = page_state + offset_end / PAGE_SIZE;
-				do {
-					auto region_end = region_begin;
-					if (!((PageState::MASK_MAY_BE_SHARED | PageState::DECOMMITTED) & *region_begin)) {
-						do
-							++region_end;
-						while (region_end < state_end && !((PageState::MASK_MAY_BE_SHARED | PageState::DECOMMITTED) & *region_end));
-
-						BYTE* ptr = address () + (region_begin - page_state) * PAGE_SIZE;
-						size_t size = (region_end - region_begin) * PAGE_SIZE;
-						verify (VirtualAlloc2 (space_.process (), ptr, size, MEM_RESET, PageState::DECOMMITTED, nullptr, 0));
-					} else {
-						do
-							++region_end;
-						while (region_end < state_end && ((PageState::MASK_MAY_BE_SHARED | PageState::DECOMMITTED) & *region_end));
-					}
-					region_begin = region_end;
-				} while (region_begin < state_end);
-
-				// Invalidate block state.
-				invalidate_state ();
-			}
-		}
-	}
-}
-
 void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
 {
 	process_ = process_handle;

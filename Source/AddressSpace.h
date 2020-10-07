@@ -162,7 +162,6 @@ public:
 		void unmap (HANDLE reserve = INVALID_HANDLE_VALUE);
 		DWORD check_committed (size_t offset, size_t size);
 		void change_protection (size_t offset, size_t size, UWord flags);
-		void decommit (size_t offset, size_t size);
 		bool is_copy (Block& other, size_t offset, size_t size);
 
 		struct State
@@ -256,7 +255,6 @@ public:
 	void check_allocated (void* ptr, size_t size);
 	DWORD check_committed (void* ptr, size_t size);
 	void change_protection (void* ptr, size_t size, UWord flags);
-	void decommit (void* ptr, size_t size);
 
 protected:
 	void initialize (DWORD process_id, HANDLE process_handle);
@@ -282,24 +280,6 @@ private:
 #endif
 	size_t directory_size_;
 };
-
-inline void AddressSpace::decommit (void* ptr, size_t size)
-{
-	if (!size)
-		return;
-
-	// Memory must be allocated.
-	check_allocated (ptr, size);
-
-	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
-		Block block (*this, p);
-		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-		if (block_end > end)
-			block_end = end;
-		block.decommit (p - block.address (), block_end - p);
-		p = block_end;
-	}
-}
 
 inline bool AddressSpace::Block::is_copy (Block& other, size_t offset, size_t size)
 {

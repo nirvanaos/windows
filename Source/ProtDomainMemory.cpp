@@ -74,6 +74,8 @@ DWORD ProtDomainMemory::Block::commit (size_t offset, size_t size)
 					throw_NO_MEMORY ();
 				}
 			}
+
+			invalidate_state ();
 		}
 	}
 	return ret;
@@ -215,25 +217,18 @@ void ProtDomainMemory::Block::aligned_copy (void* src, size_t size, UWord flags)
 	if ((offset || size < ALLOCATION_GRANULARITY) && INVALID_HANDLE_VALUE != mapping ()) {
 		if (CompareObjectHandles (mapping (), src_block.mapping ())) {
 			if (src_block.need_remap_to_share (offset, size)) {
-				if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED)) {
-					// Real copy
-					copy (offset, size, src, flags);
-					return;
-				} else
+				if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
+					goto fallback;
+				else
 					src_block.remap ();
 				
 			} else if (!need_remap_to_share (offset, size))
 				return; // If no unmapped pages at target region, we don't need to do anything.
-			else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED)) {
-				// Real copy
-				copy (offset, size, src, flags);
-				return;
-			}
-		} else if (has_data_outside_of (offset, size)) {
-			// Real copy
-			copy (offset, size, src, flags);
-			return;
-		} else if (src_block.need_remap_to_share (offset, size))
+			else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
+				goto fallback;
+		} else if (has_data_outside_of (offset, size))
+			goto fallback;
+		else if (src_block.need_remap_to_share (offset, size))
 			src_block.remap ();
 	} else if (src_block.need_remap_to_share (offset, size))
 		src_block.remap ();
@@ -241,6 +236,12 @@ void ProtDomainMemory::Block::aligned_copy (void* src, size_t size, UWord flags)
 	if (!(flags & Memory::DECOMMIT))	// Memory::RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
 	AddressSpace::Block::copy (src_block, offset, size, flags);
+	return;
+
+fallback:
+	// Real copy
+	commit (offset, size);
+	copy (offset, size, src, flags);
 }
 
 void ProtDomainMemory::Block::copy (size_t offset, size_t size, const void* src, UWord flags)
@@ -268,6 +269,67 @@ void ProtDomainMemory::Block::copy (size_t offset, size_t size, const void* src,
 		real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
 		if (flags & Memory::READ_ONLY)
 			change_protection (offset, size, Memory::READ_ONLY);
+	}
+}
+
+void ProtDomainMemory::Block::decommit (size_t offset, size_t size)
+{
+	offset = round_up (offset, PAGE_SIZE);
+	size_t offset_end = round_down (offset + size, PAGE_SIZE);
+	assert (offset_end <= ALLOCATION_GRANULARITY);
+	if (offset < offset_end) {
+		if (!offset && offset_end == ALLOCATION_GRANULARITY)
+			unmap ();
+		else if (state ().state == State::MAPPED) {
+			bool can_unmap = true;
+			auto page_state = state ().mapped.page_state;
+			if (offset) {
+				for (auto ps = page_state, end = page_state + offset / PAGE_SIZE; ps < end; ++ps) {
+					if (PageState::MASK_ACCESS & *ps) {
+						can_unmap = false;
+						break;
+					}
+				}
+			}
+			if (can_unmap && offset_end < ALLOCATION_GRANULARITY) {
+				for (auto ps = page_state + offset_end / PAGE_SIZE, end = page_state + PAGES_PER_BLOCK; ps < end; ++ps) {
+					if (PageState::MASK_ACCESS & *ps) {
+						can_unmap = false;
+						break;
+					}
+				}
+			}
+
+			if (can_unmap)
+				unmap ();
+			else {
+				// Decommit pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
+				space_.protect (address () + offset, offset_end - offset, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
+
+				// Discard private pages.
+				auto region_begin = page_state + offset / PAGE_SIZE, state_end = page_state + offset_end / PAGE_SIZE;
+				do {
+					auto region_end = region_begin;
+					if (!((PageState::MASK_MAY_BE_SHARED | PageState::DECOMMITTED) & *region_begin)) {
+						do
+							++region_end;
+						while (region_end < state_end && !((PageState::MASK_MAY_BE_SHARED | PageState::DECOMMITTED) & *region_end));
+
+						BYTE* ptr = address () + (region_begin - page_state) * PAGE_SIZE;
+						size_t size = (region_end - region_begin) * PAGE_SIZE;
+						verify (VirtualAlloc2 (space_.process (), ptr, size, MEM_RESET, PageState::DECOMMITTED, nullptr, 0));
+					} else {
+						do
+							++region_end;
+						while (region_end < state_end && ((PageState::MASK_MAY_BE_SHARED | PageState::DECOMMITTED) & *region_end));
+					}
+					region_begin = region_end;
+				} while (region_begin < state_end);
+
+				// Invalidate block state.
+				invalidate_state ();
+			}
+		}
 	}
 }
 
@@ -382,7 +444,20 @@ void ProtDomainMemory::commit (void* ptr, size_t size)
 
 void ProtDomainMemory::decommit (void* ptr, size_t size)
 {
-	space_.decommit (ptr, size);
+	if (!size)
+		return;
+
+	// Memory must be allocated.
+	space_.check_allocated (ptr, size);
+
+	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
+		Block block (p);
+		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		if (block_end > end)
+			block_end = end;
+		block.decommit (p - block.address (), block_end - p);
+		p = block_end;
+	}
 }
 
 uint32_t ProtDomainMemory::check_committed (void* ptr, size_t size)

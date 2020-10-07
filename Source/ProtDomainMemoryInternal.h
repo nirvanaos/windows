@@ -38,6 +38,7 @@ public:
 	void aligned_copy (void* src, size_t size, UWord flags);
 	void copy (size_t offset, size_t size, const void* src, UWord flags);
 
+	void decommit (size_t offset, size_t size);
 private:
 	struct Regions;
 
