@@ -163,18 +163,14 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, UWord fl
 	if (INVALID_HANDLE_VALUE == cur_mapping)
 		remap = true;
 	else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
-		// Change mapping, if possible
-		if (has_data_outside_of (offset, size))
-			throw_INTERNAL ();
+		// Change mapping
+		assert (!has_data_outside_of (offset, size));
 		remap = true;
 	} else
 		remap = false;
 
-	copy (remap, src.can_move (offset, size, flags), src, offset, size, flags);
-}
+	bool move = src.can_move (offset, size, flags);
 
-void AddressSpace::Block::copy (bool remap, bool move, Block& src, size_t offset, size_t size, UWord flags)
-{
 	DWORD dst_page_state [PAGES_PER_BLOCK];
 	DWORD* dst_ps_begin = dst_page_state + offset / PAGE_SIZE;
 	DWORD* dst_ps_end = dst_page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -239,87 +235,6 @@ void AddressSpace::Block::copy (bool remap, bool move, Block& src, size_t offset
 
 		region_begin = region_end;
 	} while (region_begin < block_end);
-}
-
-void AddressSpace::Block::change_protection (size_t offset, size_t size, UWord flags)
-{
-	size_t offset_end = offset + size;
-	assert (offset_end <= ALLOCATION_GRANULARITY);
-	assert (size);
-
-	static const size_t STATES_CNT = 3;
-
-	static const DWORD states_RW [STATES_CNT] = {
-		PageState::RW_MAPPED_PRIVATE,
-		PageState::RW_MAPPED_SHARED,
-		PageState::RW_UNMAPPED
-	};
-
-	static const DWORD states_RO [STATES_CNT] = {
-		PageState::RO_MAPPED_PRIVATE,
-		PageState::RO_MAPPED_SHARED,
-		PageState::RO_UNMAPPED
-	};
-
-	DWORD protect_mask;
-	const DWORD* states_src;
-	const DWORD* states_dst;
-
-	if (flags & Memory::READ_ONLY) {
-		protect_mask = PageState::MASK_RO;
-		states_src = states_RW;
-		states_dst = states_RO;
-		offset = round_up (offset, PAGE_SIZE);
-		offset_end = round_down (offset_end, PAGE_SIZE);
-	} else {
-		protect_mask = PageState::MASK_RW;
-		states_src = states_RO;
-		states_dst = states_RW;
-		offset = round_down (offset, PAGE_SIZE);
-		offset_end = round_up (offset_end, PAGE_SIZE);
-	}
-
-	const DWORD* page_state = state ().mapped.page_state;
-	auto region_begin = page_state + offset / PAGE_SIZE, state_end = page_state + offset_end / PAGE_SIZE;
-	while (region_begin < state_end) {
-		auto region_end = region_begin;
-		const DWORD state = *region_begin;
-		do
-			++region_end;
-		while (region_end < state_end && state == *region_end);
-
-		if (!(protect_mask & state)) {
-
-			DWORD new_state = state;
-			for (size_t i = 0; i < STATES_CNT; ++i) {
-				if (states_src [i] == state) {
-					new_state = states_dst [i];
-					break;
-				}
-			}
-
-			if (new_state != state) {
-				BYTE* ptr = address () + (region_begin - page_state) * PAGE_SIZE;
-				size_t size = (region_end - region_begin) * PAGE_SIZE;
-				space_.protect (ptr, size, new_state);
-			}
-		}
-
-		region_begin = region_end;
-	}
-}
-
-DWORD AddressSpace::Block::check_committed (size_t offset, size_t size)
-{
-	assert (offset + size <= ALLOCATION_GRANULARITY);
-
-	const State& bs = state ();
-	if (bs.state != State::MAPPED)
-		throw_BAD_PARAM ();
-	for (auto ps = bs.mapped.page_state + offset / PAGE_SIZE, end = bs.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps)
-		if (!(PageState::MASK_ACCESS & *ps))
-			throw_BAD_PARAM ();
-	return bs.page_state_bits;
 }
 
 void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
@@ -490,7 +405,7 @@ AddressSpace::BlockInfo* AddressSpace::allocated_block (const void* address)
 	return p;
 }
 
-void* AddressSpace::reserve (size_t size, UWord flags, void* dst)
+void* AddressSpace::reserve (void* dst, size_t size, UWord flags)
 {
 	if (!size)
 		throw_BAD_PARAM ();
@@ -619,44 +534,6 @@ void AddressSpace::check_allocated (void* ptr, size_t size)
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end; p += ALLOCATION_GRANULARITY)
 		if (!allocated_block (p))
 			throw_BAD_PARAM ();
-}
-
-DWORD AddressSpace::check_committed (void* ptr, size_t size)
-{
-	if (!size)
-		return 0;
-	if (!ptr)
-		throw_BAD_PARAM ();
-
-	DWORD mask;
-	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
-		Block block (*this, p);
-		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-		if (block_end > end)
-			block_end = end;
-		mask |= block.check_committed (p - block.address (), block_end - p);
-		p = block_end;
-	}
-	return mask;
-}
-
-void AddressSpace::change_protection (void* ptr, size_t size, UWord flags)
-{
-	if (!size)
-		return;
-	if (!ptr)
-		throw_BAD_PARAM ();
-
-	BYTE* begin = (BYTE*)ptr;
-	BYTE* end = begin + size;
-	for (BYTE* p = begin; p < end;) {
-		Block block (*this, p);
-		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-		if (block_end > end)
-			block_end = end;
-		block.change_protection (p - block.address (), block_end - p, flags);
-		p = block_end;
-	}
 }
 
 }

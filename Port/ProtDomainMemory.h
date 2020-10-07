@@ -110,6 +110,8 @@ private:
 
 	static uint32_t check_committed (void* ptr, size_t size);
 
+	static void change_protection (void* ptr, size_t size, UWord flags);
+
 	// Create new mapping
 	static HANDLE new_mapping ();
 

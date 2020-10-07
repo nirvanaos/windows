@@ -160,9 +160,6 @@ public:
 
 		void copy (Block& src, size_t offset, size_t size, UWord flags);
 		void unmap (HANDLE reserve = INVALID_HANDLE_VALUE);
-		DWORD check_committed (size_t offset, size_t size);
-		void change_protection (size_t offset, size_t size, UWord flags);
-		bool is_copy (Block& other, size_t offset, size_t size);
 
 		struct State
 		{
@@ -223,7 +220,6 @@ public:
 
 	private:
 		friend class AddressSpace;
-		void copy (bool remap, bool move, Block& src, size_t offset, size_t size, UWord flags);
 
 		bool can_move (size_t offset, size_t size, UWord flags)
 		{
@@ -244,7 +240,7 @@ public:
 		State state_;
 	};
 
-	void* reserve (size_t size, UWord flags = 0, void* dst = 0);
+	void* reserve (void* dst, size_t size, UWord flags);
 	void release (void* ptr, size_t size);
 
 	void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) const
@@ -253,8 +249,6 @@ public:
 	}
 
 	void check_allocated (void* ptr, size_t size);
-	DWORD check_committed (void* ptr, size_t size);
-	void change_protection (void* ptr, size_t size, UWord flags);
 
 protected:
 	void initialize (DWORD process_id, HANDLE process_handle);
@@ -262,7 +256,6 @@ protected:
 private:
 	friend class Port::ProtDomainMemory;
 
-	void* map (HANDLE mapping, MappingType protection);
 	void protect (void* address, size_t size, DWORD protection)
 	{
 		DWORD old;
@@ -280,27 +273,6 @@ private:
 #endif
 	size_t directory_size_;
 };
-
-inline bool AddressSpace::Block::is_copy (Block& other, size_t offset, size_t size)
-{
-	const State& st = state (), &other_st = other.state ();
-	if (st.state != State::MAPPED || other_st.state != State::MAPPED)
-		return false;
-	if (!CompareObjectHandles (mapping (), other.mapping ()))
-		return false;
-	size_t page_begin = offset / PAGE_SIZE;
-	auto pst = st.mapped.page_state + page_begin;
-	auto other_pst = other_st.mapped.page_state + page_begin;
-	auto pst_end = st.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
-	for (; pst != pst_end; ++pst, ++other_pst) {
-		DWORD ps = *pst, other_ps = *other_pst;
-		if ((ps | other_ps) & PageState::MASK_UNMAPPED)
-			return false;
-		else if (!(ps & PageState::MASK_ACCESS) || !(other_ps & PageState::MASK_ACCESS))
-			return false;
-	}
-	return true;
-}
 
 }
 }

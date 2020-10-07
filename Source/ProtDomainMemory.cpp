@@ -81,6 +81,19 @@ DWORD ProtDomainMemory::Block::commit (size_t offset, size_t size)
 	return ret;
 }
 
+DWORD ProtDomainMemory::Block::check_committed (size_t offset, size_t size)
+{
+	assert (offset + size <= ALLOCATION_GRANULARITY);
+
+	const State& bs = state ();
+	if (bs.state != State::MAPPED)
+		throw_BAD_PARAM ();
+	for (auto ps = bs.mapped.page_state + offset / PAGE_SIZE, end = bs.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps)
+		if (!(PageState::MASK_ACCESS & *ps))
+			throw_BAD_PARAM ();
+	return bs.page_state_bits;
+}
+
 bool ProtDomainMemory::Block::need_remap_to_share (size_t offset, size_t size)
 {
 	const State& st = state ();
@@ -123,22 +136,6 @@ void ProtDomainMemory::Block::prepare_to_share_no_remap (size_t offset, size_t s
 
 			region_begin = region_end;
 		} while (region_begin < block_end);
-	}
-
-	if (st.page_state_bits & PAGE_GUARD) {
-		// We are sharing block at the top of the stack.
-		// We have to commit all pages in the block.
-		for (auto end = st.mapped.page_state + PAGES_PER_BLOCK, begin = st.mapped.page_state, p = end;;) {
-			auto prev = p - 1;
-			DWORD s;
-			if (s = *prev) {
-				if (p < end && !VirtualAlloc (address () + (p - begin) * PAGE_SIZE, (end - p) * PAGE_SIZE, MEM_COMMIT, s))
-					throw_NO_MEMORY ();
-				break;
-			}
-			if ((p = prev) == begin)
-				break;
-		}
 	}
 }
 
@@ -333,6 +330,96 @@ void ProtDomainMemory::Block::decommit (size_t offset, size_t size)
 	}
 }
 
+void ProtDomainMemory::Block::change_protection (size_t offset, size_t size, UWord flags)
+{
+	size_t offset_end = offset + size;
+	assert (offset_end <= ALLOCATION_GRANULARITY);
+	assert (size);
+
+	static const size_t STATES_CNT = 3;
+
+	static const DWORD states_RW [STATES_CNT] = {
+		PageState::RW_MAPPED_PRIVATE,
+		PageState::RW_MAPPED_SHARED,
+		PageState::RW_UNMAPPED
+	};
+
+	static const DWORD states_RO [STATES_CNT] = {
+		PageState::RO_MAPPED_PRIVATE,
+		PageState::RO_MAPPED_SHARED,
+		PageState::RO_UNMAPPED
+	};
+
+	DWORD protect_mask;
+	const DWORD* states_src;
+	const DWORD* states_dst;
+
+	if (flags & Memory::READ_ONLY) {
+		protect_mask = PageState::MASK_RO;
+		states_src = states_RW;
+		states_dst = states_RO;
+		offset = round_up (offset, PAGE_SIZE);
+		offset_end = round_down (offset_end, PAGE_SIZE);
+	} else {
+		protect_mask = PageState::MASK_RW;
+		states_src = states_RO;
+		states_dst = states_RW;
+		offset = round_down (offset, PAGE_SIZE);
+		offset_end = round_up (offset_end, PAGE_SIZE);
+	}
+
+	const DWORD* page_state = state ().mapped.page_state;
+	auto region_begin = page_state + offset / PAGE_SIZE, state_end = page_state + offset_end / PAGE_SIZE;
+	while (region_begin < state_end) {
+		auto region_end = region_begin;
+		const DWORD state = *region_begin;
+		do
+			++region_end;
+		while (region_end < state_end && state == *region_end);
+
+		if (!(protect_mask & state)) {
+
+			DWORD new_state = state;
+			for (size_t i = 0; i < STATES_CNT; ++i) {
+				if (states_src [i] == state) {
+					new_state = states_dst [i];
+					break;
+				}
+			}
+
+			if (new_state != state) {
+				BYTE* ptr = address () + (region_begin - page_state) * PAGE_SIZE;
+				size_t size = (region_end - region_begin) * PAGE_SIZE;
+				space_.protect (ptr, size, new_state);
+			}
+		}
+
+		region_begin = region_end;
+	}
+}
+
+inline
+bool ProtDomainMemory::Block::is_copy (Block& other, size_t offset, size_t size)
+{
+	const State& st = state (), & other_st = other.state ();
+	if (st.state != State::MAPPED || other_st.state != State::MAPPED)
+		return false;
+	if (!CompareObjectHandles (mapping (), other.mapping ()))
+		return false;
+	size_t page_begin = offset / PAGE_SIZE;
+	auto pst = st.mapped.page_state + page_begin;
+	auto other_pst = other_st.mapped.page_state + page_begin;
+	auto pst_end = st.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+	for (; pst != pst_end; ++pst, ++other_pst) {
+		DWORD ps = *pst, other_ps = *other_pst;
+		if ((ps | other_ps) & PageState::MASK_UNMAPPED)
+			return false;
+		else if (!(ps & PageState::MASK_ACCESS) || !(other_ps & PageState::MASK_ACCESS))
+			return false;
+	}
+	return true;
+}
+
 void ProtDomainMemory::initialize ()
 {
 	space_.initialize ();
@@ -391,6 +478,25 @@ void ProtDomainMemory::prepare_to_share (void* src, size_t size, UWord flags)
 	}
 }
 
+void ProtDomainMemory::change_protection (void* ptr, size_t size, UWord flags)
+{
+	if (!size)
+		return;
+	if (!ptr)
+		throw_BAD_PARAM ();
+
+	BYTE* begin = (BYTE*)ptr;
+	BYTE* end = begin + size;
+	for (BYTE* p = begin; p < end;) {
+		Block block (p);
+		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		if (block_end > end)
+			block_end = end;
+		block.change_protection (p - block.address (), block_end - p, flags);
+		p = block_end;
+	}
+}
+
 void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 {
 	if (!size)
@@ -401,7 +507,7 @@ void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 
 	void* ret;
 	try {
-		if (!(ret = space_.reserve (size, flags, dst)))
+		if (!(ret = space_.reserve (dst, size, flags)))
 			return 0;
 
 		if (!(Memory::RESERVED & flags)) {
@@ -439,7 +545,7 @@ void ProtDomainMemory::commit (void* ptr, size_t size)
 
 	uint32_t prot_mask = commit_no_check (ptr, size);
 	if (prot_mask & PageState::MASK_RO)
-		space_.change_protection (ptr, size, Memory::READ_WRITE);
+		change_protection (ptr, size, Memory::READ_WRITE);
 }
 
 void ProtDomainMemory::decommit (void* ptr, size_t size)
@@ -460,6 +566,7 @@ void ProtDomainMemory::decommit (void* ptr, size_t size)
 	}
 }
 
+inline
 uint32_t ProtDomainMemory::check_committed (void* ptr, size_t size)
 {
 	uint32_t state_bits = 0;
@@ -490,7 +597,15 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 	// Source range have to be committed.
 	uint32_t src_prot_mask;
 	if (space_.allocated_block (src)) {
-		src_prot_mask = space_.check_committed (src, size);
+		src_prot_mask = 0;
+		for (BYTE* p = (BYTE*)src, *end = p + size; p < end;) {
+			Block block (p);
+			BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+			if (block_end > end)
+				block_end = end;
+			src_prot_mask |= block.check_committed (p - block.address (), block_end - p);
+			p = block_end;
+		}
 		src_own = true;
 	} else {
 		if (release_flags)
@@ -513,9 +628,12 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 					allocated.ptr = dst;
 					allocated.size = size;
 					allocated.subtract (round_down (src, ALLOCATION_GRANULARITY), round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY));
-					dst = space_.reserve (allocated.size, flags | Memory::EXACTLY, allocated.ptr);
-					if (!dst && (flags & Memory::EXACTLY))
-						return nullptr;
+					dst = space_.reserve (allocated.ptr, allocated.size, flags | Memory::EXACTLY);
+					if (!dst) {
+						if (flags & Memory::EXACTLY)
+							return nullptr;
+						allocated.size = 0;
+					}
 				}
 			}
 			if (!dst) {
@@ -524,7 +642,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 				else {
 					size_t dst_align = src_own ? src_align : 0;
 					size_t cb_res = size + dst_align;
-					BYTE* res = (BYTE*)space_.reserve (cb_res, flags);
+					BYTE* res = (BYTE*)space_.reserve (nullptr, cb_res, flags);
 					if (!res) {
 						assert (flags & Memory::EXACTLY);
 						return nullptr;
@@ -552,7 +670,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 			// We allow to change protection of the not-allocated memory.
 			// This is necessary for core services like module load.
 			if (src_prot_mask & ((flags & Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO))
-				space_.change_protection (src, size, flags);
+				change_protection (src, size, flags);
 			return src;
 		}
 

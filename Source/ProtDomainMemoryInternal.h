@@ -39,6 +39,12 @@ public:
 	void copy (size_t offset, size_t size, const void* src, UWord flags);
 
 	void decommit (size_t offset, size_t size);
+	DWORD check_committed (size_t offset, size_t size);
+
+	void change_protection (size_t offset, size_t size, UWord flags);
+
+	bool is_copy (Block& other, size_t offset, size_t size);
+
 private:
 	struct Regions;
 
