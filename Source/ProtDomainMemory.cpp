@@ -11,6 +11,7 @@ namespace Core {
 namespace Port {
 
 using namespace ::Nirvana::Core::Windows;
+using namespace std;
 
 Windows::AddressSpace ProtDomainMemory::space_;
 
@@ -19,63 +20,73 @@ DWORD ProtDomainMemory::Block::commit (size_t offset, size_t size)
 
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
+	if (INVALID_HANDLE_VALUE == mapping ())
+		exclusive_lock ();
+restart:
 	DWORD ret = 0;	// Page state bits in committed region
-	HANDLE old_mapping = mapping ();
-	if (INVALID_HANDLE_VALUE == old_mapping) {
+	if (INVALID_HANDLE_VALUE == mapping ()) {
 		HANDLE hm = new_mapping ();
 		try {
-			map (hm, AddressSpace::MAP_PRIVATE, true);
+			map (hm, AddressSpace::MAP_PRIVATE);
 		} catch (...) {
 			CloseHandle (hm);
 			throw;
 		}
-	}
+		size_t begin = round_down (offset, PAGE_SIZE);
+		size = round_up (offset + size, PAGE_SIZE) - begin;
+		if (!VirtualAlloc (address () + begin, size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE))
+			throw_NO_MEMORY ();
+		ret = PageState::RW_MAPPED_PRIVATE;
+	} else {
+		if (size) {
+			const State& bs = state ();
+			Regions regions;	// Regions to commit.
+			auto region_begin = bs.mapped.page_state + offset / PAGE_SIZE, state_end = bs.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+			do {
+				auto region_end = region_begin;
+				DWORD state = *region_begin;
+				if (!(PageState::MASK_ACCESS & state)) {
+					do {
+						++region_end;
+					} while (region_end < state_end && !(PageState::MASK_ACCESS & (state = *region_end)));
 
-	if (size) {
-		const State& bs = state ();
-		Regions regions;	// Regions to commit.
-		auto region_begin = bs.mapped.page_state + offset / PAGE_SIZE, state_end = bs.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
-		do {
-			auto region_end = region_begin;
-			DWORD state = *region_begin;
-			if (!(PageState::MASK_ACCESS & state)) {
-				do {
-					++region_end;
-				} while (region_end < state_end && !(PageState::MASK_ACCESS & (state = *region_end)));
-
-				regions.add (address () + (region_begin - bs.mapped.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE);
-			} else {
-				do {
-					ret |= state;
-					++region_end;
-				} while (region_end < state_end && (PageState::MASK_ACCESS & (state = *region_end)));
-			}
-			region_begin = region_end;
-		} while (region_begin < state_end);
-
-		if (regions.end != regions.begin) {
-
-			// If the memory section is shared, we mustn't commit pages.
-			// If the page is not committed and we commit it, it will become committed in another block.
-			if (bs.page_state_bits & PageState::MASK_MAY_BE_SHARED) {
-				remap ();
-				ret = ((ret & PageState::MASK_RW) ? PageState::RW_MAPPED_PRIVATE : 0)
-					| ((ret & PageState::MASK_RO) ? PageState::RO_MAPPED_PRIVATE : 0);
-			}
-
-			for (const Region* p = regions.begin; p != regions.end; ++p) {
-				if (!VirtualAlloc (p->ptr, p->size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE)) {
-					// Error, decommit back and throw the exception.
-					while (p != regions.begin) {
-						--p;
-						protect (p->ptr, p->size, PageState::DECOMMITTED);
-						verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
-					}
-					throw_NO_MEMORY ();
+					regions.add (address () + (region_begin - bs.mapped.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE);
+				} else {
+					do {
+						ret |= state;
+						++region_end;
+					} while (region_end < state_end && (PageState::MASK_ACCESS & (state = *region_end)));
 				}
-			}
+				region_begin = region_end;
+			} while (region_begin < state_end);
 
-			invalidate_state ();
+			if (regions.end != regions.begin) {
+
+				// If the memory section is shared, we mustn't commit pages.
+				// If the page is not committed and we commit it, it will become committed in another block.
+				if (bs.page_state_bits & PageState::MASK_MAY_BE_SHARED) {
+					if (exclusive_lock ())
+						goto restart;
+					remap ();
+					ret = ((ret & PageState::MASK_RW) ? PageState::RW_MAPPED_PRIVATE : 0)
+						| ((ret & PageState::MASK_RO) ? PageState::RO_MAPPED_PRIVATE : 0);
+				}
+
+				for (const Region* p = regions.begin; p != regions.end; ++p) {
+					if (!VirtualAlloc (p->ptr, p->size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE)) {
+						// Error, decommit back and throw the exception.
+						while (p != regions.begin) {
+							--p;
+							protect (p->ptr, p->size, PageState::DECOMMITTED);
+							verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
+						}
+						throw_NO_MEMORY ();
+					} else
+						ret |= PageState::RW_MAPPED_PRIVATE;
+				}
+
+				invalidate_state ();
+			}
 		}
 	}
 	return ret;
@@ -139,8 +150,10 @@ void ProtDomainMemory::Block::prepare_to_share_no_remap (size_t offset, size_t s
 	}
 }
 
-void ProtDomainMemory::Block::remap ()
+void ProtDomainMemory::Block::remap (const CopyReadOnly* copy_rgn)
 {
+	assert (exclusive_locked ());
+
 	// Create a new memory section.
 	HANDLE hm = new_mapping ();
 	try {
@@ -149,29 +162,39 @@ void ProtDomainMemory::Block::remap ()
 		if (!ptmp)
 			throw_NO_MEMORY ();
 
+		auto ps = state ().mapped; // Create copy of page state
+		const auto block_end = ps.page_state + PAGES_PER_BLOCK;
+
 		// Copy data to the temporary address.
-		Regions read_only, read_write;
 		try {
-			auto page_state = state ().mapped.page_state;
-			auto region_begin = page_state, block_end = page_state + PAGES_PER_BLOCK;
+			auto region_begin = ps.page_state;
+			DWORD* copy_begin = nullptr, * copy_end = nullptr;
+			if (copy_rgn) {
+				copy_begin = ps.page_state + (copy_rgn->offset + PAGE_SIZE - 1) / PAGE_SIZE;
+				copy_end = ps.page_state + (copy_rgn->offset + copy_rgn->size) / PAGE_SIZE;
+				fill (copy_begin, copy_end, 0);
+			}
 			do {
 				auto region_end = region_begin;
 				if (PageState::MASK_ACCESS & *region_begin) {
-					do
+					DWORD access_mask = 0;
+					do {
+						access_mask |= *region_end;
 						++region_end;
-					while (region_end < block_end && (PageState::MASK_ACCESS & *region_end));
+					} while (region_end < block_end && (PageState::MASK_ACCESS & *region_end));
 
-					size_t offset = (region_begin - page_state) * PAGE_SIZE;
+					size_t offset = (region_begin - ps.page_state) * PAGE_SIZE;
 					LONG_PTR* dst = (LONG_PTR*)(ptmp + offset);
 					size_t size = (region_end - region_begin) * PAGE_SIZE;
 					if (!VirtualAlloc (dst, size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE))
 						throw_NO_MEMORY ();
-					const LONG_PTR* src = (LONG_PTR*)(address () + offset);
+					LONG_PTR* src = (LONG_PTR*)(address () + offset);
+					
+					// Temporary disable write access to save data consistency.
+					if (access_mask & PageState::MASK_RW)
+						protect (src, size, PAGE_READONLY);
+
 					real_copy (src, src + size / sizeof (LONG_PTR), dst);
-					if (PageState::MASK_RO & *region_begin)
-						read_only.add ((void*)src, size);
-					else
-						read_write.add ((void*)src, size);
 				} else {
 					do
 						++region_end;
@@ -180,8 +203,28 @@ void ProtDomainMemory::Block::remap ()
 
 				region_begin = region_end;
 			} while (region_begin < block_end);
+
+			if (copy_rgn) {
+				if (copy_begin < copy_end) {
+					fill (copy_begin, copy_end, PageState::RO_MAPPED_PRIVATE);
+					size_t offset = (copy_begin - ps.page_state) * PAGE_SIZE;
+					LONG_PTR* dst = (LONG_PTR*)(ptmp + offset);
+					size_t size = (copy_end - copy_begin) * PAGE_SIZE;
+					if (!VirtualAlloc (dst, size, MEM_COMMIT, PageState::RW_MAPPED_PRIVATE))
+						throw_NO_MEMORY ();
+				}
+				const BYTE* src = (const BYTE*)copy_rgn->src;
+				real_copy (src, src + copy_rgn->size, ptmp + copy_rgn->offset);
+			}
+
 		} catch (...) {
 			verify (UnmapViewOfFile (ptmp));
+			// Restore write access
+			const DWORD* page_state = state ().mapped.page_state;
+			for (const DWORD* ps = page_state, *end = ps + PAGES_PER_BLOCK; ps != end; ++ps) {
+				if (PageState::MASK_RW & *ps)
+					protect (address () + (ps - page_state) * PAGE_SIZE, PAGE_SIZE, *ps);
+			}
 			throw;
 		}
 
@@ -192,10 +235,29 @@ void ProtDomainMemory::Block::remap ()
 		map (hm, AddressSpace::MAP_PRIVATE);
 
 		// Change protection.
-		for (const Region* p = read_write.begin; p != read_write.end; ++p)
-			protect (p->ptr, p->size, PageState::RW_MAPPED_PRIVATE);
-		for (const Region* p = read_only.begin; p != read_only.end; ++p)
-			protect (p->ptr, p->size, PageState::RO_MAPPED_PRIVATE);
+		auto region_begin = ps.page_state;
+		do {
+			auto region_end = region_begin;
+			if (PageState::MASK_ACCESS & *region_begin) {
+				DWORD state = *region_begin;
+				do
+					++region_end;
+				while (region_end < block_end && state == *region_end);
+
+				size_t offset = (region_begin - ps.page_state) * PAGE_SIZE;
+				void* dst = address () + offset;
+				size_t size = (region_end - region_begin) * PAGE_SIZE;
+				// Even for RW pages we must change RW protection from shared (PAGE_EXECUTE_READWRITE) to private (PAGE_READWRITE).
+				protect (dst, size, (PageState::MASK_RO & state) ? PageState::RO_MAPPED_PRIVATE : PageState::RW_MAPPED_PRIVATE);
+			} else {
+				do
+					++region_end;
+				while (region_end < block_end && !(PageState::MASK_ACCESS & *region_end));
+			}
+
+			region_begin = region_end;
+		} while (region_begin < block_end);
+
 	} catch (...) {
 		CloseHandle (hm);
 		throw;
@@ -211,25 +273,39 @@ void ProtDomainMemory::Block::aligned_copy (void* src, size_t size, UWord flags)
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
 	Block src_block (src);
-	if ((offset || size < ALLOCATION_GRANULARITY) && INVALID_HANDLE_VALUE != mapping ()) {
-		if (CompareObjectHandles (mapping (), src_block.mapping ())) {
-			if (src_block.need_remap_to_share (offset, size)) {
-				if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
+	for (;;) {
+		bool src_remap = false;
+		if ((offset || size < ALLOCATION_GRANULARITY) && INVALID_HANDLE_VALUE != mapping ()) {
+			if (CompareObjectHandles (mapping (), src_block.mapping ())) {
+				if (src_block.need_remap_to_share (offset, size)) {
+					if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
+						goto fallback;
+					else
+						src_remap = true;
+				} else if (!need_remap_to_share (offset, size))
+					return; // If no unmapped pages at target region, we don't need to do anything.
+				else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
 					goto fallback;
-				else
-					src_block.remap ();
-				
-			} else if (!need_remap_to_share (offset, size))
-				return; // If no unmapped pages at target region, we don't need to do anything.
-			else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
+			} else if (has_data_outside_of (offset, size))
 				goto fallback;
-		} else if (has_data_outside_of (offset, size))
-			goto fallback;
-		else if (src_block.need_remap_to_share (offset, size))
-			src_block.remap ();
-	} else if (src_block.need_remap_to_share (offset, size))
-		src_block.remap ();
+			else
+				src_remap = src_block.need_remap_to_share (offset, size);
+		} else
+			src_remap = src_block.need_remap_to_share (offset, size);
 
+		// Virtual copy is possible.
+		if (src_remap) {
+			if (src_block.exclusive_lock ())
+				continue;
+			else
+				src_block.remap ();
+		}
+
+		if (!exclusive_lock ())
+			break;
+	}
+
+	// Virtual copy.
 	if (!(flags & Memory::DECOMMIT))	// Memory::RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
 	AddressSpace::Block::copy (src_block, offset, size, flags);
@@ -246,18 +322,28 @@ void ProtDomainMemory::Block::copy (size_t offset, size_t size, const void* src,
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
+repeat:
 	DWORD page_state = check_committed (offset, size);
 	if (PageState::MASK_RO & page_state) {
 		// Some target pages are read-only
 		if (flags & Memory::READ_ONLY) {
-			// Map memory section to temporary address.
-			BYTE* ptmp = (BYTE*)MapViewOfFile (mapping (), FILE_MAP_WRITE, 0, 0, ALLOCATION_GRANULARITY);
-			if (!ptmp)
-				throw_NO_MEMORY ();
-			real_copy ((const BYTE*)src, (const BYTE*)src + size, ptmp + offset);
-			verify (UnmapViewOfFile (ptmp));
-			if (PageState::MASK_RW & page_state)
-				change_protection (offset, size, Memory::READ_ONLY);
+			HANDLE new_hm = nullptr;
+			if (PageState::MASK_UNMAPPED & page_state) {
+				if (exclusive_lock ())
+					goto repeat;
+				// Remap
+				CopyReadOnly cr = { offset, size, src };
+				remap (&cr);
+			} else {
+				// Map memory section to temporary address.
+				BYTE* ptmp = (BYTE*)MapViewOfFile (mapping (), FILE_MAP_WRITE, 0, 0, ALLOCATION_GRANULARITY);
+				if (!ptmp)
+					throw_NO_MEMORY ();
+				real_copy ((const BYTE*)src, (const BYTE*)src + size, ptmp + offset);
+				verify (UnmapViewOfFile (ptmp));
+				if (PageState::MASK_RW & page_state)
+					change_protection (offset, size, Memory::READ_ONLY);
+			}
 		} else {
 			change_protection (offset, size, Memory::READ_WRITE);
 			real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
@@ -900,23 +986,26 @@ long CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pe
 		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
 		) {
 		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
-		const AddressSpace::BlockInfo* block = space_.allocated_block (address);
+		AddressSpace::BlockInfo* block = space_.allocated_block (address);
 		if (block) {
-			if (INVALID_HANDLE_VALUE == block->mapping)
-				throw CORBA::MEM_NOT_COMMITTED ();
+			HANDLE mapping = block->mapping.lock ();
+			if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
+				block->mapping.unlock ();
+				throw_NO_PERMISSION ();
+			}
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
-			if (MEM_MAPPED != mbi.Type) {
-				Sleep (0);
-				return EXCEPTION_CONTINUE_EXECUTION;
-			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
-				throw CORBA::MEM_NOT_COMMITTED ();
-			else if (pex->ExceptionRecord->ExceptionInformation [0] && !(mbi.Protect & PageState::MASK_RW))
-				throw CORBA::NO_PERMISSION ();
+			block->mapping.unlock ();
+			if (
+				!(mbi.Protect & PageState::MASK_ACCESS)
+				||
+				(pex->ExceptionRecord->ExceptionInformation [0] && !(mbi.Protect & PageState::MASK_RW))
+			)
+				throw_NO_PERMISSION ();
 			else
 				return EXCEPTION_CONTINUE_EXECUTION;
 		} else
-			throw CORBA::MEM_NOT_ALLOCATED ();
+			throw_NO_PERMISSION ();
 	}
 
 	return EXCEPTION_CONTINUE_SEARCH;
@@ -932,23 +1021,26 @@ void ProtDomainMemory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* 
 		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
 		) {
 		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
-		const AddressSpace::BlockInfo* block = space_.allocated_block (address);
+		AddressSpace::BlockInfo* block = space_.allocated_block (address);
 		if (block) {
-			if (INVALID_HANDLE_VALUE == block->mapping)
-				throw CORBA::MEM_NOT_COMMITTED ();
+			HANDLE mapping = block->mapping.lock ();
+			if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
+				block->mapping.unlock ();
+				throw_NO_PERMISSION ();
+			}
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
-			if (MEM_MAPPED != mbi.Type) {
-				Sleep (0);
-				return;
-			} else if (!(mbi.Protect & PageState::MASK_ACCESS))
-				throw CORBA::MEM_NOT_COMMITTED ();
-			else if (pex->ExceptionRecord->ExceptionInformation [0] && !(mbi.Protect & PageState::MASK_RW))
+			block->mapping.unlock ();
+			if (
+				!(mbi.Protect & PageState::MASK_ACCESS)
+				||
+				(pex->ExceptionRecord->ExceptionInformation [0] && !(mbi.Protect & PageState::MASK_RW))
+			)
 				throw_NO_PERMISSION ();
 			else
 				return;
 		} else
-			throw CORBA::MEM_NOT_ALLOCATED ();
+			throw_NO_PERMISSION ();
 	}
 
 	throw_UNKNOWN ();

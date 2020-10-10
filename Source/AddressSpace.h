@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
 #define NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
 
-#include <Nirvana/Memory.h>
+#include "LockableHandle.h"
 #include "Win32.h"
 
 namespace Nirvana {
@@ -131,7 +131,7 @@ public:
 	struct BlockInfo
 	{
 		// Currently we are using only one field. But we create structure for possible future extensions.
-		volatile HANDLE mapping;
+		LockableHandle mapping;
 	};
 
 	BlockInfo& block (const void* address);
@@ -147,15 +147,29 @@ public:
 	{
 	public:
 		Block (AddressSpace& space, void* address);
+		~Block ();
 
 		BYTE* address () const
 		{
 			return address_;
 		}
 
-		volatile HANDLE& mapping ()
+		HANDLE mapping ()
 		{
-			return info_.mapping;
+			return mapping_;
+		}
+
+		void mapping (HANDLE hm)
+		{
+			assert (exclusive_);
+			mapping_ = hm;
+		}
+
+		bool exclusive_lock ();
+
+		bool exclusive_locked () const
+		{
+			return exclusive_;
 		}
 
 		void copy (Block& src, size_t offset, size_t size, UWord flags);
@@ -182,7 +196,7 @@ public:
 				/// <summary>
 				/// Valid if block is mapped.
 				/// </summary>
-				struct
+				struct PageState
 				{
 					DWORD page_state [PAGES_PER_BLOCK];
 				}
@@ -214,7 +228,7 @@ public:
 			state_.state = State::INVALID;
 		}
 
-		void map (HANDLE mapping, MappingType protection, bool commit = false);
+		void map (HANDLE mapping, MappingType protection);
 
 		bool has_data_outside_of (size_t offset, size_t size, DWORD mask = PageState::MASK_ACCESS);
 
@@ -237,7 +251,9 @@ public:
 		AddressSpace & space_;
 		BYTE* address_;
 		BlockInfo& info_;
+		HANDLE mapping_;
 		State state_;
+		bool exclusive_;
 	};
 
 	void* reserve (void* dst, size_t size, UWord flags);
@@ -261,6 +277,8 @@ private:
 		DWORD old;
 		verify (VirtualProtectEx (process_, address, size, protection, &old));
 	}
+
+	BlockInfo* block_no_commit (const void* address);
 
 private:
 	HANDLE process_;

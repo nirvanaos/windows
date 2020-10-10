@@ -30,7 +30,8 @@ public:
 	void prepare_to_share (size_t offset, size_t size, UWord flags)
 	{
 		if (need_remap_to_share (offset, size))
-			remap ();
+			if (exclusive_lock () && need_remap_to_share (offset, size))
+				remap ();
 		if (!(flags & Memory::DECOMMIT)) // Memory::RELEASE includes flag DECOMMIT.
 			prepare_to_share_no_remap (offset, size);
 	}
@@ -48,7 +49,14 @@ public:
 private:
 	struct Regions;
 
-	void remap ();
+	struct CopyReadOnly
+	{
+		size_t offset;
+		size_t size;
+		const void* src;
+	};
+
+	void remap (const CopyReadOnly* copy_rgn = nullptr);
 	void prepare_to_share_no_remap (size_t offset, size_t size);
 };
 

@@ -44,8 +44,8 @@ TEST_F (TestMemory, Allocate)
 
 	static const size_t ITER_CNT = 2;
 	static const UWord iter_flags [ITER_CNT] = {
-		Memory::READ_WRITE | Memory::RESERVED,
-		Memory::READ_WRITE
+		Memory::RESERVED,
+		0
 	};
 	for (int iteration = 0; iteration < ITER_CNT; ++iteration) {
 
@@ -110,7 +110,7 @@ TEST_F (TestMemory, Commit)
 	ASSERT_TRUE (block);
 	BYTE* end = block + BLOCK_SIZE;
 	
-	EXPECT_THROW (*block = 1, MEM_NOT_COMMITTED);
+	EXPECT_THROW (*block = 1, NO_PERMISSION);
 
 	ProtDomainMemory::commit (block, BLOCK_SIZE);
 	for (int* p = (int*)block, *end = (int*)(block + BLOCK_SIZE); p < end; ++p)
@@ -267,7 +267,7 @@ TEST_F (TestMemory, SmallBlock)
 		EXPECT_TRUE (ProtDomainMemory::is_writable (copy, sizeof (int)));
 		EXPECT_FALSE (ProtDomainMemory::is_readable (block, sizeof (int)));
 		EXPECT_FALSE (ProtDomainMemory::is_writable (block, sizeof (int)));
-		EXPECT_THROW (*block = 2, MEM_NOT_COMMITTED);
+		EXPECT_THROW (*block = 2, NO_PERMISSION);
 		ProtDomainMemory::commit (block, sizeof (int));
 		*block = 2;
 		EXPECT_TRUE (ProtDomainMemory::is_private (block, sizeof (int)));
