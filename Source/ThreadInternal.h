@@ -21,8 +21,7 @@ inline void Thread::terminate ()
 inline void Thread::attach ()
 {
 	assert (!handle_);
-	BOOL ok = DuplicateHandle (GetCurrentProcess (), GetCurrentThread (), GetCurrentProcess (), &handle_, 0, FALSE, DUPLICATE_SAME_ACCESS);
-	assert (ok);
+	verify (DuplicateHandle (GetCurrentProcess (), GetCurrentThread (), GetCurrentProcess (), &handle_, 0, FALSE, DUPLICATE_SAME_ACCESS));
 	TlsSetValue (tls_current_, this);
 }
 

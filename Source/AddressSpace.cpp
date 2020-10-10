@@ -159,8 +159,7 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, UWord fl
 {
 	exclusive_lock ();
 	assert (size);
-	size_t offset_end = offset + size;
-	assert (offset_end <= ALLOCATION_GRANULARITY);
+	assert (offset + size <= ALLOCATION_GRANULARITY);
 	HANDLE src_mapping = src.mapping ();
 	assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
 	assert (address () != src.address ());

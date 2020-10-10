@@ -508,8 +508,11 @@ bool ProtDomainMemory::Block::is_copy (Block& other, size_t offset, size_t size)
 void ProtDomainMemory::initialize ()
 {
 	space_.initialize ();
-	//		SetUnhandledExceptionFilter (&exception_filter);
+#if defined (__GNUG__) || defined (__clang__)
+	SetUnhandledExceptionFilter (&exception_filter);
+#else
 	_set_se_translator (&se_translator);
+#endif
 }
 
 void ProtDomainMemory::terminate ()
@@ -593,11 +596,13 @@ void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 	void* ret;
 	try {
 		if (!(ret = space_.reserve (dst, size, flags)))
-			return 0;
+			return nullptr;
 
 		if (!(Memory::RESERVED & flags)) {
 			try {
-				commit_no_check (ret, size);
+				uint32_t prot_mask = commit_no_check (ret, size);
+				if (prot_mask & PageState::MASK_RO)
+					change_protection (ret, size, Memory::READ_WRITE);
 			} catch (...) {
 				space_.release (ret, size);
 				throw;
@@ -605,7 +610,7 @@ void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 		}
 	} catch (const CORBA::NO_MEMORY&) {
 		if (flags & Memory::EXACTLY)
-			ret = 0;
+			ret = nullptr;
 		else
 			throw;
 	}

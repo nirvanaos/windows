@@ -39,12 +39,6 @@ const size_t HEAP_UNIT_MAX = 4096;
 */
 const size_t HEAP_DIRECTORY_SIZE = 0x10000;
 
-/** Use exceptions to handle uncommitted pages in heap directory.
-When set to `false`, heap algorithm uses `Memory::is_readable ()`
-to detect uncommitted pages. `true` provides better performance, but maybe not for all platforms.
-*/
-const bool HEAP_DIRECTORY_USE_EXCEPTION = true;
-
 /** Maximum count of levels in PriorityQueue.
 To provide best performance with a probabilistic time complexity of
 O(logN) where N is the maximum number of elements, the queue should
