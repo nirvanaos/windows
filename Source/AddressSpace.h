@@ -6,7 +6,7 @@
 #define NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
 
 #include "LockableHandle.h"
-#include "Win32.h"
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {

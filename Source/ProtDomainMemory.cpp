@@ -327,7 +327,6 @@ repeat:
 	if (PageState::MASK_RO & page_state) {
 		// Some target pages are read-only
 		if (flags & Memory::READ_ONLY) {
-			HANDLE new_hm = nullptr;
 			if (PageState::MASK_UNMAPPED & page_state) {
 				if (exclusive_lock ())
 					goto repeat;
@@ -837,7 +836,6 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 								s_p += cb;
 							}
 						} else {
-							BYTE* s_end = (BYTE*)src + size;
 							BYTE* d_p = (BYTE*)dst + size, * s_p = (BYTE*)src + size;
 							while (d_p > dst) {
 								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);

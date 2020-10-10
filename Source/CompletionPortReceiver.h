@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_COMPLETIONPORTRECEIVER_H_
 #define NIRVANA_CORE_WINDOWS_COMPLETIONPORTRECEIVER_H_
 
-#include "Win32.h"
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {

@@ -108,7 +108,6 @@ TEST_F (TestMemory, Commit)
 	size_t BLOCK_SIZE = 0x20000000;	// 512M
 	BYTE* block = (BYTE*)ProtDomainMemory::allocate (0, BLOCK_SIZE, Memory::READ_WRITE | Memory::RESERVED);
 	ASSERT_TRUE (block);
-	BYTE* end = block + BLOCK_SIZE;
 	
 	EXPECT_THROW (*block = 1, NO_PERMISSION);
 
