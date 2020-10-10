@@ -27,14 +27,14 @@ class ProtDomainMemory
 	static const size_t PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
 	static const size_t ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
 public:
-	static const size_t ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
-	static const size_t SHARING_UNIT = ALLOCATION_UNIT;
-	static const size_t GRANULARITY = ALLOCATION_UNIT;
-	static const size_t SHARING_ASSOCIATIVITY = ALLOCATION_UNIT;
-	static const size_t OPTIMAL_COMMIT_UNIT = ALLOCATION_UNIT;
+	static const size_t FIXED_ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
+	static const size_t SHARING_UNIT = ALLOCATION_GRANULARITY;
+	static const size_t GRANULARITY = ALLOCATION_GRANULARITY;
+	static const size_t SHARING_ASSOCIATIVITY = ALLOCATION_GRANULARITY;
+	static const size_t OPTIMAL_COMMIT_UNIT = ALLOCATION_GRANULARITY;
 
-	static const size_t COMMIT_UNIT = PAGE_SIZE;
-	static const size_t PROTECTION_UNIT = PAGE_SIZE;
+	static const size_t FIXED_COMMIT_UNIT = PAGE_SIZE;
+	static const size_t FIXED_PROTECTION_UNIT = PAGE_SIZE;
 
 	static const UWord FLAGS = 
 		Memory::ACCESS_CHECK |
