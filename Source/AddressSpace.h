@@ -233,7 +233,12 @@ public:
 		bool has_data_outside_of (size_t offset, size_t size, DWORD mask = PageState::MASK_ACCESS);
 
 	private:
-		friend class AddressSpace;
+		static BlockInfo& check_block (BlockInfo* info)
+		{
+			if (!info)
+				throw_BAD_PARAM ();
+			return *info;
+		}
 
 		bool can_move (size_t offset, size_t size, UWord flags)
 		{

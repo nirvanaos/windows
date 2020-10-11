@@ -12,13 +12,14 @@ namespace Windows {
 AddressSpace::Block::Block (AddressSpace& space, void* address) :
 	space_ (space),
 	address_ (round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
-	info_ (*space.allocated_block (address)),
+	info_ (check_block (space.allocated_block (address))),
 	exclusive_ (false)
 {
-	if (!&info_)
-		throw CORBA::BAD_PARAM ();
 	mapping_ = info_.mapping.lock ();
-	assert (mapping_);
+	if (!mapping_) {
+		info_.mapping.unlock ();
+		throw_BAD_PARAM ();
+	}
 }
 
 AddressSpace::Block::~Block ()
