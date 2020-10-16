@@ -16,17 +16,14 @@ public:
 	}
 };
 
-namespace Windows {
+}
+}
 
 int main ()
 {
-	Heap::initialize ();
-	Startup runnable;
-	::Nirvana::Core::Port::Scheduler::run_system_domain (runnable, std::numeric_limits <DeadlineTime>::max ());
-	Heap::terminate ();
+	Nirvana::Core::Heap::initialize ();
+	Nirvana::Core::Startup runnable;
+	Nirvana::Core::Port::Scheduler::run_system_domain (runnable, std::numeric_limits <Nirvana::DeadlineTime>::max ());
+	Nirvana::Core::Heap::terminate ();
 	return 0;
-}
-
-}
-}
 }

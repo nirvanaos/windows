@@ -1,5 +1,6 @@
 #include <ExecDomain.h>
 #include "../Port/ProtDomainMemory.h"
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
