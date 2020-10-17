@@ -94,24 +94,12 @@ public:
 	};
 };
 
-/// <summary>
-/// Logical address space of some Windows process.
-/// </summary>
+/// \brief Logical address space of some Windows process.
 class AddressSpace
 {
 public:
-	/// <summary>
-	/// Initializes this instance for current process.
-	/// </summary>
-	void initialize ()
-	{
-		initialize (GetCurrentProcessId (), GetCurrentProcess ());
-	}
-
-	/// <summary>
-	/// Terminates this instance.
-	/// </summary>
-	void terminate ();
+	AddressSpace (DWORD process_id, HANDLE process_handle);
+	~AddressSpace ();
 
 	HANDLE process () const
 	{
@@ -271,9 +259,6 @@ public:
 
 	void check_allocated (void* ptr, size_t size);
 
-protected:
-	void initialize (DWORD process_id, HANDLE process_handle);
-
 private:
 	friend class Port::ProtDomainMemory;
 
@@ -286,7 +271,7 @@ private:
 	BlockInfo* block_no_commit (const void* address);
 
 private:
-	HANDLE process_;
+	const HANDLE process_;
 	HANDLE mapping_;
 #ifdef _WIN64
 	static const size_t SECOND_LEVEL_BLOCK = ALLOCATION_GRANULARITY / sizeof (BlockInfo);

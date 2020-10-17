@@ -9,6 +9,16 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
+class ProtDomainMemory::AddressSpace : public Windows::AddressSpace
+{
+public:
+	AddressSpace () :
+		Windows::AddressSpace (GetCurrentProcessId (), GetCurrentProcess ())
+	{
+		AddVectoredExceptionHandler (TRUE, &exception_filter);
+	}
+};
+
 inline void ProtDomainMemory::protect (void* address, size_t size, uint32_t protection)
 {
 	//space_.protect (address, size, protection);

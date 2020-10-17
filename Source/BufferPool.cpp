@@ -15,7 +15,7 @@ void BufferPool::initialize (CompletionPort& port, DWORD buffer_size)
 	size_t buffer_count = port.thread_count ();
 	buffer_size_ = round_up (buffer_size, sizeof (LONG_PTR));
 	size_t size = buffer_count * (sizeof (OVERLAPPED) + buffer_size);
-	begin_ = (OVERLAPPED*)g_core_heap->allocate (nullptr, size, 0);
+	begin_ = (OVERLAPPED*)g_core_heap.allocate (nullptr, size, 0);
 	end_ = (OVERLAPPED*)(((BYTE*)begin_) + size);
 	for (OVERLAPPED* p = begin (); p != end (); p = next (p)) {
 		memset (p, 0, sizeof (OVERLAPPED));
@@ -27,7 +27,7 @@ void BufferPool::initialize (CompletionPort& port, DWORD buffer_size)
 
 void BufferPool::terminate ()
 {
-	g_core_heap->release (begin_, (BYTE*)end_ - (BYTE*)begin_);
+	g_core_heap.release (begin_, (BYTE*)end_ - (BYTE*)begin_);
 	begin_ = end_ = nullptr;
 }
 

@@ -8,28 +8,18 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-inline void Thread::initialize ()
-{
-	tls_current_ = TlsAlloc ();
-}
-
-inline void Thread::terminate ()
-{
-	TlsFree (tls_current_);
-}
-
 inline void Thread::attach ()
 {
 	assert (!handle_);
 	verify (DuplicateHandle (GetCurrentProcess (), GetCurrentThread (), GetCurrentProcess (), &handle_, 0, FALSE, DUPLICATE_SAME_ACCESS));
-	TlsSetValue (tls_current_, this);
+	current_ = this;
 }
 
 inline void Thread::detach ()
 {
 	if (handle_) {
 		assert (GetThreadId (handle_) == GetCurrentThreadId ());
-		TlsSetValue (tls_current_, nullptr);
+		current_ = nullptr;
 		CloseHandle (handle_);
 		handle_ = nullptr;
 	}
@@ -43,7 +33,7 @@ inline void Thread::join () const
 
 inline void Thread::thread_proc ()
 {
-	TlsSetValue (tls_current_, this);
+	current_ = this;
 }
 
 }

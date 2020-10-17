@@ -30,13 +30,9 @@ class Thread
 	Thread& operator = (const Thread&) = delete;
 
 public:
-	static void initialize ();
-	static void terminate ();
-
 	static Thread* current ()
 	{
-		assert (tls_current_);
-		return (Thread*)TlsGetValue (tls_current_);
+		return current_;
 	}
 
 	//! \fn	void Thread::attach ()
@@ -75,7 +71,7 @@ private:
 	void create (size_t stack_size, PTHREAD_START_ROUTINE thread_proc, void* param, int priority);
 
 private:
-	static uint32_t tls_current_;
+	static thread_local Thread* current_;
 
 	void* handle_;
 };

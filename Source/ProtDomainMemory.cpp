@@ -1,7 +1,6 @@
 // Nirvana project
 // Protection domain memory service over Win32 API
 
-#include <eh.h>
 #include "ProtDomainMemoryInternal.h"
 #include <Nirvana/real_copy.h>
 #include <CORBA/CORBA.h>
@@ -13,7 +12,7 @@ namespace Port {
 using namespace ::Nirvana::Core::Windows;
 using namespace std;
 
-Windows::AddressSpace ProtDomainMemory::space_;
+ProtDomainMemory::AddressSpace ProtDomainMemory::space_;
 
 DWORD ProtDomainMemory::Block::commit (size_t offset, size_t size)
 { // This operation must be thread-safe.
@@ -505,22 +504,6 @@ bool ProtDomainMemory::Block::is_copy (Block& other, size_t offset, size_t size)
 	return true;
 }
 
-void ProtDomainMemory::initialize ()
-{
-	space_.initialize ();
-#if defined (__GNUG__) || defined (__clang__)
-	SetUnhandledExceptionFilter (&exception_filter);
-#else
-	_set_se_translator (&se_translator);
-#endif
-}
-
-void ProtDomainMemory::terminate ()
-{
-	//		SetUnhandledExceptionFilter (0);
-	space_.terminate ();
-}
-
 inline void ProtDomainMemory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi)
 {
 	//space_.query (address, mbi);
@@ -994,7 +977,7 @@ long CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pe
 			HANDLE mapping = block->mapping.lock ();
 			if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
 				block->mapping.unlock ();
-				throw_NO_PERMISSION ();
+				return EXCEPTION_EXECUTE_HANDLER;
 			}
 			MEMORY_BASIC_INFORMATION mbi;
 			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
@@ -1004,16 +987,17 @@ long CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pe
 				||
 				(pex->ExceptionRecord->ExceptionInformation [0] && !(mbi.Protect & PageState::MASK_RW))
 			)
-				throw_NO_PERMISSION ();
+				return EXCEPTION_EXECUTE_HANDLER;
 			else
 				return EXCEPTION_CONTINUE_EXECUTION;
 		} else
-			throw_NO_PERMISSION ();
+			return EXCEPTION_EXECUTE_HANDLER;
 	}
 
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
+// Currently unused
 void ProtDomainMemory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex)
 {
 	if (

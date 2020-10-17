@@ -27,14 +27,12 @@ protected:
 	{
 		// Code here will be called immediately after the constructor (right
 		// before each test).
-		ProtDomainMemory::initialize ();
 	}
 
 	virtual void TearDown ()
 	{
 		// Code here will be called immediately after each test (right
 		// before the destructor).
-		ProtDomainMemory::terminate ();
 	}
 };
 
@@ -109,7 +107,7 @@ TEST_F (TestMemory, Commit)
 	BYTE* block = (BYTE*)ProtDomainMemory::allocate (0, BLOCK_SIZE, Memory::READ_WRITE | Memory::RESERVED);
 	ASSERT_TRUE (block);
 	
-	EXPECT_THROW (*block = 1, NO_PERMISSION);
+	EXPECT_ANY_THROW (*block = 1);
 
 	ProtDomainMemory::commit (block, BLOCK_SIZE);
 	for (int* p = (int*)block, *end = (int*)(block + BLOCK_SIZE); p < end; ++p)
@@ -252,7 +250,7 @@ TEST_F (TestMemory, SmallBlock)
 		EXPECT_TRUE (ProtDomainMemory::is_readable (copy, sizeof (int)));
 		EXPECT_FALSE (ProtDomainMemory::is_writable (copy, sizeof (int)));
 		EXPECT_TRUE (ProtDomainMemory::is_copy (copy, block, sizeof (int)));
-		EXPECT_THROW (*copy = 2, NO_PERMISSION);
+		EXPECT_ANY_THROW (*copy = 2);
 		ProtDomainMemory::release (copy, sizeof (int));
 	}
 	ProtDomainMemory::decommit (block, PAGE_SIZE);
@@ -266,7 +264,7 @@ TEST_F (TestMemory, SmallBlock)
 		EXPECT_TRUE (ProtDomainMemory::is_writable (copy, sizeof (int)));
 		EXPECT_FALSE (ProtDomainMemory::is_readable (block, sizeof (int)));
 		EXPECT_FALSE (ProtDomainMemory::is_writable (block, sizeof (int)));
-		EXPECT_THROW (*block = 2, NO_PERMISSION);
+		EXPECT_ANY_THROW (*block = 2);
 		ProtDomainMemory::commit (block, sizeof (int));
 		*block = 2;
 		EXPECT_TRUE (ProtDomainMemory::is_private (block, sizeof (int)));

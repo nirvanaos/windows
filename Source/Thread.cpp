@@ -5,7 +5,7 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-uint32_t Thread::tls_current_;
+thread_local Thread* Thread::current_;
 
 void Thread::create (size_t stack_size, PTHREAD_START_ROUTINE thread_proc, void* param, int priority)
 {

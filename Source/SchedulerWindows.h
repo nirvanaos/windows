@@ -108,13 +108,13 @@ private:
 			buffer_idx_ (-1)
 		{
 			AtomicCounter::UIntType buf_cnt = clp2 ((AtomicCounter::UIntType)thread_count);
-			buffer_ = (Execute*)g_core_heap->allocate (nullptr, sizeof (Execute) * buf_cnt, 0);
+			buffer_ = (Execute*)g_core_heap.allocate (nullptr, sizeof (Execute) * buf_cnt, 0);
 			mask_ = buf_cnt - 1;
 		}
 
 		~InProcExecute ()
 		{
-			g_core_heap->release (buffer_, sizeof (Execute) * (mask_ + 1));
+			g_core_heap.release (buffer_, sizeof (Execute) * (mask_ + 1));
 		}
 
 		void execute (const Execute& msg)

@@ -13,12 +13,6 @@ typedef struct _MEMORY_BASIC_INFORMATION MEMORY_BASIC_INFORMATION;
 
 namespace Nirvana {
 namespace Core {
-
-namespace Windows {
-class ThreadMemory;
-class AddressSpace;
-}
-
 namespace Port {
 
 class ProtDomainMemory
@@ -41,9 +35,6 @@ public:
 		Memory::HARDWARE_PROTECTION |
 		Memory::COPY_ON_WRITE |
 		Memory::SPACE_RESERVATION;
-
-	static void initialize ();
-	static void terminate ();
 
 	// Memory::
 	static void* allocate (void* dst, size_t size, UWord flags);
@@ -73,8 +64,6 @@ public:
 	static void se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex);
 
 private:
-	friend class Windows::AddressSpace;
-	friend class Windows::ThreadMemory;
 
 	struct Region
 	{
@@ -116,7 +105,8 @@ private:
 	static HANDLE new_mapping ();
 
 private:
-	static Core::Windows::AddressSpace space_;
+	class AddressSpace;
+	static AddressSpace space_;
 };
 
 }

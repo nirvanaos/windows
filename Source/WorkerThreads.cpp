@@ -12,15 +12,11 @@ namespace Windows {
 
 WorkerThreads::WorkerThreads ()
 {
-	Scheduler::initialize ();
-	Port::Thread::initialize ();
 	CompletionPort::start ();
 }
 
 WorkerThreads::~WorkerThreads ()
 {
-	Port::Thread::terminate ();
-	Scheduler::terminate ();
 }
 
 void WorkerThreads::run (Runnable& startup, DeadlineTime deadline)
