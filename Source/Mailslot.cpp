@@ -16,7 +16,7 @@ bool Mailslot::open (const wchar_t* name)
 	mailslot_ = CreateFileW (name, GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (INVALID_HANDLE_VALUE == mailslot_) {
 		DWORD err = GetLastError ();
-		if (ERROR_FILE_NOT_FOUND)
+		if (ERROR_FILE_NOT_FOUND == err)
 			return false;
 		throw ::CORBA::INTERNAL ();
 	}

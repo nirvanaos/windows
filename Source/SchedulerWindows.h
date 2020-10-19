@@ -47,7 +47,7 @@ struct SchedulerItem
 			return true;
 		else if (executor > rhs.executor)
 			return false;
-		return protection_domain < protection_domain;
+		return protection_domain < rhs.protection_domain;
 	}
 };
 
