@@ -652,46 +652,51 @@ private:
 
 TEST_F (TestAPI, ZeroedPage)
 {
+	// Try to detect if Windows support zeroed page COW.
 	static const size_t PAGE_COUNT = 32;
 
-	SIZE_T before, after, after_read, after_write;
+	PSAPI_WORKING_SET_EX_INFORMATION page_info [PAGE_COUNT];
 
-	WorkingSet ws;
+	int* mem = (int*)VirtualAlloc (nullptr, PAGE_COUNT * PAGE_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	ASSERT_TRUE (mem);
 
-	for (int iter = 0; iter < 100; ++iter) {
-		Sleep (100);
-
-		ws.query ();
-		before = ws.unique_pages_cnt ();
-
-		int* mem = (int*)VirtualAlloc (nullptr, PAGE_COUNT * PAGE_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-		ASSERT_TRUE (mem);
-
-		ws.query ();
-		after = ws.unique_pages_cnt ();
-
-		for (const int* p = mem, *end = mem + PAGE_COUNT * PAGE_SIZE / sizeof (int); p != end; ++p) {
-			EXPECT_EQ (*p, 0);
-		}
-
-		ws.query ();
-		after_read = ws.unique_pages_cnt ();
-
-		size_t new_pages = after_read - before;
-		// Windows allocates physical page on read access.
-		// It does not use zeroed page COW as Linux.
-		// So we must do it by ourselves.
-		ASSERT_GE (new_pages, PAGE_COUNT);
-
-		for (int* p = mem, *end = mem + PAGE_COUNT * PAGE_SIZE / sizeof (int); p != end; ++p) {
-			*p = 1;
-		}
-
-		ws.query ();
-		after_write = ws.unique_pages_cnt ();
-
-		VirtualFree (mem, 0, MEM_RELEASE);
+	for (size_t i = 0; i < PAGE_COUNT; ++i) {
+		page_info [i].VirtualAddress = mem + i * PAGE_SIZE / sizeof (int);
 	}
+
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), page_info, sizeof (page_info)));
+
+	for (size_t i = 0; i < PAGE_COUNT; ++i) {
+		EXPECT_EQ (page_info [i].VirtualAttributes.Valid, 0);
+	}
+
+	for (const int* p = mem, *end = mem + PAGE_COUNT * PAGE_SIZE / sizeof (int); p != end; ++p) {
+		EXPECT_EQ (*p, 0);
+	}
+
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), page_info, sizeof (page_info)));
+
+	for (size_t i = 0; i < PAGE_COUNT; ++i) {
+		// Page state changes after read.
+		EXPECT_EQ (page_info [i].VirtualAttributes.Valid, 1);
+	}
+
+	for (int* p = mem, *end = mem + PAGE_COUNT * PAGE_SIZE / sizeof (int); p != end; ++p) {
+		*p = 1;
+	}
+
+	PSAPI_WORKING_SET_EX_INFORMATION page_info_w [PAGE_COUNT];
+	for (size_t i = 0; i < PAGE_COUNT; ++i) {
+		page_info_w [i].VirtualAddress = mem + i * PAGE_SIZE / sizeof (int);
+	}
+
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), page_info_w, sizeof (page_info_w)));
+
+	// Page state does not change after write.
+	EXPECT_EQ (memcmp (page_info, page_info_w, sizeof (page_info)), 0);
+
+	// Windows does not use zero page COW unlike Linux.
+	VirtualFree (mem, 0, MEM_RELEASE);
 }
 
 }
