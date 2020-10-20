@@ -9,15 +9,18 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-AddressSpace::Block::Block (AddressSpace& space, void* address) :
+AddressSpace::Block::Block (AddressSpace& space, void* address, bool exclusive) :
 	space_ (space),
 	address_ (round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
 	info_ (check_block (space.allocated_block (address))),
-	exclusive_ (false)
+	exclusive_ (exclusive)
 {
-	mapping_ = info_.mapping.lock ();
+	mapping_ = exclusive ? info_.mapping.exclusive_lock () : info_.mapping.lock ();
 	if (!mapping_) {
-		info_.mapping.unlock ();
+		if (exclusive)
+			info_.mapping.set_and_unlock (nullptr);
+		else
+			info_.mapping.unlock ();
 		throw_BAD_PARAM ();
 	}
 }

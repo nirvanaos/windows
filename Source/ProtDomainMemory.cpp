@@ -518,11 +518,11 @@ HANDLE ProtDomainMemory::new_mapping ()
 	return mapping;
 }
 
-uint32_t ProtDomainMemory::commit_no_check (void* ptr, size_t size)
+uint32_t ProtDomainMemory::commit_no_check (void* ptr, size_t size, bool exclusive)
 {
 	uint32_t state_bits = 0; // Page states bit mask
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
-		Block block (p);
+		Block block (p, exclusive);
 		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
@@ -583,9 +583,8 @@ void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 
 		if (!(Memory::RESERVED & flags)) {
 			try {
-				uint32_t prot_mask = commit_no_check (ret, size);
-				if (prot_mask & PageState::MASK_RO)
-					change_protection (ret, size, Memory::READ_WRITE);
+				uint32_t prot_mask = commit_no_check (ret, size, true);
+				assert (!(prot_mask & PageState::MASK_RO));
 			} catch (...) {
 				space_.release (ret, size);
 				throw;

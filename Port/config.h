@@ -43,11 +43,12 @@ const size_t HEAP_DIRECTORY_SIZE = 0x10000;
 COMMITTED_BITMAP commits all bitmap memory on heap initialization.
 RESERVED_BITMAP_WITH_EXCEPTIONS conserves the physical memory usage but slightly reduces
 the performance. RESERVED_BITMAP_WITH_EXCEPTIONS is not supported by Clang.
+RESERVED_BITMAP is extremely slow and unusable.
+PLAIN_MEMORY provides the best performance but wastes a lot of physical memory.
 */
 
 #if !defined (__clang__)
-//#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS
-#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::COMMITTED_BITMAP
+#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS
 #else
 #define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::COMMITTED_BITMAP
 #endif

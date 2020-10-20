@@ -134,7 +134,7 @@ public:
 	class Block
 	{
 	public:
-		Block (AddressSpace& space, void* address);
+		Block (AddressSpace& space, void* address, bool exclusive = false);
 		~Block ();
 
 		BYTE* address () const

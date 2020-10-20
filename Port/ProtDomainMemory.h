@@ -91,7 +91,7 @@ private:
 	class Block;
 
 private:
-	static uint32_t commit_no_check (void* ptr, size_t size);
+	static uint32_t commit_no_check (void* ptr, size_t size, bool exclusive = false);
 
 	static void protect (void* address, size_t size, uint32_t protection);
 

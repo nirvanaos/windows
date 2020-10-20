@@ -30,8 +30,8 @@ class ProtDomainMemory::Block :
 	public Core::Windows::AddressSpace::Block
 {
 public:
-	Block (void* addr) :
-		Core::Windows::AddressSpace::Block (ProtDomainMemory::space_, addr)
+	Block (void* addr, bool exclusive = false) :
+		Core::Windows::AddressSpace::Block (ProtDomainMemory::space_, addr, exclusive)
 	{}
 
 	DWORD commit (size_t offset, size_t size);
