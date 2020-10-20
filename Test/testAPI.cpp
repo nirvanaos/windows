@@ -3,9 +3,13 @@
 #include <core.h>
 #include <gtest/gtest.h>
 #include <windows.h>
+#include <Psapi.h>
+#include <set>
 
 #define PAGE_SIZE 4096
 #define ALLOCATION_GRANULARITY (16 * PAGE_SIZE)
+
+using namespace std;
 
 namespace TestAPI {
 
@@ -593,6 +597,101 @@ TEST_F (TestAPI, Placeholder)
 	EXPECT_TRUE (UnmapViewOfFile2 (process, placeholder + ALLOCATION_GRANULARITY, 0));
 	CloseHandle (mh);
 	EXPECT_TRUE (VirtualFreeEx (process, placeholder + 2 * ALLOCATION_GRANULARITY, 0, MEM_RELEASE));
+}
+
+class WorkingSet
+{
+public:
+	WorkingSet () :
+		wsi_ ((PSAPI_WORKING_SET_INFORMATION*)malloc (sizeof (PSAPI_WORKING_SET_INFORMATION))),
+		wsi_cb_ (sizeof (PSAPI_WORKING_SET_INFORMATION))
+	{
+		wsi_->NumberOfEntries = 0;
+	}
+
+	~WorkingSet ()
+	{
+		free (wsi_);
+	}
+
+	void query ()
+	{
+		while (!QueryWorkingSet (GetCurrentProcess (), wsi_, wsi_cb_)) {
+			ASSERT_EQ (ERROR_BAD_LENGTH, GetLastError ());
+			DWORD cb = sizeof (PSAPI_WORKING_SET_INFORMATION) + sizeof (PSAPI_WORKING_SET_BLOCK) * (wsi_->NumberOfEntries - 1);
+			free (wsi_);
+			wsi_ = nullptr;
+			wsi_ = (PSAPI_WORKING_SET_INFORMATION*)malloc (cb);
+			wsi_cb_ = cb;
+		}
+	}
+
+	const PSAPI_WORKING_SET_BLOCK* begin () const
+	{
+		return wsi_->WorkingSetInfo;
+	}
+
+	const PSAPI_WORKING_SET_BLOCK* end () const
+	{
+		return wsi_->WorkingSetInfo + wsi_->NumberOfEntries;
+	}
+
+	size_t unique_pages_cnt () const
+	{
+		set <size_t> pages;
+		for (auto p = begin (); p != end (); ++p) {
+			pages.insert (p->VirtualPage);
+		}
+		return pages.size ();
+	}
+
+private:
+	DWORD wsi_cb_;
+	PSAPI_WORKING_SET_INFORMATION* wsi_;
+};
+
+TEST_F (TestAPI, ZeroedPage)
+{
+	static const size_t PAGE_COUNT = 32;
+
+	SIZE_T before, after, after_read, after_write;
+
+	WorkingSet ws;
+
+	for (int iter = 0; iter < 100; ++iter) {
+		Sleep (100);
+
+		ws.query ();
+		before = ws.unique_pages_cnt ();
+
+		int* mem = (int*)VirtualAlloc (nullptr, PAGE_COUNT * PAGE_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		ASSERT_TRUE (mem);
+
+		ws.query ();
+		after = ws.unique_pages_cnt ();
+
+		for (const int* p = mem, *end = mem + PAGE_COUNT * PAGE_SIZE / sizeof (int); p != end; ++p) {
+			EXPECT_EQ (*p, 0);
+		}
+
+		ws.query ();
+		after_read = ws.unique_pages_cnt ();
+
+		size_t new_pages = after_read - before;
+		// Windows allocates physical page on read access.
+		// It does not use zeroed page COW as Linux.
+		// So we must do it by ourselves.
+		ASSERT_GE (new_pages, PAGE_COUNT);
+
+		for (int* p = mem, *end = mem + PAGE_COUNT * PAGE_SIZE / sizeof (int); p != end; ++p) {
+			*p = 1;
+		}
+
+		ws.query ();
+		after_write = ws.unique_pages_cnt ();
+
+		VirtualFree (mem, 0, MEM_RELEASE);
+	}
 }
 
 }
