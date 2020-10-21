@@ -294,6 +294,7 @@ void ProtDomainMemory::Block::aligned_copy (void* src, size_t size, UWord flags)
 
 		// Virtual copy is possible.
 		if (src_remap) {
+			exclusive_lock ();
 			if (src_block.exclusive_lock ())
 				continue;
 			else
