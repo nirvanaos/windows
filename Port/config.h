@@ -38,6 +38,7 @@ const size_t HEAP_UNIT_MAX = 4096;
 и SHARING_UNIT его можно сделать меньше.
 */
 const size_t HEAP_DIRECTORY_SIZE = 0x10000;
+const size_t HEAP_DIRECTORY_LEVELS = 11;
 
 /** Heap directory implementation.
 COMMITTED_BITMAP commits all bitmap memory on heap initialization.
@@ -48,7 +49,8 @@ PLAIN_MEMORY provides the best performance but wastes a lot of physical memory.
 */
 
 #if !defined (__clang__)
-#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS
+//#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS
+#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::COMMITTED_BITMAP
 #else
 #define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::COMMITTED_BITMAP
 #endif
