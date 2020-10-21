@@ -618,7 +618,7 @@ public:
 	{
 		while (!QueryWorkingSet (GetCurrentProcess (), wsi_, wsi_cb_)) {
 			ASSERT_EQ (ERROR_BAD_LENGTH, GetLastError ());
-			DWORD cb = sizeof (PSAPI_WORKING_SET_INFORMATION) + sizeof (PSAPI_WORKING_SET_BLOCK) * (wsi_->NumberOfEntries - 1);
+			DWORD cb = (DWORD)(sizeof (PSAPI_WORKING_SET_INFORMATION) + sizeof (PSAPI_WORKING_SET_BLOCK) * (wsi_->NumberOfEntries - 1));
 			free (wsi_);
 			wsi_ = nullptr;
 			wsi_ = (PSAPI_WORKING_SET_INFORMATION*)malloc (cb);
