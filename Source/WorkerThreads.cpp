@@ -55,7 +55,7 @@ void WorkerThreads::run (Runnable& startup, DeadlineTime deadline)
 	// Switch to neutral context and run main_fiber_proc
 	threads ()->neutral_context ()->switch_to ();
 
-	// Do fiber_proc for this worker threads
+	// Do fiber_proc for this worker thread
 	Port::ExecContext::fiber_proc (nullptr);
 
 	// Detach main thread from pool
@@ -75,7 +75,8 @@ void CALLBACK WorkerThreads::main_fiber_proc (void* p)
 {
 	MainFiberParam* param = (MainFiberParam*)p;
 	param->main_domain->_remove_ref (); // Place my fiber to pool for reuse
-	ExecDomain::async_call (*param->startup, param->deadline, nullptr);
+	// Schedule startup runnable
+	ExecDomain::async_call (*param->startup, param->deadline, nullptr, nullptr);
 	ThreadPoolable::thread_proc (((MainFiberParam*)param)->worker_thread);
 	param->main_domain->switch_to ();
 }
