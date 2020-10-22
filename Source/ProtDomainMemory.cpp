@@ -271,7 +271,7 @@ void ProtDomainMemory::Block::aligned_copy (void* src, size_t size, UWord flags)
 	size_t offset = (uintptr_t)src % ALLOCATION_GRANULARITY;
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
-	Block src_block (src);
+	Block src_block (src, size % ALLOCATION_GRANULARITY == 0);
 	for (;;) {
 		bool src_remap = false;
 		if ((offset || size < ALLOCATION_GRANULARITY) && INVALID_HANDLE_VALUE != mapping ()) {
@@ -756,26 +756,22 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 						BYTE* s_p = (BYTE*)src;
 						if (d_end > src) {
 							// Copy overlapped part with Memory::DECOMMIT.
-							BYTE* first_part_end = round_up (d_end - ((BYTE*)src + size - d_end), ALLOCATION_GRANULARITY);
-							assert (first_part_end < d_end);
-							UWord first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
-							while (d_p < first_part_end) {
-								Block block (d_p);
-								BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-								size_t cb = block_end - d_p;
-								block.aligned_copy (s_p, cb, first_part_flags);
-								d_p = block_end;
+							BYTE* overlapped_end = round_up (d_end - ((BYTE*)src + size - d_end), ALLOCATION_GRANULARITY);
+							assert (overlapped_end < d_end);
+							UWord overlapped_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
+							while (d_p < overlapped_end) {
+								size_t cb = round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY - d_p;
+								Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
+								block.aligned_copy (s_p, cb, overlapped_flags);
+								d_p += cb;
 								s_p += cb;
 							}
 						}
 						while (d_p < d_end) {
-							Block block (d_p);
-							BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-							if (block_end > d_end)
-								block_end = d_end;
-							size_t cb = block_end - d_p;
+							size_t cb = min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
+							Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
 							block.aligned_copy (s_p, cb, flags);
-							d_p = block_end;
+							d_p += cb;
 							s_p += cb;
 						}
 					} else {
@@ -783,15 +779,15 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 						BYTE* d_p = (BYTE*)dst + size, * s_p = (BYTE*)src + size;
 						if (dst < s_end) {
 							// Copy overlapped part with Memory::DECOMMIT.
-							BYTE* first_part_begin = round_down ((BYTE*)dst + ((BYTE*)dst - (BYTE*)src), ALLOCATION_GRANULARITY);
-							assert (first_part_begin > dst);
-							UWord first_part_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
-							while (d_p > first_part_begin) {
+							BYTE* overlapped_begin = round_down ((BYTE*)dst + ((BYTE*)dst - (BYTE*)src), ALLOCATION_GRANULARITY);
+							assert (overlapped_begin > dst);
+							UWord overlapped_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
+							while (d_p > overlapped_begin) {
 								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
-								Block block (block_begin);
 								size_t cb = d_p - block_begin;
+								Block block (block_begin, cb % ALLOCATION_GRANULARITY == 0);
 								s_p -= cb;
-								block.aligned_copy (s_p, cb, first_part_flags);
+								block.aligned_copy (s_p, cb, overlapped_flags);
 								d_p = block_begin;
 							}
 						}
@@ -799,8 +795,8 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 							BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
 							if (block_begin < dst)
 								block_begin = (BYTE*)dst;
-							Block block (block_begin);
 							size_t cb = d_p - block_begin;
+							Block block (block_begin, cb % ALLOCATION_GRANULARITY == 0);
 							s_p -= cb;
 							block.aligned_copy (s_p, cb, flags);
 							d_p = block_begin;
@@ -814,13 +810,10 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 							BYTE* d_p = (BYTE*)dst, *d_end = d_p + size;
 							BYTE* s_p = (BYTE*)src;
 							while (d_p < d_end) {
-								Block block (d_p);
-								BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
-								if (block_end > d_end)
-									block_end = d_end;
-								size_t cb = block_end - d_p;
+								size_t cb = min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
+								Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
 								block.copy (d_p - block.address (), cb, s_p, flags);
-								d_p = block_end;
+								d_p += cb;
 								s_p += cb;
 							}
 						} else {
@@ -829,8 +822,8 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
 								if (block_begin < dst)
 									block_begin = (BYTE*)dst;
-								Block block (block_begin);
 								size_t cb = d_p - block_begin;
+								Block block (block_begin, cb % ALLOCATION_GRANULARITY == 0);
 								s_p -= cb;
 								block.copy (block_begin - block.address (), cb, s_p, flags);
 								d_p = block_begin;

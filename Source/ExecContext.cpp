@@ -8,6 +8,7 @@ namespace Port {
 
 void __stdcall ExecContext::fiber_proc (void*)
 {
+	// TODO: SEH handler
 	Core::Thread::current ().execution_domain ()->execute_loop ();
 }
 
