@@ -49,6 +49,18 @@ protected:
 		return CreateFileMappingW (INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, nullptr);
 	}
 
+	static DWORD protection (const void* p)
+	{
+		MEMORY_BASIC_INFORMATION mbi;
+		if (VirtualQuery (p, &mbi, sizeof (mbi)))
+			return mbi.Protect;
+		else
+			return 0;
+	}
+
+	static const DWORD MASK_RW = PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY | PAGE_READWRITE | PAGE_WRITECOPY;
+	static const DWORD MASK_RO = PAGE_EXECUTE_READ | PAGE_READONLY;
+	static const DWORD MASK_ACCESS = MASK_RW | MASK_RO;
 };
 
 TEST_F (TestAPI, MappingHandle)
@@ -93,11 +105,10 @@ TEST_F (TestAPI, Allocate)
 	EXPECT_TRUE (VirtualProtect (p, PAGE_SIZE, PAGE_NOACCESS, &old));
 	EXPECT_TRUE (VirtualAlloc (p, PAGE_SIZE, MEM_RESET, PAGE_NOACCESS));
 
-	char x = 0;
-	EXPECT_ANY_THROW (x = p [0]);
-	EXPECT_EQ (x, 0); // Prevent optimization.
+	EXPECT_FALSE (protection (p) & MASK_RW);
 
 	// Recommit first page
+	char x;
 	EXPECT_TRUE (VirtualAlloc (p, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
 	EXPECT_NO_THROW (x = p [0]);
 
@@ -153,9 +164,8 @@ TEST_F (TestAPI, Sharing)
 		EXPECT_TRUE (p);
 		copies [i] = p;
 		if (p) {
-//			EXPECT_TRUE (VirtualProtect (p, PAGE_SIZE, PAGE_READONLY, &old));
 			EXPECT_STREQ (p, "test");
-			EXPECT_ANY_THROW (strcpy (p, "test1"));
+			EXPECT_FALSE (protection (p) & MASK_RW);
 		}
 	}
 
@@ -324,12 +334,9 @@ TEST_F (TestAPI, Protection)
 
 	EXPECT_EQ (dst [0], 1);	// Destination not changed
 
-	BYTE x = 0;
-
 	// Decommit source page
 	EXPECT_TRUE (VirtualProtect (src, PAGE_SIZE, PAGE_NOACCESS | PAGE_REVERT_TO_FILE_MAP, &old));
-	EXPECT_ANY_THROW (x = src [0]);
-	EXPECT_EQ (x, 0); // Prevent optimization.
+	EXPECT_FALSE (protection (src) & MASK_ACCESS);
 
 	EXPECT_EQ (dst [0], 1);	// Destination not changed
 
@@ -337,8 +344,7 @@ TEST_F (TestAPI, Protection)
 	EXPECT_TRUE (VirtualProtect (src + PAGE_SIZE, PAGE_SIZE, PAGE_NOACCESS, &old));
 	// For not shared pages call VirtualAlloc with MEM_RESET to inform system that page content is not more interested.
 	EXPECT_TRUE (VirtualAlloc (src + PAGE_SIZE, PAGE_SIZE, MEM_RESET, PAGE_NOACCESS));
-	EXPECT_ANY_THROW (x = src [PAGE_SIZE]);
-	EXPECT_EQ (x, 0); // Prevent optimization.
+	EXPECT_FALSE (protection (src + PAGE_SIZE) & MASK_ACCESS);
 
 	EXPECT_TRUE (UnmapViewOfFile (dst));
 	EXPECT_TRUE (UnmapViewOfFile (src));
@@ -352,7 +358,7 @@ TEST_F (TestAPI, SparseMapping)
 	ASSERT_TRUE (GetCurrentDirectoryW (_countof (dir), dir));
 
 	HANDLE file = CreateFileW (L"mapping.tmp", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0,
-														 CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, 0);
+		CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, 0);
 	ASSERT_NE (file, INVALID_HANDLE_VALUE);
 
 	{

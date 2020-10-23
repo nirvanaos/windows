@@ -107,7 +107,7 @@ TEST_F (TestMemory, Commit)
 	BYTE* block = (BYTE*)ProtDomainMemory::allocate (0, BLOCK_SIZE, Memory::READ_WRITE | Memory::RESERVED);
 	ASSERT_TRUE (block);
 	
-	EXPECT_ANY_THROW (*block = 1);
+	EXPECT_FALSE (ProtDomainMemory::is_writable (block, 1));
 
 	ProtDomainMemory::commit (block, BLOCK_SIZE);
 	for (int* p = (int*)block, *end = (int*)(block + BLOCK_SIZE); p < end; ++p)
@@ -250,7 +250,7 @@ TEST_F (TestMemory, SmallBlock)
 		EXPECT_TRUE (ProtDomainMemory::is_readable (copy, sizeof (int)));
 		EXPECT_FALSE (ProtDomainMemory::is_writable (copy, sizeof (int)));
 		EXPECT_TRUE (ProtDomainMemory::is_copy (copy, block, sizeof (int)));
-		EXPECT_ANY_THROW (*copy = 2);
+		EXPECT_FALSE (ProtDomainMemory::is_writable (copy, sizeof (int)));
 		ProtDomainMemory::release (copy, sizeof (int));
 	}
 	ProtDomainMemory::decommit (block, PAGE_SIZE);
@@ -264,7 +264,7 @@ TEST_F (TestMemory, SmallBlock)
 		EXPECT_TRUE (ProtDomainMemory::is_writable (copy, sizeof (int)));
 		EXPECT_FALSE (ProtDomainMemory::is_readable (block, sizeof (int)));
 		EXPECT_FALSE (ProtDomainMemory::is_writable (block, sizeof (int)));
-		EXPECT_ANY_THROW (*block = 2);
+		EXPECT_FALSE (ProtDomainMemory::is_writable (block, sizeof (int)));
 		ProtDomainMemory::commit (block, sizeof (int));
 		*block = 2;
 		EXPECT_TRUE (ProtDomainMemory::is_private (block, sizeof (int)));
