@@ -8,9 +8,6 @@
 #include <Nirvana/Nirvana.h>
 
 extern "C" __declspec (dllimport)
-void* __stdcall TlsGetValue (unsigned long dwTlsIndex);
-
-extern "C" __declspec (dllimport)
 int __stdcall CloseHandle (void* hObject);
 
 typedef unsigned long (__stdcall *PTHREAD_START_ROUTINE) (void* lpThreadParameter);
