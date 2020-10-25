@@ -26,7 +26,7 @@ public:
 private:
 	struct MainFiberParam
 	{
-		ExecDomain* main_domain;
+		Core_var <ExecDomain> main_domain;
 		ThreadPoolable* worker_thread;
 		Runnable* startup;
 		DeadlineTime deadline;

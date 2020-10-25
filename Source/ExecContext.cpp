@@ -1,4 +1,5 @@
 #include <ExecDomain.h>
+#include <Thread.h>
 #include "../Port/ProtDomainMemory.h"
 #include "win32.h"
 

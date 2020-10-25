@@ -29,7 +29,10 @@ void WorkerThreads::run (Runnable& startup, DeadlineTime deadline)
 		throw CORBA::NO_MEMORY ();
 
 	// Convert main thread context into execution domain
-	param.main_domain = new ExecDomain (main_fiber);
+	param.main_domain = ExecDomain::create (main_fiber);
+
+	// Save for detach
+	ExecDomain& main_domain = *param.main_domain;
 
 	// Create fiber for neutral context
 	param.worker_thread = threads ();
@@ -65,7 +68,7 @@ void WorkerThreads::run (Runnable& startup, DeadlineTime deadline)
 	SetThreadPriority (GetCurrentThread (), prio);
 	ConvertFiberToThread ();
 
-	param.main_domain->port ().detach ();	// Prevent DeleteFiber()
+	main_domain.port ().detach ();	// Prevent DeleteFiber()
 
 	// Wait termination of all other worker threads
 	ThreadPool <ThreadWorker>::terminate ();
@@ -74,11 +77,13 @@ void WorkerThreads::run (Runnable& startup, DeadlineTime deadline)
 void CALLBACK WorkerThreads::main_fiber_proc (void* p)
 {
 	MainFiberParam* param = (MainFiberParam*)p;
-	param->main_domain->_remove_ref (); // Place my fiber to pool for reuse
+	ExecDomain* main_domain = param->main_domain;
+	param->main_domain = nullptr; // Place my fiber to pool for reuse
 	// Schedule startup runnable
 	ExecDomain::async_call (*param->startup, param->deadline, nullptr, nullptr);
 	ThreadPoolable::thread_proc (((MainFiberParam*)param)->worker_thread);
-	param->main_domain->switch_to ();
+	// Switch back to main fiber.
+	main_domain->switch_to ();
 }
 
 void WorkerThreads::shutdown ()
