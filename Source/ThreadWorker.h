@@ -7,7 +7,7 @@
 #define NIRVANA_CORE_WINDOWS_THREADWORKER_H_
 
 #include "ThreadPoolable.h"
-#include "ExecContext.h"
+#include <ExecContext.h>
 
 namespace Nirvana {
 namespace Core {
@@ -38,6 +38,8 @@ public:
 
 	virtual ExecContext* neutral_context ();
 
+private:
+	friend class Nirvana::Core::Port::Thread;
 	static DWORD WINAPI thread_proc (ThreadWorker* _this);
 
 private:

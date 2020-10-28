@@ -1,6 +1,7 @@
 #ifndef NIRVANA_CORE_PORT_THREADINTERNAL_H_
 #define NIRVANA_CORE_PORT_THREADINTERNAL_H_
 
+#include <core.h>
 #include "../Port/Thread.h"
 #include "win32.h"
 

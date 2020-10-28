@@ -23,7 +23,7 @@ public:
 	template <class T>
 	void create (T* p, int priority)
 	{
-		port ().create (p, NEUTRAL_FIBER_STACK_SIZE, priority);
+		port ().create (p, priority);
 	}
 
 	void join ()

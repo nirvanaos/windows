@@ -7,11 +7,12 @@ namespace Port {
 
 thread_local Thread* Thread::current_;
 
-void Thread::create (size_t stack_size, PTHREAD_START_ROUTINE thread_proc, void* param, int priority)
+void Thread::create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority)
 {
-	handle_ = CreateThread (nullptr, stack_size, thread_proc, param, 0, nullptr);
+	assert (!handle_);
+	handle_ = CreateThread (nullptr, Windows::NEUTRAL_FIBER_STACK_SIZE, thread_proc, param, 0, nullptr);
 	if (!handle_)
-		throw ::CORBA::INITIALIZE ();
+		throw_INTERNAL ();
 	verify (SetThreadPriority (handle_, priority));
 }
 

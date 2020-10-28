@@ -9,11 +9,13 @@ namespace Port {
 
 void __stdcall ExecContext::fiber_proc (void*)
 {
-	ExecDomain* ed = Core::Thread::current ().execution_domain ();
+	Core::Thread& thread = Core::Thread::current ();
+	ExecDomain* ed = thread.execution_domain ();
 	assert (ed);
 	__try {
 		ed->execute_loop ();
 	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		thread.execution_domain (nullptr);
 		ed->on_crash ();
 	}
 }

@@ -5,8 +5,6 @@
 #ifndef NIRVANA_CORE_PORT_THREAD_H_
 #define NIRVANA_CORE_PORT_THREAD_H_
 
-#include <Nirvana/Nirvana.h>
-
 extern "C" __declspec (dllimport)
 int __stdcall CloseHandle (void* hObject);
 
@@ -40,9 +38,9 @@ public:
 	void detach ();
 
 	template <class T>
-	void create (T* p, size_t stack_size = 0, int priority = 0) // THREAD_PRIORITY_NORMAL = 0
+	void create (T* p, int priority = 0) // THREAD_PRIORITY_NORMAL = 0
 	{
-		create (stack_size, (PTHREAD_START_ROUTINE)T::thread_proc, p, priority);
+		create ((PTHREAD_START_ROUTINE)T::thread_proc, p, priority);
 	}
 
 	void* handle () const
@@ -65,7 +63,7 @@ protected:
 	}
 
 private:
-	void create (size_t stack_size, PTHREAD_START_ROUTINE thread_proc, void* param, int priority);
+	void create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority);
 
 private:
 	static thread_local Thread* current_;

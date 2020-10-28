@@ -24,6 +24,9 @@ extern "C" __declspec (dllimport)
 void* __stdcall ConvertThreadToFiber (void* lpParameter);
 
 extern "C" __declspec (dllimport)
+void* __stdcall ConvertThreadToFiberEx (void* lpParameter, unsigned long dwFlags);
+
+extern "C" __declspec (dllimport)
 int __stdcall ConvertFiberToThread ();
 
 extern "C" __declspec (dllimport)
@@ -59,10 +62,14 @@ public:
 	void convert_to_fiber ()
 	{
 		assert (!fiber_);
-		fiber_ = ConvertThreadToFiber (nullptr);
+		// If dwFlags parameter is zero, the floating - point state on x86 systems is not switched and data 
+		// can be corrupted if a fiber uses floating - point arithmetic.
+		// This causes faster switching. Neutral execution context does not use floating - point arithmetic.
+		if (!(fiber_ = ConvertThreadToFiberEx (nullptr, 0)))
+			throw_NO_MEMORY ();
 	}
 
-	void convert_to_thread ()
+	void convert_to_thread () NIRVANA_NOEXCEPT
 	{
 		assert (fiber_);
 		fiber_ = nullptr;

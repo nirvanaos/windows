@@ -3,7 +3,6 @@
 
 #include "../Port/ProtDomainMemory.h"
 #include "AddressSpace.h"
-#include <Runnable.h>
 
 namespace Nirvana {
 namespace Core {

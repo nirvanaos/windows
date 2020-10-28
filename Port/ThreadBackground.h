@@ -8,6 +8,11 @@
 
 #include <Thread.h>
 
+struct _SECURITY_ATTRIBUTES;
+
+extern "C" __declspec (dllimport)
+void* __stdcall CreateEventW (_SECURITY_ATTRIBUTES*, int bManualReset, int bInitialState, const wchar_t* lpName);
+
 namespace Nirvana {
 namespace Core {
 namespace Port {
@@ -18,14 +23,29 @@ class ThreadBackground :
 public:
 	ThreadBackground ()
 	{
-		Port::Thread::create (this, thread_proc);
+		if (!(event_ = CreateEventW (nullptr, 0, 0, nullptr)))
+			throw_NO_MEMORY ();
 	}
 
 	~ThreadBackground ()
-	{}
+	{
+		CloseHandle (event_);
+	}
+
+	virtual Core::ExecContext* neutral_context ();
+
+protected:
+	void create ();
+	void suspend ();
+	void resume ();
 
 private:
-	static DWORD WINAPI thread_proc (void* _this);
+	friend class Nirvana::Core::Port::Thread;
+	static unsigned long __stdcall thread_proc (ThreadBackground* _this);
+
+private:
+	Core::ExecContext neutral_context_;
+	void* event_;
 };
 
 }
