@@ -1,49 +1,43 @@
 // Nirvana project
 // Windows implementation.
-// ThreadWorkerBase class.
+// Thread class.
 // Platform-specific worker thread implementation.
 
-#ifndef NIRVANA_CORE_WINDOWS_THREADWORKER_H_
-#define NIRVANA_CORE_WINDOWS_THREADWORKER_H_
+#ifndef NIRVANA_CORE_PORT_THREAD_H_
+#define NIRVANA_CORE_PORT_THREAD_H_
 
-#include "ThreadPoolable.h"
-#include <ExecContext.h>
+#include "../Source/ThreadPoolable.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
 
-class ThreadWorker :
-	public ThreadPoolable
+class Runnable;
+
+namespace Port {
+
+class Thread :
+	public Windows::ThreadPoolable
 {
 public:
-	ThreadWorker (CompletionPort& completion_port) :
-		ThreadPoolable (completion_port),
-		neutral_context_ (nullptr)
-	{}
-
-	~ThreadWorker ()
-	{}
-
-	void attach (void* fiber)
+	static Core::Thread* current ()
 	{
-		neutral_context_.port ().attach (fiber);
-		port ().attach ();
+		return current_;
 	}
 
-	void detach ()
-	{
-		port ().detach ();
-	}
+	Thread (Windows::CompletionPort& completion_port) :
+		ThreadPoolable (completion_port)
+	{}
 
-	virtual ExecContext* neutral_context ();
+	~Thread ();
 
-private:
-	friend class Nirvana::Core::Port::Thread;
-	static DWORD WINAPI thread_proc (ThreadWorker* _this);
+	void run_main (Runnable& startup, DeadlineTime deadline);
+	void create ();
 
 private:
-	ExecContext neutral_context_;
+	friend class ThreadBase;
+	static unsigned long __stdcall thread_proc (Thread* _this);
+	static void __stdcall main_fiber_proc (void* p);
+	struct MainFiberParam;
 };
 
 }

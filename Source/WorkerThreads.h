@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_WORKERTHREADS_H_
 #define NIRVANA_CORE_WINDOWS_WORKERTHREADS_H_
 
-#include "ThreadWorker.h"
+#include "ThreadInternal.h"
 #include "ThreadPool.h"
 #include <ExecDomain.h>
 
@@ -14,25 +14,21 @@ namespace Core {
 namespace Windows {
 
 class WorkerThreads :
-	public ThreadPool <ThreadWorker>
+	public ThreadPool <Thread>
 {
 public:
-	~WorkerThreads ();
-	WorkerThreads ();
+	WorkerThreads ()
+	{
+		CompletionPort::start ();
+	}
+
+	~WorkerThreads ()
+	{}
 
 	void run (Runnable& startup, DeadlineTime deadline);
 	void shutdown ();
 
 private:
-	struct MainFiberParam
-	{
-		Core_var <ExecDomain> main_domain;
-		ThreadPoolable* worker_thread;
-		Runnable* startup;
-		DeadlineTime deadline;
-	};
-
-	static void CALLBACK main_fiber_proc (void* param);
 };
 
 }

@@ -3,8 +3,8 @@
 // ThreadBackgroundBase class.
 // Platform-specific background thread implementation.
 
-#ifndef NIRVANA_CORE_WINDOWS_THREADBACKGROUND_H_
-#define NIRVANA_CORE_WINDOWS_THREADBACKGROUND_H_
+#ifndef NIRVANA_CORE_PORT_THREADBACKGROUND_H_
+#define NIRVANA_CORE_PORT_THREADBACKGROUND_H_
 
 #include <Thread.h>
 

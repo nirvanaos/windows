@@ -10,80 +10,18 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-WorkerThreads::WorkerThreads ()
-{
-	CompletionPort::start ();
-}
-
-WorkerThreads::~WorkerThreads ()
-{
-}
-
 void WorkerThreads::run (Runnable& startup, DeadlineTime deadline)
 {
-	MainFiberParam param;
-	
-	// Convert main thread to fiber
-	void* main_fiber = ConvertThreadToFiber (nullptr);
-	if (!main_fiber)
-		throw CORBA::NO_MEMORY ();
-
-	// Convert main thread context into execution domain
-	param.main_domain = ExecDomain::create (main_fiber);
-
-	// Save for detach
-	ExecDomain& main_domain = *param.main_domain;
-
-	// Create fiber for neutral context
-	param.worker_thread = threads ();
-	param.startup = &startup;
-	param.deadline = deadline;
-
-	void* worker_fiber = CreateFiber (NEUTRAL_FIBER_STACK_SIZE, main_fiber_proc, &param);
-	if (!worker_fiber)
-		throw CORBA::NO_MEMORY ();
-
-	// Attach main thread as first worker thread in pool
-	threads ()->attach (worker_fiber);
-
 	// Create other worker threads
-	for (ThreadWorker* p = threads () + 1, *end = threads () + thread_count (); p != end; ++p) {
-		p->port ().create (p, WORKER_THREAD_PRIORITY);
+	for (Thread* p = threads () + 1, *end = threads () + thread_count (); p != end; ++p) {
+		p->port ().create ();
 	}
 
-	// Set main thread priority to WORKER_THREAD_PRIORITY
-	int prio = GetThreadPriority (GetCurrentThread ());
-	SetThreadPriority (GetCurrentThread (), WORKER_THREAD_PRIORITY);
-
-	// Switch to neutral context and run main_fiber_proc
-	threads ()->neutral_context ()->switch_to ();
-
-	// Do fiber_proc for this worker thread
-	Port::ExecContext::fiber_proc (nullptr);
-
-	// Detach main thread from pool
-	threads ()->detach ();
-
-	// Restore priority and release resources
-	SetThreadPriority (GetCurrentThread (), prio);
-	ConvertFiberToThread ();
-
-	main_domain.port ().detach ();	// Prevent DeleteFiber()
+	// Run main
+	threads ()->port ().run_main (startup, deadline);
 
 	// Wait termination of all other worker threads
-	ThreadPool <ThreadWorker>::terminate ();
-}
-
-void CALLBACK WorkerThreads::main_fiber_proc (void* p)
-{
-	MainFiberParam* param = (MainFiberParam*)p;
-	ExecDomain* main_domain = param->main_domain;
-	param->main_domain = nullptr; // Place my fiber to pool for reuse
-	// Schedule startup runnable
-	ExecDomain::async_call (*param->startup, param->deadline, nullptr, nullptr);
-	ThreadPoolable::thread_proc (((MainFiberParam*)param)->worker_thread);
-	// Switch back to main fiber.
-	main_domain->switch_to ();
+	ThreadPool <Thread>::terminate ();
 }
 
 void WorkerThreads::shutdown ()

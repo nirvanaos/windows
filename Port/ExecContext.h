@@ -42,11 +42,14 @@ namespace Port {
 class ExecContext
 {
 public:
-	ExecContext () :
-		fiber_ (CreateFiber (0, fiber_proc, nullptr))
+	ExecContext (bool neutral = false) :
+		fiber_ (nullptr)
 	{
-		if (!fiber_)
-			throw CORBA::NO_MEMORY ();
+		if (!neutral) {
+			fiber_ = CreateFiber (0, fiber_proc, nullptr);
+			if (!fiber_)
+				throw CORBA::NO_MEMORY ();
+		}
 	}
 
 	ExecContext (void* fiber) :
@@ -57,6 +60,13 @@ public:
 	{
 		if (fiber_)
 			DeleteFiber (fiber_);
+	}
+
+	void create ()
+	{
+		fiber_ = CreateFiber (0, fiber_proc, nullptr);
+		if (!fiber_)
+			throw_NO_MEMORY ();
 	}
 
 	void convert_to_fiber ()
@@ -78,6 +88,7 @@ public:
 
 	void switch_to ()
 	{
+		assert (fiber_);
 		SwitchToFiber (fiber_);
 	}
 

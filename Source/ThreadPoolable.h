@@ -4,22 +4,29 @@
 #ifndef NIRVANA_CORE_THREADPOOLABLE_H_
 #define NIRVANA_CORE_THREADPOOLABLE_H_
 
-#include "ThreadInternal.h"
-#include "ThreadPool.h"
+#include "ThreadBase.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+class CompletionPort;
+
 class ThreadPoolable :
-	public Port::ThreadBase
+	public ThreadBase
 {
 public:
+	/// For template compatibility with Core::Tread
+	ThreadPoolable& port ()
+	{
+		return *this;
+	}
+
 	ThreadPoolable (CompletionPort& completion_port) :
 		completion_port_ (completion_port)
 	{}
 
-	static DWORD WINAPI thread_proc (ThreadPoolable* _this);
+	static unsigned long __stdcall thread_proc (ThreadPoolable* _this);
 
 private:
 	CompletionPort& completion_port_;

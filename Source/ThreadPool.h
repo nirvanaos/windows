@@ -77,16 +77,16 @@ private:
 };
 
 //! Template class for thread pool controlled by a completion port.
-//! \tparam Thread Thread class.
+//! \tparam Thr Thread class.
 //! Thread constructor gets reference to CompletionPort as parameter.
 //! Thread class must have method Thread::create(int priority);
 //! Thread procedure must call CompletionPort::thread_proc() method.
 
-template <class Thread>
+template <class Thr>
 class ThreadPool :
 	public CompletionPort
 {
-	typedef CoreAllocator <Thread> Allocator;
+	typedef CoreAllocator <Thr> Allocator;
 
 public:
 	ThreadPool () :
@@ -95,14 +95,14 @@ public:
 	{
 		Allocator allocator;
 		threads_ = allocator.allocate (CompletionPort::thread_count ());
-		Thread* p = threads_;
+		Thr* p = threads_;
 		try {
-			for (Thread* end = p + CompletionPort::thread_count (); p != end; ++p) {
-				allocator.construct (p, *static_cast <CompletionPort*> (this));
+			for (Thr* end = p + CompletionPort::thread_count (); p != end; ++p) {
+				new (p) Thr (std::ref (*static_cast <CompletionPort*> (this)));
 			}
 		} catch (...) {
 			while (p != threads_) {
-				allocator.destroy (--p);
+				(--p)->~Thr ();
 			}
 			allocator.deallocate (threads_, CompletionPort::thread_count ());
 			throw;
@@ -112,13 +112,13 @@ public:
 	~ThreadPool ()
 	{
 		Allocator allocator;
-		for (Thread* p = threads_, *end = p + CompletionPort::thread_count (); p != end; ++p) {
-			allocator.destroy (p);
+		for (Thr* p = threads_, *end = p + CompletionPort::thread_count (); p != end; ++p) {
+			p->~Thr ();
 		}
 		allocator.deallocate (threads_, CompletionPort::thread_count ());
 	}
 
-	Thread* threads ()
+	Thr* threads ()
 	{
 		return threads_;
 	}
@@ -132,7 +132,7 @@ public:
 	void start (int priority)
 	{
 		CompletionPort::start ();
-		for (Thread* p = threads_, *end = p + thread_count (); p != end; ++p) {
+		for (Thr* p = threads_, *end = p + thread_count (); p != end; ++p) {
 			p->create (p, priority);
 		}
 	}
@@ -141,13 +141,13 @@ public:
 	virtual void terminate ()
 	{
 		CompletionPort::terminate ();
-		for (Thread* p = threads_, *end = p + thread_count (); p != end; ++p) {
-			p->join ();
+		for (Thr* p = threads_, *end = p + thread_count (); p != end; ++p) {
+			p->port ().join ();
 		}
 	}
 
 private:
-	Thread* threads_;
+	Thr* threads_;
 };
 
 }

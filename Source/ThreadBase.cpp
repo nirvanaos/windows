@@ -1,9 +1,9 @@
-#include "ThreadInternal.h"
+#include "ThreadBaseInternal.h"
 #include <CORBA/Exception.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
 
 thread_local Core::Thread* ThreadBase::current_;
 

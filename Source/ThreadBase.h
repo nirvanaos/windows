@@ -12,7 +12,7 @@ namespace Core {
 
 class Thread;
 
-namespace Port {
+namespace Windows {
 
 class ThreadBase
 {
@@ -27,22 +27,10 @@ public:
 		return current_;
 	}
 
-	//! \fn	void Thread::attach ()
-	//!
-	//! \brief	Attaches current thread to the Thread object.
-
-	void attach ();
-	void detach ();
-
 	template <class T>
 	void create (T* p, int priority = 0) // THREAD_PRIORITY_NORMAL = 0
 	{
 		create ((PTHREAD_START_ROUTINE)T::thread_proc, p, priority);
-	}
-
-	void* handle () const
-	{
-		return handle_;
 	}
 
 	void join () const;

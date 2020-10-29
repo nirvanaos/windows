@@ -3,6 +3,7 @@
 // ThreadPoolable class. Thread object for ThreadPool.
 
 #include "ThreadPoolable.h"
+#include "ThreadPool.h"
 
 namespace Nirvana {
 namespace Core {
