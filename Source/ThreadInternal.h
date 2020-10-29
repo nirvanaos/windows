@@ -2,21 +2,26 @@
 #define NIRVANA_CORE_PORT_THREADINTERNAL_H_
 
 #include <core.h>
-#include "../Port/Thread.h"
+#include "../Port/ThreadBase.h"
 #include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-inline void Thread::attach ()
+inline ThreadBase::~ThreadBase ()
+{
+	if (handle_)
+		CloseHandle (handle_);
+}
+
+inline void ThreadBase::attach ()
 {
 	assert (!handle_);
 	verify (DuplicateHandle (GetCurrentProcess (), GetCurrentThread (), GetCurrentProcess (), &handle_, 0, FALSE, DUPLICATE_SAME_ACCESS));
-	current_ = this;
 }
 
-inline void Thread::detach ()
+inline void ThreadBase::detach ()
 {
 	if (handle_) {
 		assert (GetThreadId (handle_) == GetCurrentThreadId ());
@@ -26,15 +31,10 @@ inline void Thread::detach ()
 	}
 }
 
-inline void Thread::join () const
+inline void ThreadBase::join () const
 {
 	if (handle_)
 		WaitForSingleObject (handle_, INFINITE);
-}
-
-inline void Thread::thread_proc ()
-{
-	current_ = this;
 }
 
 }

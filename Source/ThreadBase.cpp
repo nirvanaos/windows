@@ -5,9 +5,9 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-thread_local Thread* Thread::current_;
+thread_local Core::Thread* ThreadBase::current_;
 
-void Thread::create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority)
+void ThreadBase::create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority)
 {
 	assert (!handle_);
 	handle_ = CreateThread (nullptr, Windows::NEUTRAL_FIBER_STACK_SIZE, thread_proc, param, 0, nullptr);

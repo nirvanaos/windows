@@ -2,27 +2,24 @@
 // Windows implementation.
 // Port::Thread class. Thread object base.
 
-#ifndef NIRVANA_CORE_PORT_THREAD_H_
-#define NIRVANA_CORE_PORT_THREAD_H_
-
-extern "C" __declspec (dllimport)
-int __stdcall CloseHandle (void* hObject);
+#ifndef NIRVANA_CORE_PORT_THREADBASE_H_
+#define NIRVANA_CORE_PORT_THREADBASE_H_
 
 typedef unsigned long (__stdcall *PTHREAD_START_ROUTINE) (void* lpThreadParameter);
 
 namespace Nirvana {
 namespace Core {
 
-class ExecContext;
+class Thread;
 
 namespace Port {
 
-class Thread
+class ThreadBase
 {
 	/// Deprecated
-	Thread (const Thread&) = delete;
+	ThreadBase (const ThreadBase&) = delete;
 	/// Deprecated
-	Thread& operator = (const Thread&) = delete;
+	ThreadBase& operator = (const ThreadBase&) = delete;
 
 public:
 	static Thread* current ()
@@ -49,24 +46,19 @@ public:
 	}
 
 	void join () const;
-	void thread_proc ();
 
 protected:
-	Thread () :
+	ThreadBase () :
 		handle_ (nullptr)
 	{}
 
-	~Thread ()
-	{
-		if (handle_)
-			CloseHandle (handle_);
-	}
+	~ThreadBase ();
 
 private:
 	void create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority);
 
-private:
-	static thread_local Thread* current_;
+protected:
+	static thread_local Core::Thread* current_;
 
 	void* handle_;
 };
