@@ -2,14 +2,14 @@
 // Windows implementation.
 // ThreadWorkerBase class.
 
-#include "ThreadInternal.h"
+#include "ThreadWorkerInternal.h"
 #include "ExecContextInternal.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-struct Thread::MainFiberParam
+struct ThreadWorker::MainFiberParam
 {
 	Core_var <ExecDomain> main_domain;
 	Windows::ThreadPoolable* worker_thread;
@@ -17,17 +17,17 @@ struct Thread::MainFiberParam
 	DeadlineTime deadline;
 };
 
-DWORD WINAPI Thread::thread_proc (Thread* _this)
+DWORD WINAPI ThreadWorker::thread_proc (ThreadWorker* _this)
 {
-	Core::Thread& thread = static_cast <Core::Thread&> (*_this);
+	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*_this);
 	current_ = &thread;
-	thread.neutral_context_.port ().convert_to_fiber ();
+	thread.neutral_context ().port ().convert_to_fiber ();
 	ThreadPoolable::thread_proc (_this);
-	thread.neutral_context_.port ().convert_to_thread ();
+	thread.neutral_context ().port ().convert_to_thread ();
 	return 0;
 }
 
-void CALLBACK Thread::main_fiber_proc (void* p)
+void CALLBACK ThreadWorker::main_fiber_proc (void* p)
 {
 	MainFiberParam* param = (MainFiberParam*)p;
 	ExecDomain* main_domain = param->main_domain;
@@ -39,12 +39,12 @@ void CALLBACK Thread::main_fiber_proc (void* p)
 	main_domain->switch_to ();
 }
 
-void Thread::create ()
+void ThreadWorker::create ()
 {
 	Windows::ThreadPoolable::create (this, Windows::WORKER_THREAD_PRIORITY);
 }
 
-void Thread::run_main (Runnable& startup, DeadlineTime deadline)
+void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 {
 	// Convert main thread to fiber
 	void* main_fiber = ConvertThreadToFiber (nullptr);
@@ -67,8 +67,8 @@ void Thread::run_main (Runnable& startup, DeadlineTime deadline)
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
 
-	Core::Thread& thread = static_cast <Core::Thread&> (*this);
-	thread.neutral_context_.port ().attach (worker_fiber);
+	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
+	thread.neutral_context ().port ().attach (worker_fiber);
 	current_ = &thread;
 
 	// Set main thread priority to WORKER_THREAD_PRIORITY

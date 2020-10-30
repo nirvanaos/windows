@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_WORKERTHREADS_H_
 #define NIRVANA_CORE_WINDOWS_WORKERTHREADS_H_
 
-#include "ThreadInternal.h"
+#include "ThreadWorkerInternal.h"
 #include "ThreadPool.h"
 #include <ExecDomain.h>
 
@@ -14,7 +14,7 @@ namespace Core {
 namespace Windows {
 
 class WorkerThreads :
-	public ThreadPool <Thread>
+	public ThreadPool <Core::ThreadWorker>
 {
 public:
 	WorkerThreads ()

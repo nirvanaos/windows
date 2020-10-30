@@ -1,10 +1,10 @@
 // Nirvana project
 // Windows implementation.
-// Thread class.
+// Port::ThreadWorker class.
 // Platform-specific worker thread implementation.
 
-#ifndef NIRVANA_CORE_PORT_THREAD_H_
-#define NIRVANA_CORE_PORT_THREAD_H_
+#ifndef NIRVANA_CORE_PORT_THREADWORKER_H_
+#define NIRVANA_CORE_PORT_THREADWORKER_H_
 
 #include "../Source/ThreadPoolable.h"
 
@@ -15,27 +15,22 @@ class Runnable;
 
 namespace Port {
 
-class Thread :
+class ThreadWorker :
 	public Windows::ThreadPoolable
 {
 public:
-	static Core::Thread* current ()
-	{
-		return current_;
-	}
-
-	Thread (Windows::CompletionPort& completion_port) :
+	ThreadWorker (Windows::CompletionPort& completion_port) :
 		ThreadPoolable (completion_port)
 	{}
 
-	~Thread ();
+	~ThreadWorker ();
 
 	void run_main (Runnable& startup, DeadlineTime deadline);
 	void create ();
 
 private:
-	friend class ThreadBase;
-	static unsigned long __stdcall thread_proc (Thread* _this);
+	friend class Thread;
+	static unsigned long __stdcall thread_proc (ThreadWorker* _this);
 	static void __stdcall main_fiber_proc (void* p);
 	struct MainFiberParam;
 };

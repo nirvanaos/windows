@@ -20,6 +20,16 @@ void __stdcall ExecContext::fiber_proc (void*)
 	}
 }
 
+ExecContext::ExecContext (bool neutral) :
+	fiber_ (nullptr)
+{
+	if (!neutral) {
+		fiber_ = CreateFiber (0, fiber_proc, nullptr);
+		if (!fiber_)
+			throw CORBA::NO_MEMORY ();
+	}
+}
+
 }
 }
 }

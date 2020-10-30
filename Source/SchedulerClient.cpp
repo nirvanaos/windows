@@ -38,7 +38,7 @@ void SchedulerClient::received (OVERLAPPED* ovl, DWORD size)
 	
 	Executor* executor = reinterpret_cast <Executor*> (exec.executor);
 	if (executor)
-		Thread::execute (*executor, exec.deadline);
+		ThreadWorker::execute (*executor, exec.deadline);
 }
 
 }

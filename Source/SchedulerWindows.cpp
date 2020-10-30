@@ -22,7 +22,7 @@ void SchedulerWindows::core_free ()
 void SchedulerWindows::InProcExecute::received (OVERLAPPED* ovl, DWORD size)
 {
 	Execute* exec = reinterpret_cast <Execute*> (ovl);
-	Thread::execute (*reinterpret_cast <Executor*> (exec->executor), exec->deadline);
+	ThreadWorker::execute (*reinterpret_cast <Executor*> (exec->executor), exec->deadline);
 }
 
 }

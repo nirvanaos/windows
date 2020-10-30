@@ -1,21 +1,21 @@
-#ifndef NIRVANA_CORE_PORT_THREADBASEINTERNAL_H_
-#define NIRVANA_CORE_PORT_THREADBASEINTERNAL_H_
+#ifndef NIRVANA_CORE_WINDOWS_THREADINTERNAL_H_
+#define NIRVANA_CORE_WINDOWS_THREADINTERNAL_H_
 
 #include <core.h>
-#include "ThreadBase.h"
+#include "../Port/Thread.h"
 #include "win32.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
-inline ThreadBase::~ThreadBase ()
+inline Thread::~Thread ()
 {
 	if (handle_)
 		CloseHandle (handle_);
 }
 
-inline void ThreadBase::join () const
+inline void Thread::join () const
 {
 	if (handle_)
 		WaitForSingleObject (handle_, INFINITE);

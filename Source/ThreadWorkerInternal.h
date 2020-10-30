@@ -1,14 +1,14 @@
-#ifndef NIRVANA_CORE_PORT_THREADINTERNAL_H_
-#define NIRVANA_CORE_PORT_THREADINTERNAL_H_
+#ifndef NIRVANA_CORE_WINDOWS_THREADWORKERINTERNAL_H_
+#define NIRVANA_CORE_WINDOWS_THREADWORKERINTERNAL_H_
 
-#include <Thread.h>
-#include "ThreadBaseInternal.h"
+#include <ThreadWorker.h>
+#include "ThreadInternal.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-inline Thread::~Thread ()
+inline ThreadWorker::~ThreadWorker ()
 {}
 
 }
