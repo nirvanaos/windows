@@ -16,17 +16,17 @@ namespace Windows {
 /// Template class for multithreaded mailslot receiver.
 /// \tparam T Derived class.
 /// \tparam BUF_SIZE Size of message buffer. Maximal message size.
-/// \tparam Thread Thread class. Thread must start in the constructor and join in the destructor.
+/// \tparam Thr Thread class. Thread must start in the constructor and join in the destructor.
 /// Thread constructor gets reference to PostOfficeBase as parameter./// \tparam PRIORITY Priority of the worker threads.
 
 /// Thread procedure must call PostOffice::dispatch() method while it returns true.
-template <class T, unsigned BUF_SIZE, class Thread, int PRIORITY = THREAD_PRIORITY_NORMAL>
+template <class T, unsigned BUF_SIZE, class Thr, int PRIORITY>
 class PostOffice :
 	public MailslotReader,
-	public ThreadPool <Thread>
+	public ThreadPool <Thr>
 {
 	static const size_t MAX_WORDS = (BUF_SIZE + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR);
-	typedef ThreadPool <Thread> Pool;
+	typedef ThreadPool <Thr> Pool;
 
 public:
 	/// Derived class must override this method to receive messages.

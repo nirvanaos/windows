@@ -21,9 +21,9 @@ struct Message
 const unsigned TAG = 123456789;
 
 class PostOffice :
-	public ::Nirvana::Core::Windows::PostOffice <PostOffice, sizeof (Message), ThreadPoolable>
+	public ::Nirvana::Core::Windows::PostOffice <PostOffice, sizeof (Message), ThreadPoolable, THREAD_PRIORITY_NORMAL>
 {
-	typedef ::Nirvana::Core::Windows::PostOffice <PostOffice, sizeof (Message), ThreadPoolable> Base;
+	typedef ::Nirvana::Core::Windows::PostOffice <PostOffice, sizeof (Message), ThreadPoolable, THREAD_PRIORITY_NORMAL> Base;
 public:
 	PostOffice ()
 	{

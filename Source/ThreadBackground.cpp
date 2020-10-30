@@ -9,6 +9,7 @@ namespace Port {
 DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 {
 	Legacy::Core::ThreadBackground& thread = static_cast <Legacy::Core::ThreadBackground&> (*_this);
+	current_ = &thread;
 	try {
 		thread.neutral_context().port ().convert_to_fiber ();
 	} catch (...) {
@@ -16,8 +17,8 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 		thread.on_thread_proc_end ();
 		return 0;
 	}
-	thread.port ().thread_proc ();
-	thread.execution_domain ()->execute_loop ();
+	thread.execution_domain ()->switch_to ();
+	Core::ExecContext::neutral_context_loop ();
 	thread.neutral_context ().port ().convert_to_thread ();
 	thread.on_thread_proc_end ();
 	return 0;
@@ -34,6 +35,11 @@ ThreadBackground::~ThreadBackground ()
 	CloseHandle (event_);
 }
 
+void ThreadBackground::create ()
+{
+	Thread::create (this, Windows::BACKGROUND_THREAD_PRIORITY);
+}
+
 void ThreadBackground::suspend ()
 {
 	WaitForSingleObject (event_, INFINITE);
@@ -42,6 +48,17 @@ void ThreadBackground::suspend ()
 void ThreadBackground::resume ()
 {
 	verify (SetEvent (event_));
+}
+
+/// Temparary boost thread priority above the worker threads priority.
+void ThreadBackground::priority_boost ()
+{
+	SetThreadPriority (handle_, Windows::BACKGROUND_THREAD_PRIORITY_BOOSTED);
+}
+
+void ThreadBackground::priority_restore ()
+{
+	SetThreadPriority (handle_, Windows::BACKGROUND_THREAD_PRIORITY);
 }
 
 }

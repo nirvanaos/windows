@@ -54,12 +54,12 @@ struct SchedulerItem
 class SchedulerWindows :
 	public SchedulerAbstract,
 	public SchedulerIPC,
-	public PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, THREAD_PRIORITY_TIME_CRITICAL>,
+	public PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, SCHEDULER_THREAD_PRIORITY>,
 	public SchedulerImpl <SchedulerWindows, SchedulerItem>
 {
 public:
 	typedef SchedulerImpl <SchedulerWindows, SchedulerItem> Base;
-	typedef PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, THREAD_PRIORITY_TIME_CRITICAL> Office;
+	typedef PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, SCHEDULER_THREAD_PRIORITY> Office;
 
 	SchedulerWindows () :
 		Base (thread_count ()),

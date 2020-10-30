@@ -15,17 +15,27 @@ namespace Port {
 class ThreadBackground :
 	public Thread
 {
+	///@{
+	/// Members called from Core.
 protected:
 	ThreadBackground ();
 	~ThreadBackground ();
 
-	void create ()
-	{
-		Thread::create (this, 0); // THREAD_PRIORITY_NORMAL = 0
-	}
+	/// Create thread
+	void create ();
 
+	/// Suspend execution and wait for resume ().
 	void suspend ();
+
+	/// Continue execution.
 	void resume ();
+
+	/// Temparary boost thread priority above the worker threads priority.
+	void priority_boost ();
+
+	/// Restore priority after the priority_boost () call.
+	void priority_restore ();
+	///@}
 
 private:
 	friend class Nirvana::Core::Port::Thread;

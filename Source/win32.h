@@ -29,6 +29,15 @@ const SIZE_T NEUTRAL_FIBER_STACK_SIZE = 0; // TODO: Decrease stack size.
 /// Worker thread priority should be greater than normal thread priority.
 const int WORKER_THREAD_PRIORITY = THREAD_PRIORITY_ABOVE_NORMAL;
 
+/// Background thread priority is normal priority.
+const int BACKGROUND_THREAD_PRIORITY = THREAD_PRIORITY_NORMAL;
+
+/// Boosted background thread priority must be above worker thread priority.
+const int BACKGROUND_THREAD_PRIORITY_BOOSTED = THREAD_PRIORITY_HIGHEST;
+
+/// System scheduler threads must have maximal priority.
+const int SCHEDULER_THREAD_PRIORITY = THREAD_PRIORITY_TIME_CRITICAL;
+
 const DWORD SCHEDULER_ACK_TIMEOUT = 1000;
 
 const SIZE_T PAGE_SIZE = 4096;
