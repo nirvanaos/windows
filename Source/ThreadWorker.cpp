@@ -3,6 +3,7 @@
 // ThreadWorkerBase class.
 
 #include "ThreadInternal.h"
+#include "ExecContextInternal.h"
 
 namespace Nirvana {
 namespace Core {
