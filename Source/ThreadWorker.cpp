@@ -4,6 +4,7 @@
 
 #include "ThreadWorkerInternal.h"
 #include "ExecContextInternal.h"
+#include <ExecDomain.h>
 
 namespace Nirvana {
 namespace Core {

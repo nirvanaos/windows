@@ -1,4 +1,5 @@
 #include <Legacy/ThreadBackground.h>
+#include <ExecDomain.h>
 #include "win32.h"
 
 namespace Nirvana {
@@ -7,29 +8,30 @@ namespace Port {
 
 DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 {
+	Legacy::Core::ThreadBackground& thread = static_cast <Legacy::Core::ThreadBackground&> (*_this);
 	try {
-		_this->neutral_context_.port ().convert_to_fiber ();
+		thread.neutral_context().port ().convert_to_fiber ();
 	} catch (...) {
-		_this->execution_domain ()->on_crash ();
-		static_cast <Nirvana::Legacy::Core::ThreadBackground*> (_this)->on_thread_proc_end ();
+		thread.execution_domain ()->on_crash ();
+		thread.on_thread_proc_end ();
 		return 0;
 	}
-	_this->context (&_this->neutral_context_);
-	_this->port ().thread_proc ();
-	_this->execution_domain ()->execute_loop ();
-	_this->neutral_context_.port ().convert_to_thread ();
-	static_cast <Nirvana::Legacy::Core::ThreadBackground*> (_this)->on_thread_proc_end ();
+	thread.port ().thread_proc ();
+	thread.execution_domain ()->execute_loop ();
+	thread.neutral_context ().port ().convert_to_thread ();
+	thread.on_thread_proc_end ();
 	return 0;
 }
 
-Core::ExecContext* ThreadBackground::neutral_context ()
+ThreadBackground::ThreadBackground ()
 {
-	return &neutral_context_;
+	if (!(event_ = CreateEventW (nullptr, 0, 0, nullptr)))
+		throw_NO_MEMORY ();
 }
 
-void ThreadBackground::create ()
+ThreadBackground::~ThreadBackground ()
 {
-	port ().create (this, THREAD_PRIORITY_NORMAL);
+	CloseHandle (event_);
 }
 
 void ThreadBackground::suspend ()

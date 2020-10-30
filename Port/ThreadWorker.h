@@ -19,14 +19,15 @@ class ThreadWorker :
 	public Windows::ThreadPoolable
 {
 public:
+	void run_main (Runnable& startup, DeadlineTime deadline);
+	void create ();
+
+protected:
 	ThreadWorker (Windows::CompletionPort& completion_port) :
 		ThreadPoolable (completion_port)
 	{}
 
 	~ThreadWorker ();
-
-	void run_main (Runnable& startup, DeadlineTime deadline);
-	void create ();
 
 private:
 	friend class Thread;

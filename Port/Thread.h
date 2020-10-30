@@ -30,7 +30,7 @@ public:
 	///@}
 
 	template <class T>
-	void create (T* p, int priority = 0) // THREAD_PRIORITY_NORMAL = 0
+	void create (T* p, int priority) // THREAD_PRIORITY_NORMAL = 0
 	{
 		create ((PTHREAD_START_ROUTINE)T::thread_proc, p, priority);
 	}
