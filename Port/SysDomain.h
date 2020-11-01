@@ -43,9 +43,13 @@ public:
 			// TODO: Kill process by id.
 		}
 
-		void execute (const Execute& msg)
+		void execute (const Execute& msg) NIRVANA_NOEXCEPT
 		{
-			execute_mailslot_.send (msg);
+			try {
+				execute_mailslot_.send (msg);
+			} catch (...) {
+				// TODO: Process is dead, remove process info.
+			}
 		}
 
 	private:

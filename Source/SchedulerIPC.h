@@ -82,6 +82,7 @@ public:
 	{
 		uint64_t executor;
 		DeadlineTime deadline;
+		int64_t scheduler_error;
 	};
 };
 

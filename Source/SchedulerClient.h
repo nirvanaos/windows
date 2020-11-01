@@ -6,7 +6,7 @@
 #include "Mailslot.h"
 #include "MailslotReader.h"
 #include "WorkerThreads.h"
-#include <core.h>
+#include "RoundBuffers.h"
 
 namespace Nirvana {
 namespace Core {
@@ -28,7 +28,7 @@ public:
 
 	// Implementation of SchedulerAbstract.
 
-	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev);
+	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback);
 
 	virtual void core_free ();
 
@@ -46,11 +46,13 @@ private:
 	uint64_t protection_domain_;
 	Mailslot scheduler_mailslot_;
 	WorkerThreads worker_threads_;
+	RoundBuffers <Execute> fallback_buffers_;
 };
 
 inline
 SchedulerClient::SchedulerClient (uint64_t protection_domain) :
-	protection_domain_ (protection_domain)
+	protection_domain_ (protection_domain),
+	fallback_buffers_ (worker_threads_.thread_count ())
 {
 	DWORD id = GetCurrentProcessId ();
 	static const WCHAR prefix [] = EXECUTE_MAILSLOT_PREFIX;

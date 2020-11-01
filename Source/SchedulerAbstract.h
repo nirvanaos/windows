@@ -10,7 +10,7 @@ namespace Windows {
 class SchedulerAbstract
 {
 public:
-	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) = 0;
+	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime old, bool nothrow_fallback) = 0;
 	virtual void core_free () = 0;
 	virtual void shutdown () = 0;
 };

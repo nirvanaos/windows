@@ -13,8 +13,7 @@
 #include "WorkerThreads.h"
 #include <SysDomain.h>
 #include <SchedulerImpl.h>
-#include <AtomicCounter.h>
-#include <Nirvana/bitutils.h>
+#include "RoundBuffers.h"
 
 namespace Nirvana {
 namespace Core {
@@ -78,6 +77,7 @@ public:
 		Execute msg;
 		msg.executor = item.executor;
 		msg.deadline = deadline;
+		msg.scheduler_error = 0;
 		if (item.protection_domain)
 			item.protection_domain->port ().execute (msg);
 		else
@@ -86,7 +86,7 @@ public:
 
 	// Implementation of SchedulerAbstract.
 
-	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev);
+	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback);
 
 	virtual void core_free ();
 
@@ -105,21 +105,15 @@ private:
 	{
 	public:
 		InProcExecute (unsigned thread_count) :
-			buffer_idx_ (-1)
-		{
-			AtomicCounter::UIntType buf_cnt = clp2 ((AtomicCounter::UIntType)thread_count);
-			buffer_ = (Execute*)g_core_heap.allocate (nullptr, sizeof (Execute) * buf_cnt, 0);
-			mask_ = buf_cnt - 1;
-		}
+			buffers_ (thread_count)
+		{}
 
 		~InProcExecute ()
-		{
-			g_core_heap.release (buffer_, sizeof (Execute) * (mask_ + 1));
-		}
+		{}
 
 		void execute (const Execute& msg)
 		{
-			Execute* buffer = buffer_ + (buffer_idx_.increment () & mask_);
+			Execute* buffer = buffers_.next_buffer ();
 			*buffer = msg;
 			worker_threads_.post (*this, reinterpret_cast <OVERLAPPED*> (buffer), 0);
 		}
@@ -137,9 +131,7 @@ private:
 	private:
 		virtual void received (OVERLAPPED* ovl, DWORD size);
 
-		Execute* buffer_;
-		AtomicCounter buffer_idx_;
-		AtomicCounter::UIntType mask_;
+		RoundBuffers <Execute> buffers_;
 		WorkerThreads worker_threads_;
 	}
 	in_proc_execute_;
@@ -156,11 +148,19 @@ void SchedulerWindows::received (void* data, DWORD size)
 		break;
 
 	case SchedulerMessage::SCHEDULE:
-		{
-			Base::schedule (msg->msg.schedule.deadline, 
-											SchedulerItem (msg->msg.schedule.protection_domain, msg->msg.schedule.executor),
-											msg->msg.schedule.deadline_prev);
+	{
+		SchedulerItem item (msg->msg.schedule.protection_domain, msg->msg.schedule.executor);
+		try {
+			Base::schedule (msg->msg.schedule.deadline, item, msg->msg.schedule.deadline_prev);
+		} catch (...) {
+			// Fallback
+			Execute exec;
+			exec.executor = item.executor;
+			exec.deadline = msg->msg.schedule.deadline;
+			exec.scheduler_error = CORBA::SystemException::EC_NO_MEMORY;
+			item.protection_domain->port ().execute (exec);
 		}
+	}
 		break;
 
 	case SchedulerMessage::PROCESS_START:

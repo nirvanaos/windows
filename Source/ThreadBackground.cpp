@@ -13,11 +13,11 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	try {
 		thread.neutral_context().port ().convert_to_fiber ();
 	} catch (...) {
-		thread.execution_domain ()->on_crash ();
+		thread.exec_domain ()->on_crash ();
 		thread.on_thread_proc_end ();
 		return 0;
 	}
-	thread.execution_domain ()->switch_to ();
+	thread.exec_domain ()->switch_to ();
 	Core::ExecContext::neutral_context_loop ();
 	thread.neutral_context ().port ().convert_to_thread ();
 	thread.on_thread_proc_end ();

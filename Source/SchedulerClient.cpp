@@ -5,7 +5,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void SchedulerClient::schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev)
+void SchedulerClient::schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback)
 {
 	SchedulerMessage msg;
 	msg.tag = SchedulerMessage::SCHEDULE;
@@ -13,7 +13,19 @@ void SchedulerClient::schedule (DeadlineTime deadline, Executor& executor, Deadl
 	msg.msg.schedule.executor = (uint64_t)&executor;
 	msg.msg.schedule.deadline = deadline;
 	msg.msg.schedule.deadline_prev = deadline_prev;
-	send (msg);
+	try {
+		send (msg);
+	} catch (...) {
+		if (nothrow_fallback) {
+			// Fallback
+			Execute* exec = fallback_buffers_.next_buffer ();
+			exec->executor = msg.msg.schedule.executor;
+			exec->deadline = msg.msg.schedule.deadline;
+			exec->scheduler_error = CORBA::SystemException::EC_COMM_FAILURE;
+			enqueue_buffer ((OVERLAPPED*)exec);
+		} else
+			throw;
+	}
 }
 
 void SchedulerClient::core_free ()
@@ -38,7 +50,7 @@ void SchedulerClient::received (OVERLAPPED* ovl, DWORD size)
 	
 	Executor* executor = reinterpret_cast <Executor*> (exec.executor);
 	if (executor)
-		ThreadWorker::execute (*executor, exec.deadline);
+		ThreadWorker::execute (*executor, exec.deadline, (Word)exec.scheduler_error);
 }
 
 }

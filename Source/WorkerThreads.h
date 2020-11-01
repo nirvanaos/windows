@@ -14,7 +14,7 @@ namespace Core {
 namespace Windows {
 
 class WorkerThreads :
-	public ThreadPool <Core::ThreadWorker>
+	public ThreadPool <ImplStatic <Core::ThreadWorker> >
 {
 public:
 	WorkerThreads ()

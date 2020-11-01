@@ -12,9 +12,9 @@ namespace Port {
 class Scheduler
 {
 public:
-	static void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime old)
+	static void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime old, bool nothrow_fallback)
 	{
-		scheduler_->schedule (deadline, executor, old);
+		scheduler_->schedule (deadline, executor, old, nothrow_fallback);
 	}
 
 	static void core_free ()
