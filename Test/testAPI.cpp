@@ -705,4 +705,23 @@ TEST_F (TestAPI, ZeroedPage)
 	VirtualFree (mem, 0, MEM_RELEASE);
 }
 
+TEST_F (TestAPI, Mailslot)
+{
+	static const WCHAR name [] = L"\\\\.\\mailslot\\Nirvana\\TestAPI";
+	HANDLE ms_read = CreateMailslotW (name, sizeof (int), MAILSLOT_WAIT_FOREVER, nullptr);
+	ASSERT_TRUE (ms_read);
+	HANDLE ms_write = CreateFileW (name, GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	EXPECT_TRUE (ms_write);
+
+	int msg = 1;
+	DWORD cb;
+	EXPECT_TRUE (WriteFile (ms_write, &msg, sizeof (msg), &cb, nullptr));
+	EXPECT_TRUE (ReadFile (ms_read, &msg, sizeof (msg), &cb, nullptr));
+
+	CloseHandle (ms_read);
+	EXPECT_FALSE (WriteFile (ms_write, &msg, sizeof (msg), &cb, nullptr));
+
+	CloseHandle (ms_write);
+}
+
 }
