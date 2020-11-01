@@ -16,7 +16,10 @@ void SchedulerWindows::schedule (DeadlineTime deadline, Executor& executor, Dead
 	} catch (...) {
 		if (nothrow_fallback) {
 			// Fallback
-			Execute exec = { (uint64_t)&executor, deadline, CORBA::SystemException::EC_NO_MEMORY };
+			Execute exec;
+			exec.executor = (uint64_t)&executor;
+			exec.deadline = deadline;
+			exec.scheduler_error = CORBA::SystemException::EC_NO_MEMORY;
 			in_proc_execute_.execute (exec);
 		} else
 			throw;

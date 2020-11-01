@@ -16,6 +16,8 @@ namespace Windows {
 class WorkerThreads :
 	public ThreadPool <ImplStatic <Core::ThreadWorker> >
 {
+	typedef ImplStatic <Core::ThreadWorker> ThreadType;
+	typedef ThreadPool <ImplStatic <Core::ThreadWorker> > Base;
 public:
 	WorkerThreads ()
 	{
@@ -27,8 +29,6 @@ public:
 
 	void run (Runnable& startup, DeadlineTime deadline);
 	void shutdown ();
-
-private:
 };
 
 }

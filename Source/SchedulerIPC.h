@@ -80,9 +80,9 @@ public:
 
 	struct Execute
 	{
-		uint64_t executor;
+		// Max virtual address in Windows 64 is 0x7FFF'FFFFFFFF.
+		int64_t executor : 48, scheduler_error : 16;
 		DeadlineTime deadline;
-		int64_t scheduler_error;
 	};
 };
 

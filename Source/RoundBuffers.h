@@ -30,6 +30,11 @@ public:
 		return buffer_ + (buffer_idx_.increment () & mask_);
 	}
 
+	bool from_here (Buf* p) const
+	{
+		return buffer_ <= p && p < buffer_ + mask_ + 1;
+	}
+
 private:
 	Buf* buffer_;
 	AtomicCounter::UIntType mask_;

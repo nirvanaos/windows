@@ -7,6 +7,7 @@
 #include "MailslotReader.h"
 #include "WorkerThreads.h"
 #include "RoundBuffers.h"
+#include <PriorityQueue.h>
 
 namespace Nirvana {
 namespace Core {
@@ -41,10 +42,12 @@ public:
 private:
 	virtual void received (OVERLAPPED* ovl, DWORD size);
 	void send (const SchedulerMessage& msg);
+	void fallback (Executor& executor, DeadlineTime deadline, int error);
 	
 private:
 	uint64_t protection_domain_;
 	Mailslot scheduler_mailslot_;
+	PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> queue_;
 	WorkerThreads worker_threads_;
 	RoundBuffers <Execute> fallback_buffers_;
 };
