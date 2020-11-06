@@ -1,3 +1,4 @@
+// TODO: Create watchdog thread which will wait for system domain process termination.
 #include "SchedulerClient.h"
 #include <Thread.h>
 
