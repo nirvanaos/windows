@@ -15,8 +15,7 @@ namespace Port {
 class SysDomain
 {
 public:
-	class ProtDomainInfo :
-		private Windows::SchedulerIPC
+	class ProtDomainInfo
 	{
 	public:
 		ProtDomainInfo (uint32_t process_id) :
@@ -53,7 +52,8 @@ public:
 		}
 
 	private:
-		Windows::Mailslot execute_mailslot_;
+		HANDLE process_;
+		Windows::Mailslot scheduler_mailslot_;
 		uint32_t process_id_;
 	};
 };

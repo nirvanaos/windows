@@ -1,7 +1,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERABSTRACT_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERABSTRACT_H_
 
-#include "Executor.h"
+#include <Executor.h>
 
 namespace Nirvana {
 namespace Core {
@@ -10,9 +10,14 @@ namespace Windows {
 class SchedulerAbstract
 {
 public:
-	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime old, bool nothrow_fallback) = 0;
-	virtual void core_free () = 0;
-	virtual void shutdown () = 0;
+	virtual void create_item () = 0;
+	virtual void delete_item () NIRVANA_NOEXCEPT = 0;
+	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT = 0;
+	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) = 0;
+	virtual void shutdown () NIRVANA_NOEXCEPT = 0;
+
+protected:
+	virtual void execute () NIRVANA_NOEXCEPT = 0;
 };
 
 }

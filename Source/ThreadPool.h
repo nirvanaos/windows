@@ -6,105 +6,45 @@
 #define NIRVANA_CORE_WINDOWS_THREADPOOL_H_
 
 #include <Heap.h>
-#include "CompletionPortReceiver.h"
+#include "../Port/SystemInfo.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-/// Windows I/O completion port wrapper.
-class CompletionPort
-{
-private:
-	/// Deprecated
-	CompletionPort (const CompletionPort&);
-	/// Deprecated
-	CompletionPort& operator = (const CompletionPort&);
-
-public:
-	CompletionPort ();
-
-	~CompletionPort ()
-	{
-		if (completion_port_)
-			CloseHandle (completion_port_);
-	}
-
-	/// Add a CompletionPortReceiver object listening this completion port.
-	void add_receiver (HANDLE hf, CompletionPortReceiver& receiver)
-	{
-		create (hf, &receiver);
-	}
-
-	/// Post an I/O completion packet to an I/O completion port.
-	void post (CompletionPortReceiver& receiver, OVERLAPPED* param, DWORD size)
-	{
-		verify (PostQueuedCompletionStatus (completion_port_, size, (ULONG_PTR)&receiver, param));
-	}
-
-	/// On close completion port all threads will return with `ERROR_ABANDONED_WAIT_0` error code.
-	virtual void terminate ()
-	{
-		HANDLE port = completion_port_;
-		completion_port_ = nullptr;
-		if (port)
-			CloseHandle (port);
-	}
-
-	unsigned thread_count () const
-	{
-		return thread_count_;
-	}
-
-	/// Worker thread procedure.
-	void thread_proc ();
-
-protected:
-	/// Ensure that port exists.
-	void start ()
-	{
-		if (!completion_port_)
-			create (INVALID_HANDLE_VALUE, nullptr);
-	}
-
-private:
-	bool dispatch ();
-	void create (HANDLE hfile, CompletionPortReceiver* receiver);
-
-private:
-	HANDLE completion_port_;
-	const unsigned thread_count_;
-};
-
-//! Template class for thread pool controlled by a completion port.
-//! \tparam Thr Thread class.
-//! Thread constructor gets reference to CompletionPort as parameter.
-//! Thread class must have method Thread::create(int priority);
-//! Thread procedure must call CompletionPort::thread_proc() method.
-
-template <class Thr>
+/// Template class for thread pool controlled by a master object.
+/// \tparam Master Thread controller class.
+/// \tparam Worker Thread class.
+/// Worker constructor gets reference to Master as parameter.
+/// Worker class must have method Worker::create(int priority);
+template <class Master, class Worker>
 class ThreadPool :
-	public CompletionPort
+	public Master
 {
-	typedef CoreAllocator <Thr> Allocator;
+	typedef CoreAllocator <Worker> Allocator;
 
 public:
+	static unsigned int thread_count ()
+	{
+		return Port::g_system_info.hardware_concurrency ();
+	}
+
 	ThreadPool () :
-		CompletionPort (),
+		Master (),
 		threads_ (nullptr)
 	{
 		Allocator allocator;
-		threads_ = allocator.allocate (CompletionPort::thread_count ());
-		Thr* p = threads_;
+		threads_ = allocator.allocate (thread_count ());
+		Worker* p = threads_;
 		try {
-			for (Thr* end = p + CompletionPort::thread_count (); p != end; ++p) {
-				new (p) Thr (std::ref (*static_cast <CompletionPort*> (this)));
+			for (Worker* end = p + thread_count (); p != end; ++p) {
+				new (p) Worker (std::ref (static_cast <Master&> (*this)));
 			}
 		} catch (...) {
 			while (p != threads_) {
-				(--p)->~Thr ();
+				(--p)->~Worker ();
 			}
-			allocator.deallocate (threads_, CompletionPort::thread_count ());
+			allocator.deallocate (threads_, thread_count ());
 			throw;
 		}
 	}
@@ -112,42 +52,37 @@ public:
 	~ThreadPool ()
 	{
 		Allocator allocator;
-		for (Thr* p = threads_, *end = p + CompletionPort::thread_count (); p != end; ++p) {
-			p->~Thr ();
+		for (Worker* p = threads_, *end = p + thread_count (); p != end; ++p) {
+			p->~Worker ();
 		}
-		allocator.deallocate (threads_, CompletionPort::thread_count ());
+		allocator.deallocate (threads_, thread_count ());
 	}
 
-	Thr* threads ()
+	Worker* threads ()
 	{
 		return threads_;
-	}
-
-	unsigned thread_count () const
-	{
-		return CompletionPort::thread_count ();
 	}
 
 	//! Create and start threads.
 	void start (int priority)
 	{
-		CompletionPort::start ();
-		for (Thr* p = threads_, *end = p + thread_count (); p != end; ++p) {
+		Master::start ();
+		for (Worker* p = threads_, *end = p + thread_count (); p != end; ++p) {
 			p->create (p, priority);
 		}
 	}
 
 	//! Terminate threads.
-	virtual void terminate ()
+	void terminate ()
 	{
-		CompletionPort::terminate ();
-		for (Thr* p = threads_, *end = p + thread_count (); p != end; ++p) {
+		Master::terminate ();
+		for (Worker* p = threads_, *end = p + thread_count (); p != end; ++p) {
 			p->port ().join ();
 		}
 	}
 
 private:
-	Thr* threads_;
+	Worker* threads_;
 };
 
 }

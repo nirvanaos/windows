@@ -2,23 +2,22 @@
 // Windows implementation.
 // ThreadPool template class.
 
-#include "ThreadPool.h"
-#include "SystemInfo.h"
+#include "CompletionPort.h"
+#include <Nirvana/throw_exception.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
 CompletionPort::CompletionPort () :
-	completion_port_ (nullptr),
-	thread_count_ (SystemInfo::hardware_concurrency ())
+	completion_port_ (nullptr)
 {}
 
 void CompletionPort::create (HANDLE hfile, CompletionPortReceiver* receiver)
 {
 	HANDLE port = CreateIoCompletionPort (hfile, completion_port_, (ULONG_PTR)receiver, thread_count ());
 	if (!port)
-		throw ::CORBA::INITIALIZE ();
+		throw_INITIALIZE ();
 	assert (completion_port_ == nullptr || completion_port_ == port);
 	completion_port_ = port;
 }
@@ -40,7 +39,7 @@ inline bool CompletionPort::dispatch ()
 				break;
 
 			default:
-				throw ::CORBA::INTERNAL ();
+				throw_INTERNAL ();
 			}
 		}
 	}

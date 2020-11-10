@@ -2,9 +2,9 @@
 // Windows implementation.
 // ThreadWorkerBase class.
 
-#include "ThreadWorkerInternal.h"
+#include "ThreadWorker.h"
+#include "TaskMaster.h"
 #include "ExecContextInternal.h"
-#include <ExecDomain.h>
 
 namespace Nirvana {
 namespace Core {
@@ -13,8 +13,7 @@ namespace Port {
 struct ThreadWorker::MainFiberParam
 {
 	Core_var <ExecDomain> main_domain;
-	Windows::ThreadPoolable* worker_thread;
-	Runnable* startup;
+	Windows::TaskMaster* master;
 	DeadlineTime deadline;
 };
 
@@ -23,26 +22,27 @@ DWORD WINAPI ThreadWorker::thread_proc (ThreadWorker* _this)
 	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*_this);
 	current_ = &thread;
 	thread.neutral_context ().port ().convert_to_fiber ();
-	ThreadPoolable::thread_proc (_this);
+	_this->master_.thread_proc ();
 	thread.neutral_context ().port ().convert_to_thread ();
 	return 0;
 }
 
-void CALLBACK ThreadWorker::main_fiber_proc (void* p)
+void CALLBACK ThreadWorker::main_fiber_proc (MainFiberParam* param)
 {
-	MainFiberParam* param = (MainFiberParam*)p;
 	ExecDomain* main_domain = param->main_domain;
-	param->main_domain = nullptr; // Place my fiber to pool for reuse
 	// Schedule startup runnable
-	ExecDomain::async_call (*param->startup, param->deadline, nullptr, nullptr);
-	ThreadPoolable::thread_proc (param->worker_thread);
+	main_domain->spawn (param->deadline, nullptr);
+	// Release main fiber to pool for reuse.
+	param->main_domain.reset ();
+	// Do worker thread proc.
+	param->master->thread_proc ();
 	// Switch back to main fiber.
 	main_domain->switch_to ();
 }
 
 void ThreadWorker::create ()
 {
-	Windows::ThreadPoolable::create (this, Windows::WORKER_THREAD_PRIORITY);
+	Thread::create (this, Windows::WORKER_THREAD_PRIORITY);
 }
 
 void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
@@ -50,21 +50,20 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	// Convert main thread to fiber
 	void* main_fiber = ConvertThreadToFiber (nullptr);
 	if (!main_fiber)
-		throw CORBA::NO_MEMORY ();
+		throw_NO_MEMORY ();
 
 	MainFiberParam param;
+
 	// Convert main thread context into execution domain
-	param.main_domain = ExecDomain::create (main_fiber);
+	param.main_domain = ExecDomain::create_main (startup, main_fiber);
 
 	// Save for detach
 	ExecDomain& main_domain = *param.main_domain;
 
 	// Create fiber for neutral context
-	param.worker_thread = this;
-	param.startup = &startup;
+	param.master = &master_;
 	param.deadline = deadline;
-
-	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, main_fiber_proc, &param);
+	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_fiber_proc, &param);
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
 

@@ -3,6 +3,7 @@
 // SchedulerWindows class.
 
 #include "SchedulerWindows.h"
+#include "../Port/Scheduler.h"
 #include <Thread.h>
 
 namespace Nirvana {
@@ -34,7 +35,8 @@ void SchedulerWindows::core_free ()
 void SchedulerWindows::InProcExecute::received (OVERLAPPED* ovl, DWORD size)
 {
 	Execute* exec = reinterpret_cast <Execute*> (ovl);
-	ThreadWorker::execute (*reinterpret_cast <Executor*> (exec->executor), exec->deadline, (Word)exec->scheduler_error);
+	ThreadWorker::execute (*reinterpret_cast <Executor*> (exec->executor), (Word)exec->scheduler_error);
+	scheduler ().core_free ();
 }
 
 }

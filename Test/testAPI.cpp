@@ -1,9 +1,9 @@
 // Testing Windows API memory management functions
 
-#include <core.h>
 #include <gtest/gtest.h>
 #include <windows.h>
 #include <Psapi.h>
+#include <string>
 #include <set>
 
 #define PAGE_SIZE 4096
@@ -722,6 +722,37 @@ TEST_F (TestAPI, Mailslot)
 	EXPECT_FALSE (WriteFile (ms_write, &msg, sizeof (msg), &cb, nullptr));
 
 	CloseHandle (ms_write);
+}
+
+TEST_F (TestAPI, Semaphore)
+{
+	HANDLE hsem = CreateSemaphoreW (nullptr, 0, 2, nullptr);
+	ASSERT_TRUE (hsem);
+	
+	EXPECT_EQ (WaitForSingleObject (hsem, 0), WAIT_TIMEOUT);
+
+	wstring cmd = L"ReleaseSemaphore.exe ";
+	cmd += to_wstring (GetCurrentProcessId ());
+	cmd += L' ';
+	cmd += to_wstring ((uintptr_t)hsem);
+
+	STARTUPINFO si;
+	memset (&si, 0, sizeof (si));
+	si.cb = sizeof (si);
+	PROCESS_INFORMATION pi;
+	BOOL ok = CreateProcessW (nullptr, (WCHAR*)cmd.c_str (), nullptr, nullptr, FALSE, NORMAL_PRIORITY_CLASS, nullptr, nullptr, &si, &pi);
+	ASSERT_TRUE (ok);
+	EXPECT_TRUE (CloseHandle (pi.hThread));
+
+	WaitForSingleObject (pi.hProcess, INFINITE);
+
+	DWORD ret;
+	EXPECT_TRUE (GetExitCodeProcess (pi.hProcess, &ret));
+	EXPECT_EQ (ret, 0);
+
+	EXPECT_EQ (WaitForSingleObject (hsem, 0), WAIT_OBJECT_0);
+
+	CloseHandle (hsem);
 }
 
 }

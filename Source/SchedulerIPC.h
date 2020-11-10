@@ -5,85 +5,83 @@
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERIPC_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERIPC_H_
 
-#include <core.h>
-
 #define OBJ_NAME_PREFIX L"Nirvana"
 
 #define SCHEDULER_MAILSLOT_NAME L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\scheduler_mailslot"
-#define EXECUTE_MAILSLOT_PREFIX L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\execute_mailslot"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class SchedulerIPC
+struct SchedulerMessage
 {
-public:
+	/// A new process (protection domain) is started.
+	/// 
 	struct ProcessStart
 	{
-		uint64_t protection_domain;
 		uint32_t process_id;
-	};
 
-	struct ProcessStop
-	{
-		uint64_t protection_domain;
-		uint32_t process_id;
+		/// Handle of the semaphore.
+		/// SysDomain asynchronously calls DuplicateHandle and sends resulting
+		/// handle to protection domain mailslot as "executor_id".
+		/// SchedulerSlave uses it to identify itself in the Schedule message.
+		uint32_t semaphore_handle : 31,
+			x64 : 1;
 	};
 
 	struct Schedule
 	{
-		uint64_t protection_domain;
-		uint64_t executor;
+		uint32_t executor_id;
+		DeadlineTime deadline;
+	};
+
+	struct Reschedule
+	{
+		uint32_t protection_domain;
 		DeadlineTime deadline;
 		DeadlineTime deadline_prev;
 	};
 
 	struct CoreFree
-	{};
-
-	struct SchedulerMessage
 	{
-		enum int64_t
-		{
-			CORE_FREE,
-			SCHEDULE,
-			PROCESS_START,
-			PROCESS_STOP
-		} tag;
-
-		union
-		{
-			CoreFree core_free;
-			Schedule schedule;
-			ProcessStart process_start;
-			ProcessStop process_stop;
-		} msg;
-
-		uint32_t size () const
-		{
-			static const uint32_t sizes [5] = {
-				sizeof (tag) + sizeof (msg.core_free),
-				sizeof (tag) + sizeof (msg.schedule),
-				sizeof (tag) + sizeof (msg.process_start),
-				sizeof (tag) + sizeof (msg.process_stop)
-			};
-
-			return sizes [tag];
-		}
+		uint32_t unused;
 	};
 
-	struct ProcessStartAck
+	union Buffer
 	{
-		uint64_t error;
+		CoreFree core_free;
+		Schedule schedule;
+		Reschedule reschedule;
+		ProcessStart process_start;
+	};
+};
+
+struct MsgFromScheduler
+{
+	struct ProcessStart
+	{
+		int32_t error;
+		Port::ObjectAddress system_domain;
 	};
 
 	struct Execute
+	{};
+
+	enum int64_t
 	{
-		// Max virtual address in Windows 64 is 0x7FFF'FFFFFFFF.
-		int64_t executor : 48, scheduler_error : 16;
-		DeadlineTime deadline;
-	};
+		PROCESS_START,
+		SCHEDULE,
+		PROCESS_START,
+		PROCESS_STOP
+	}
+	tag;
+
+	union
+	{
+		ProcessStart process_start;
+		Execute execute;
+	}
+	msg;
 };
 
 }

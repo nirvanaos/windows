@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_BUFFERPOOL_H_
 #define NIRVANA_CORE_WINDOWS_BUFFERPOOL_H_
 
-#include "ThreadPool.h"
+#include "CompletionPortReceiver.h"
 
 namespace Nirvana {
 namespace Core {
@@ -14,7 +14,7 @@ namespace Windows {
 /// Derived class should override void received() method to process data.
 /// Overridden method should get data pointer by call data(ovl), read the data
 /// and immediatelly call enqueue_buffer() method.
-class BufferPool :
+class NIRVANA_NOVTABLE BufferPool :
 	public CompletionPortReceiver
 {
 private:

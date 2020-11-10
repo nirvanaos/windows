@@ -1,6 +1,5 @@
 // Nirvana project.
 // Windows implementation.
-// ThreadPoolable class. Thread object for ThreadPool.
 #ifndef NIRVANA_CORE_THREADPOOLABLE_H_
 #define NIRVANA_CORE_THREADPOOLABLE_H_
 
@@ -12,6 +11,7 @@ namespace Windows {
 
 class CompletionPort;
 
+/// ThreadPoolable class. Thread for thread pool controlled by CompletionPort.
 class ThreadPoolable :
 	public Port::Thread
 {

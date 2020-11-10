@@ -3,8 +3,6 @@
 // Worker threads.
 
 #include "WorkerThreads.h"
-#include <CORBA/Exception.h>
-#include <Scheduler.h>
 
 namespace Nirvana {
 namespace Core {
@@ -21,12 +19,9 @@ void WorkerThreads::run (Runnable& startup, DeadlineTime deadline)
 	threads ()->port ().run_main (startup, deadline);
 
 	// Wait termination of all other worker threads
-	Base::terminate ();
-}
-
-void WorkerThreads::shutdown ()
-{
-	CompletionPort::terminate ();
+	for (ThreadType* p = threads () + 1, *end = threads () + thread_count (); p != end; ++p) {
+		p->port ().join ();
+	}
 }
 
 }

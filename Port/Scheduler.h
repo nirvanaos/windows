@@ -6,23 +6,32 @@
 
 namespace Nirvana {
 namespace Core {
-
 namespace Port {
 
 class Scheduler
 {
 public:
-	static void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime old, bool nothrow_fallback)
+	static void create_item ()
 	{
-		scheduler_->schedule (deadline, executor, old, nothrow_fallback);
+		return scheduler_->create_item ();
 	}
 
-	static void core_free ()
+	static void delete_item () NIRVANA_NOEXCEPT
 	{
-		scheduler_->core_free ();
+		scheduler_->delete_item ();
 	}
 
-	static void shutdown ()
+	static void schedule (const DeadlineTime& deadline, Executor& executor) NIRVANA_NOEXCEPT
+	{
+		scheduler_->schedule (deadline, executor);
+	}
+
+	static bool reschedule (const DeadlineTime& deadline, Executor& executor, const DeadlineTime& old) NIRVANA_NOEXCEPT
+	{
+		return scheduler_->reschedule (deadline, executor, old);
+	}
+
+	static void shutdown () NIRVANA_NOEXCEPT
 	{
 		scheduler_->shutdown ();
 	}
@@ -30,7 +39,7 @@ public:
 	static void run_system_domain (Runnable& startup, DeadlineTime deadline);
 	static void run_protection_domain (uint64_t protection_domain, Runnable& startup, DeadlineTime deadline);
 
-private:
+protected:
 	static Windows::SchedulerAbstract* scheduler_;
 };
 

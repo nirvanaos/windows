@@ -21,15 +21,17 @@ ExecContext::ExecContext (bool neutral) :
 
 void __stdcall ExecContext::fiber_proc (void*)
 {
-	Core::Thread& thread = Core::Thread::current ();
-	ExecDomain* ed = thread.exec_domain ();
-	assert (ed);
-	DWORD exc;
-	__try {
-		ed->execute_loop ();
-	} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
-		thread.exec_domain (nullptr);
-		ed->on_crash (EXCEPTION_ABORT == exc ? CORBA::SystemException::EC_INTERNAL : CORBA::SystemException::EC_UNKNOWN);
+	for (;;) { // The fiber procedure never completes.
+		Core::Thread& thread = Core::Thread::current ();
+		ExecDomain* ed = thread.exec_domain ();
+		assert (ed);
+		DWORD exc;
+		__try {
+			ed->execute_loop ();
+		} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
+			thread.exec_domain (nullptr);
+			ed->on_crash (EXCEPTION_ABORT == exc ? CORBA::SystemException::EC_INTERNAL : CORBA::SystemException::EC_UNKNOWN);
+		}
 	}
 }
 

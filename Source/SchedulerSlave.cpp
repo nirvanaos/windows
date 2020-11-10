@@ -91,6 +91,7 @@ void SchedulerClient::received (OVERLAPPED* ovl, DWORD size)
 		executor = reinterpret_cast <Executor*> (exec.executor);
 	}
 	ThreadWorker::execute (*executor, exec.deadline, (Word)exec.scheduler_error);
+	core_free ();
 }
 
 }

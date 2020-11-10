@@ -2,18 +2,16 @@
 // Windows implementation.
 // SchedulerWindows class. 
 
-#ifndef NIRVANA_CORE_WINDOWS_SCHEDULERWINDOWS_H_
-#define NIRVANA_CORE_WINDOWS_SCHEDULERWINDOWS_H_
+#ifndef NIRVANA_CORE_WINDOWS_SCHEDULERMASTER_H_
+#define NIRVANA_CORE_WINDOWS_SCHEDULERMASTER_H_
 
-#include "SchedulerIPC.h"
 #include "PostOffice.h"
 #include "Mailslot.h"
 #include "ThreadPoolable.h"
-#include "SchedulerAbstract.h"
 #include "WorkerThreads.h"
-#include <SysDomain.h>
 #include <SchedulerImpl.h>
 #include "RoundBuffers.h"
+#include "SchedulerIPC.h"
 
 namespace Nirvana {
 namespace Core {
@@ -21,40 +19,20 @@ namespace Windows {
 
 struct SchedulerItem
 {
-	uint64_t executor;
-	SysDomain::ProtDomainInfo* protection_domain;
-
-	SchedulerItem ()
-	{}
-
-	SchedulerItem (uint64_t prot_domain, uint64_t executor) :
-		protection_domain (reinterpret_cast <SysDomain::ProtDomainInfo*> (prot_domain))
-	{
-		this->executor = executor;
-	}
-
-	SchedulerItem (Executor& executor) :
-		protection_domain (nullptr)
-	{
-		this->executor = (uint64_t)&executor;
-	}
+	
+	uint32_t semaphore;
 
 	bool operator < (const SchedulerItem& rhs) const
 	{
-		// Compare executors first to avoid grouping of the processes.
-		if (executor < rhs.executor)
-			return true;
-		else if (executor > rhs.executor)
-			return false;
-		return protection_domain < rhs.protection_domain;
+		// Each item must be unique even if executors are the same.
+		return this < &rhs;
 	}
 };
 
-class SchedulerWindows :
-	public SchedulerAbstract,
-	public SchedulerIPC,
-	public PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, SCHEDULER_THREAD_PRIORITY>,
-	public SchedulerImpl <SchedulerWindows, SchedulerItem>
+class SchedulerMaster :
+	public PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), ThreadPoolable, SCHEDULER_THREAD_PRIORITY>,
+	public SchedulerImpl <SchedulerMaster, SchedulerItem>,
+	public WorkerThreads
 {
 public:
 	typedef SchedulerImpl <SchedulerWindows, SchedulerItem> Base;
@@ -88,7 +66,7 @@ public:
 
 	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback);
 
-	virtual void core_free ();
+	void core_free ();
 
 	virtual void shutdown ()
 	{
@@ -99,6 +77,12 @@ public:
 	void received (void* data, DWORD size);
 
 private:
+	static SchedulerWindows& scheduler ()
+	{
+		assert (scheduler_);
+		return static_cast <SchedulerWindows&> (*scheduler_);
+	}
+
 	/// Helper class for executing in the current process.
 	class InProcExecute :
 		public CompletionPortReceiver

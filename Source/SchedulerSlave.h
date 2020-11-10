@@ -1,5 +1,5 @@
-#ifndef NIRVANA_CORE_WINDOWS_SCHEDULERCLIENT_H_
-#define NIRVANA_CORE_WINDOWS_SCHEDULERCLIENT_H_
+#ifndef NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
+#define NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
 
 #include "SchedulerIPC.h"
 #include "SchedulerAbstract.h"
@@ -13,13 +13,12 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class SchedulerClient :
+class SchedulerSlave :
 	public SchedulerAbstract,
-	private SchedulerIPC,
 	public MailslotReader
 {
 public:
-	SchedulerClient (uint64_t protection_domain);
+	SchedulerSlave (uint64_t protection_domain);
 
 	void run (Runnable& startup, DeadlineTime deadline)
 	{
@@ -31,7 +30,7 @@ public:
 
 	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback);
 
-	virtual void core_free ();
+	void core_free ();
 
 	virtual void shutdown ()
 	{
@@ -53,7 +52,7 @@ private:
 };
 
 inline
-SchedulerClient::SchedulerClient (uint64_t protection_domain) :
+SchedulerSlave::SchedulerSlave (uint64_t protection_domain) :
 	protection_domain_ (protection_domain),
 	fallback_buffers_ (worker_threads_.thread_count ())
 {

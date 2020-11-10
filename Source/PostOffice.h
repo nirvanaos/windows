@@ -7,7 +7,8 @@
 #define NIRVANA_CORE_WINDOWS_POSTOFFICE_H_
 
 #include "MailslotReader.h"
-#include <Nirvana/real_copy.h>
+#include "ThreadPoolable.h"
+#include "ThreadPool.h"
 
 namespace Nirvana {
 namespace Core {
@@ -20,13 +21,13 @@ namespace Windows {
 /// Thread constructor gets reference to PostOfficeBase as parameter./// \tparam PRIORITY Priority of the worker threads.
 
 /// Thread procedure must call PostOffice::dispatch() method while it returns true.
-template <class T, unsigned BUF_SIZE, class Thr, int PRIORITY>
+template <class T, unsigned BUF_SIZE, int PRIORITY>
 class PostOffice :
 	public MailslotReader,
-	public ThreadPool <Thr>
+	public ThreadPool <CompletionPort, ThreadPoolable>
 {
 	static const size_t MAX_WORDS = (BUF_SIZE + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR);
-	typedef ThreadPool <Thr> Pool;
+	typedef ThreadPool <CompletionPort, ThreadPoolable> Pool;
 
 public:
 	/// Derived class must override this method to receive messages.

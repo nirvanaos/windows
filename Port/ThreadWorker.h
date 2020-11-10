@@ -6,25 +6,29 @@
 #ifndef NIRVANA_CORE_PORT_THREADWORKER_H_
 #define NIRVANA_CORE_PORT_THREADWORKER_H_
 
-#include "../Source/ThreadPoolable.h"
+#include "Thread.h"
 
 namespace Nirvana {
 namespace Core {
 
 class Runnable;
 
+namespace Windows {
+class TaskMaster;
+}
+
 namespace Port {
 
 class ThreadWorker :
-	public Windows::ThreadPoolable
+	public Thread
 {
 public:
 	void run_main (Runnable& startup, DeadlineTime deadline);
 	void create ();
 
 protected:
-	ThreadWorker (Windows::CompletionPort& completion_port) :
-		ThreadPoolable (completion_port)
+	ThreadWorker (Windows::TaskMaster& master) :
+		master_ (master)
 	{}
 
 	~ThreadWorker ();
@@ -32,8 +36,11 @@ protected:
 private:
 	friend class Thread;
 	static unsigned long __stdcall thread_proc (ThreadWorker* _this);
-	static void __stdcall main_fiber_proc (void* p);
 	struct MainFiberParam;
+	static void __stdcall main_fiber_proc (MainFiberParam* param);
+
+private:
+	Windows::TaskMaster& master_;
 };
 
 }
