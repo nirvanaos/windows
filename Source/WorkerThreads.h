@@ -15,9 +15,9 @@ namespace Core {
 namespace Windows {
 
 class WorkerThreads :
-	public ThreadPool <TaskMaster, ImplStatic <Core::ThreadWorker> >
+	public ThreadPool <TaskMaster, Core::ThreadWorker>
 {
-	typedef ImplStatic <Core::ThreadWorker> ThreadType;
+	typedef Core::ThreadWorker ThreadType;
 	typedef ThreadPool <TaskMaster, ThreadType > Base;
 public:
 	void run (Runnable& startup, DeadlineTime deadline);

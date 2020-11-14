@@ -30,14 +30,9 @@ void __stdcall ExecContext::fiber_proc (void*)
 			ed->execute_loop ();
 		} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
 			thread.exec_domain (nullptr);
-			ed->on_crash (EXCEPTION_ABORT == exc ? CORBA::SystemException::EC_INTERNAL : CORBA::SystemException::EC_UNKNOWN);
+			ed->on_exec_domain_crash ();
 		}
 	}
-}
-
-void ExecContext::abort ()
-{
-	RaiseException (EXCEPTION_ABORT, EXCEPTION_NONCONTINUABLE_EXCEPTION, 0, nullptr);
 }
 
 }

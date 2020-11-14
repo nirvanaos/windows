@@ -39,9 +39,6 @@ public:
 			DeleteFiber (fiber_);
 	}
 
-	/// Abort current context due to a unrecoverable error.
-	static void abort ();
-
 protected:
 	/// Switch to this context.
 	void switch_to () NIRVANA_NOEXCEPT

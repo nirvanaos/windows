@@ -17,7 +17,7 @@ public:
 	{
 		unsigned buf_cnt = clp2 (buf_cnt_min);
 		buffer_ = (Buf*)g_core_heap.allocate (nullptr, sizeof (Buf) * buf_cnt, 0);
-		mask_ = (AtomicCounter::UIntType)buf_cnt - 1;
+		mask_ = (AtomicCounter <false>::IntegralType)buf_cnt - 1;
 	}
 
 	~RoundBuffers ()
@@ -37,8 +37,8 @@ public:
 
 private:
 	Buf* buffer_;
-	AtomicCounter::UIntType mask_;
-	AtomicCounter buffer_idx_;
+	AtomicCounter <false>::IntegralType mask_;
+	AtomicCounter <false> buffer_idx_;
 };
 
 }

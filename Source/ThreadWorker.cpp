@@ -14,7 +14,6 @@ struct ThreadWorker::MainFiberParam
 {
 	Core_var <ExecDomain> main_domain;
 	Windows::TaskMaster* master;
-	DeadlineTime deadline;
 };
 
 DWORD WINAPI ThreadWorker::thread_proc (ThreadWorker* _this)
@@ -31,7 +30,7 @@ void CALLBACK ThreadWorker::main_fiber_proc (MainFiberParam* param)
 {
 	ExecDomain* main_domain = param->main_domain;
 	// Schedule startup runnable
-	main_domain->spawn (param->deadline, nullptr);
+	main_domain->spawn (nullptr);
 	// Release main fiber to pool for reuse.
 	param->main_domain.reset ();
 	// Do worker thread proc.
@@ -55,14 +54,13 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	MainFiberParam param;
 
 	// Convert main thread context into execution domain
-	param.main_domain = ExecDomain::create_main (startup, main_fiber);
+	param.main_domain = ExecDomain::create_main (deadline, startup, main_fiber);
 
 	// Save for detach
 	ExecDomain& main_domain = *param.main_domain;
 
 	// Create fiber for neutral context
 	param.master = &master_;
-	param.deadline = deadline;
 	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_fiber_proc, &param);
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
