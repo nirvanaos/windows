@@ -14,8 +14,9 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+template <class Master>
 class WorkerThreads :
-	public ThreadPool <TaskMaster, Core::ThreadWorker>
+	public ThreadPool <Master, Core::ThreadWorker>
 {
 	typedef Core::ThreadWorker ThreadType;
 	typedef ThreadPool <TaskMaster, ThreadType> Base;

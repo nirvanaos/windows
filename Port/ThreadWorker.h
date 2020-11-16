@@ -14,7 +14,8 @@ namespace Core {
 class Runnable;
 
 namespace Windows {
-class TaskMaster;
+class WorkerSemaphore;
+class CompletionPort;
 }
 
 namespace Port {

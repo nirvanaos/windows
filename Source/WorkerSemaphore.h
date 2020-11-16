@@ -1,5 +1,5 @@
-#ifndef NIRVANA_CORE_PORT_TASKMASTER_H_
-#define NIRVANA_CORE_PORT_TASKMASTER_H_
+#ifndef NIRVANA_CORE_PORT_WORKER_SEMAPHORE_H_
+#define NIRVANA_CORE_PORT_WORKER_SEMAPHORE_H_
 
 #include "SchedulerAbstract.h"
 #include "../Port/SystemInfo.h"
@@ -9,7 +9,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class TaskMaster : public SchedulerAbstract
+class WorkerSemaphore : public SchedulerAbstract
 {
 public:
 	void thread_proc ()
@@ -20,19 +20,26 @@ public:
 	}
 
 protected:
-	TaskMaster ()
+	WorkerSemaphore ()
 	{
 		handles_ [0] = nullptr;
 		verify (handles_ [1] = CreateEventW (nullptr, true, FALSE, nullptr));
 	}
 
-	~TaskMaster ()
+	~WorkerSemaphore ()
 	{
 		for (HANDLE* p = handles_; p != std::end (handles_); ++p) {
 			HANDLE h = p;
 			if (h)
 				CloseHandle (h);
 		}
+	}
+
+	void semaphore (HANDLE sem)
+	{
+		if (handles_ [WORKER_SEMAPHORE])
+			CloseHandle (handles_ [WORKER_SEMAPHORE]);
+		handles_ [WORKER_SEMAPHORE] = sem;
 	}
 
 	void start ()
@@ -50,13 +57,6 @@ protected:
 	virtual void shutdown () NIRVANA_NOEXCEPT
 	{
 		terminate ();
-	}
-
-	void semaphore (HANDLE sem)
-	{
-		if (handles_ [WORKER_SEMAPHORE])
-			CloseHandle (handles_ [WORKER_SEMAPHORE]);
-		handles_ [WORKER_SEMAPHORE] = sem;
 	}
 
 private:

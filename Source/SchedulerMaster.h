@@ -11,26 +11,54 @@
 #include <SchedulerImpl.h>
 #include "SchedulerMessage.h"
 #include "MessageBroker.h"
+#include "RoundBuffers.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-struct SchedulerItem
+class SchedulerItem
 {
-	uint32_t semaphore;
+public:
+	SchedulerItem (uint32_t executor_id) :
+		executor_ (executor_id | IS_SEMAPHORE)
+	{}
+
+	SchedulerItem (Executor& executor) :
+		executor_ ((uintptr_t)&executor)
+	{}
+
+	uintptr_t is_semaphore () const
+	{
+		return executor_ & IS_SEMAPHORE;
+	}
+
+	HANDLE semaphore () const
+	{
+		assert (is_semaphore ());
+		return (HANDLE)(executor_ & ~IS_SEMAPHORE);
+	}
+
+	Executor& executor () const
+	{
+		assert (!is_semaphore ());
+		return *(Executor*)executor_;
+	}
 
 	bool operator < (const SchedulerItem& rhs) const
 	{
 		// Each item must be unique even if executors are the same.
 		return this < &rhs;
 	}
+
+private:
+	static const uintptr_t IS_SEMAPHORE = 1 << sizeof (uintptr_t) * 8 - 1;
+	uintptr_t executor_;
 };
 
 class SchedulerMaster :
 	public PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY>,
-	public SchedulerImpl <SchedulerMaster, SchedulerItem>,
-	public WorkerThreads
+	public SchedulerImpl <SchedulerMaster, SchedulerItem>
 {
 public:
 	typedef SchedulerImpl <SchedulerMaster, SchedulerItem> Base;
@@ -66,6 +94,43 @@ private:
 	}
 
 private:
+	/// Helper class for executing in the current process.
+	class InProcExecute :
+		public CompletionPortReceiver
+	{
+	public:
+		InProcExecute (unsigned thread_count) :
+			buffers_ (thread_count)
+		{}
+
+		~InProcExecute ()
+		{}
+
+		void execute (const Execute& msg)
+		{
+			Execute* buffer = buffers_.next_buffer ();
+			*buffer = msg;
+			worker_threads_.post (*this, reinterpret_cast <OVERLAPPED*> (buffer), 0);
+		}
+
+		void run (Runnable& startup, DeadlineTime deadline)
+		{
+			worker_threads_.run (startup, deadline);
+		}
+
+		void shutdown ()
+		{
+			worker_threads_.shutdown ();
+		}
+
+	private:
+		virtual void received (OVERLAPPED* ovl, DWORD size);
+
+		RoundBuffers <Execute> buffers_;
+		WorkerThreads worker_threads_;
+	}
+	in_proc_execute_;
+
 	MessageBroker message_broker_;
 };
 
@@ -93,38 +158,13 @@ void SchedulerMaster::received (void* data, DWORD size)
 			Base::schedule (msg->deadline, msg->executor_id);
 		}
 		break;
-	}
-	SchedulerMessage* msg = (SchedulerMessage*)data;
 
-	switch (msg->tag) {
-	case SchedulerMessage::CORE_FREE:
-		Base::core_free ();
-		break;
-
-	case SchedulerMessage::SCHEDULE:
-	{
-		SchedulerItem item (msg->msg.schedule.protection_domain, msg->msg.schedule.executor);
-		try {
-			Base::schedule (msg->msg.schedule.deadline, item, msg->msg.schedule.deadline_prev);
-		} catch (...) {
-			// Fallback
-			Execute exec;
-			exec.executor = item.executor;
-			exec.deadline = msg->msg.schedule.deadline;
-			exec.scheduler_error = CORBA::SystemException::EC_NO_MEMORY;
-			item.protection_domain->port ().execute (exec);
+		case sizeof (SchedulerMessage::ReSchedule) :
+		{
+			const SchedulerMessage::ReSchedule* msg = (const SchedulerMessage::ReSchedule*)data;
+			Base::reschedule (msg->deadline, msg->executor_id, msg->deadline_prev);
 		}
-	}
 		break;
-
-	case SchedulerMessage::PROCESS_START:
-		reinterpret_cast <SysDomain::ProtDomainInfo*> (msg->msg.process_start.protection_domain)->port ().process_start (msg->msg.process_start.process_id);
-		break;
-
-		//case SchedulerMessage::PROCESS_STOP:
-
-	default:
-		assert (false);
 	}
 }
 

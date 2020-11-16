@@ -28,13 +28,13 @@ struct SchedulerMessage
 		{}
 	};
 
-	struct Reschedule
+	struct ReSchedule
 	{
 		DeadlineTime deadline;
 		DeadlineTime deadline_prev;
 		uint32_t executor_id;
 
-		Reschedule (const DeadlineTime& dt, uint32_t id, const DeadlineTime& old) :
+		ReSchedule (const DeadlineTime& dt, uint32_t id, const DeadlineTime& old) :
 			deadline (dt),
 			deadline_prev (old),
 			executor_id (id)
@@ -59,7 +59,7 @@ struct SchedulerMessage
 	union Buffer
 	{
 		Schedule schedule;
-		Reschedule reschedule;
+		ReSchedule reschedule;
 		Tagged tagged;
 	};
 };
