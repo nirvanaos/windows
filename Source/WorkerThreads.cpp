@@ -10,14 +10,19 @@ namespace Windows {
 
 void WorkerThreads::run (Runnable& startup, DeadlineTime deadline)
 {
-	// Create other worker threads
-	for (ThreadType* p = threads () + 1, *end = threads () + thread_count (); p != end; ++p) {
-		p->port ().create ();
+	try {
+		// Create other worker threads
+		for (ThreadType* p = threads () + 1, *end = threads () + thread_count (); p != end; ++p) {
+			p->port ().create ();
+		}
+
+		// Run main
+		threads ()->port ().run_main (startup, deadline);
+
+	} catch (...) {
+		Base::terminate ();
+		throw;
 	}
-
-	// Run main
-	threads ()->port ().run_main (startup, deadline);
-
 	// Wait termination of all other worker threads
 	for (ThreadType* p = threads () + 1, *end = threads () + thread_count (); p != end; ++p) {
 		p->port ().join ();

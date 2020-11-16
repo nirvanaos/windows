@@ -18,7 +18,7 @@ class WorkerThreads :
 	public ThreadPool <TaskMaster, Core::ThreadWorker>
 {
 	typedef Core::ThreadWorker ThreadType;
-	typedef ThreadPool <TaskMaster, ThreadType > Base;
+	typedef ThreadPool <TaskMaster, ThreadType> Base;
 public:
 	void run (Runnable& startup, DeadlineTime deadline);
 };

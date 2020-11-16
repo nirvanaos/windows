@@ -1,124 +1,65 @@
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
 
-#include "SchedulerIPC.h"
-#include "SchedulerAbstract.h"
-#include "Mailslot.h"
-#include "MailslotReader.h"
-#include "WorkerThreads.h"
-#include "RoundBuffers.h"
 #include <PriorityQueue.h>
+#include <SkipListWithPool.h>
+#include "SchedulerMessage.h"
+#include "WorkerThreads.h"
+#include "MessageBroker.h"
+#include "Mailslot.h"
+#include <atomic>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
 class SchedulerSlave :
-	public SchedulerAbstract,
-	public MailslotReader
+	public WorkerThreads
 {
 public:
-	SchedulerSlave (uint64_t protection_domain);
+	/// Used when process started by the system domain.
+	SchedulerSlave (uint32_t sys_process_id, uint32_t sys_semaphore);
 
-	void run (Runnable& startup, DeadlineTime deadline)
+	/// Used when process started by user.
+	SchedulerSlave ();
+
+	~SchedulerSlave ()
 	{
-		worker_threads_.run (startup, deadline);
-		MailslotReader::terminate ();
+		if (sys_process_)
+			CloseHandle (sys_process_);
 	}
+
+	/// Main loop.
+	/// \param startup Protection domain startup runnable object.
+	/// \param deadline Startup deadline.
+	/// \returns `false` if system domain is not running.
+	bool run (Runnable& startup, DeadlineTime deadline);
 
 	// Implementation of SchedulerAbstract.
+	virtual void create_item ();
+	virtual void delete_item () NIRVANA_NOEXCEPT;
+	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
+	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
 
-	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback);
-
-	void core_free ();
-
-	virtual void shutdown ()
-	{
-		// TODO: Send message to the system domain
-		worker_threads_.shutdown ();
-	}
+protected:
+	virtual void execute () NIRVANA_NOEXCEPT;
 
 private:
-	virtual void received (OVERLAPPED* ovl, DWORD size);
-	void send (const SchedulerMessage& msg);
-	void fallback (Executor& executor, DeadlineTime deadline, int error);
-	
+	bool initialize ();
+	void initialize (uint32_t sys_process_id, uint32_t sys_semaphore);
+	void terminate ();
+	void core_free () NIRVANA_NOEXCEPT;
+	void on_error (int err) NIRVANA_NOEXCEPT;
+
 private:
-	uint64_t protection_domain_;
+	HANDLE sys_process_;
 	Mailslot scheduler_mailslot_;
-	PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> queue_;
-	WorkerThreads worker_threads_;
-	RoundBuffers <Execute> fallback_buffers_;
+	Mailslot sys_mailslot_;
+	MessageBroker message_broker_;
+	uint32_t executor_id_;
+	std::atomic <int> error_;
+	SkipListWithPool <PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;
 };
-
-inline
-SchedulerSlave::SchedulerSlave (uint64_t protection_domain) :
-	protection_domain_ (protection_domain),
-	fallback_buffers_ (worker_threads_.thread_count ())
-{
-	DWORD id = GetCurrentProcessId ();
-	static const WCHAR prefix [] = EXECUTE_MAILSLOT_PREFIX;
-	initialize (prefix, id, sizeof (Execute), worker_threads_);
-
-	try {
-		if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))
-			throw ::CORBA::INITIALIZE ();
-
-		HANDLE hevent = CreateEventW (nullptr, FALSE, FALSE, nullptr);
-		assert (hevent);
-		bool success = false;
-
-		try {
-			{
-				SchedulerMessage msg;
-				msg.tag = SchedulerMessage::PROCESS_START;
-				msg.msg.process_start.protection_domain = protection_domain;
-				msg.msg.process_start.process_id = id;
-				send (msg);
-			}
-
-			{
-				OVERLAPPED ovl;
-				memset (&ovl, 0, sizeof (ovl));
-				ovl.hEvent = (HANDLE)((LONG_PTR)hevent | 1);
-
-				ProcessStartAck ack;
-				if (!ReadFile (handle_, &ack, sizeof (ack), nullptr, &ovl)) {
-					DWORD err = GetLastError ();
-					if (ERROR_IO_PENDING != err)
-						throw ::CORBA::INITIALIZE ();
-
-					if (WAIT_OBJECT_0 != WaitForSingleObject (hevent, SCHEDULER_ACK_TIMEOUT))
-						CancelIoEx (handle_, &ovl);
-					else
-						success = true;
-
-					ovl.hEvent = hevent;
-				} else
-					success = true;
-
-				DWORD size;
-				GetOverlappedResult (handle_, &ovl, &size, TRUE);
-
-				if (success && (sizeof (ack) != size || ack.error != 0))
-					success = false;
-			}
-
-		} catch (...) {
-			CloseHandle (hevent);
-			throw;
-		}
-
-		CloseHandle (hevent);
-
-		if (!success)
-			throw ::CORBA::INITIALIZE ();
-
-	} catch (...) {
-		terminate ();
-		throw;
-	}
-}
 
 }
 }

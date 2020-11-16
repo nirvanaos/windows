@@ -22,33 +22,41 @@ public:
 protected:
 	TaskMaster ()
 	{
-		verify (handles_ [0] = CreateSemaphoreW (nullptr, 0, (LONG)Port::g_system_info.hardware_concurrency (), nullptr));
+		handles_ [0] = nullptr;
 		verify (handles_ [1] = CreateEventW (nullptr, true, FALSE, nullptr));
 	}
 
 	~TaskMaster ()
 	{
 		for (HANDLE* p = handles_; p != std::end (handles_); ++p) {
-			CloseHandle (*p);
+			HANDLE h = p;
+			if (h)
+				CloseHandle (h);
 		}
 	}
 
 	void start ()
-	{}
-
-	void terminate () NIRVANA_NOEXCEPT
 	{
-		assert (false); // Must never be called.
+		if (!handles_ [WORKER_SEMAPHORE])
+			verify (handles_ [WORKER_SEMAPHORE] = CreateSemaphoreW (nullptr, 0, (LONG)Port::g_system_info.hardware_concurrency (), nullptr));
+		ResetEvent (handles_ [SHUTDOWN_EVENT]);
 	}
 
-	virtual void shutdown () NIRVANA_NOEXCEPT
+	void terminate () NIRVANA_NOEXCEPT
 	{
 		SetEvent (handles_ [SHUTDOWN_EVENT]);
 	}
 
-	HANDLE semaphore () const
+	virtual void shutdown () NIRVANA_NOEXCEPT
 	{
-		return handles_ [WORKER_SEMAPHORE];
+		terminate ();
+	}
+
+	void semaphore (HANDLE sem)
+	{
+		if (handles_ [WORKER_SEMAPHORE])
+			CloseHandle (handles_ [WORKER_SEMAPHORE]);
+		handles_ [WORKER_SEMAPHORE] = sem;
 	}
 
 private:

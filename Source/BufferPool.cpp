@@ -2,17 +2,18 @@
 // Windows implementation.
 // BufferPool class.
 
+#include <Heap.h>
 #include "BufferPool.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void BufferPool::initialize (CompletionPort& port, DWORD buffer_size)
+void BufferPool::start (CompletionPort& port, size_t buffer_count, size_t buffer_size)
 {
+	assert (handle_ != INVALID_HANDLE_VALUE);
 	port.add_receiver (handle_, *this);
 
-	size_t buffer_count = port.thread_count ();
 	buffer_size_ = round_up (buffer_size, sizeof (LONG_PTR));
 	size_t size = buffer_count * (sizeof (OVERLAPPED) + buffer_size);
 	begin_ = (OVERLAPPED*)g_core_heap.allocate (nullptr, size, 0);

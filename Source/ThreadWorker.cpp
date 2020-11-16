@@ -5,6 +5,7 @@
 #include "ThreadWorker.h"
 #include "TaskMaster.h"
 #include "ExecContextInternal.h"
+#include <ExecDomain.h>
 
 namespace Nirvana {
 namespace Core {
@@ -79,6 +80,7 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 
 	// Do fiber_proc for this worker thread
 	ExecContext::fiber_proc (nullptr);
+	assert (!handle_); // Prevent join to self.
 
 	// Restore priority and release resources
 	SetThreadPriority (GetCurrentThread (), prio);

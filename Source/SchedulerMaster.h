@@ -1,17 +1,16 @@
 // Nirvana project
 // Windows implementation.
-// SchedulerWindows class. 
+// SchedulerMaster class. 
 
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERMASTER_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERMASTER_H_
 
 #include "PostOffice.h"
 #include "Mailslot.h"
-#include "ThreadPoolable.h"
 #include "WorkerThreads.h"
 #include <SchedulerImpl.h>
-#include "RoundBuffers.h"
-#include "SchedulerIPC.h"
+#include "SchedulerMessage.h"
+#include "MessageBroker.h"
 
 namespace Nirvana {
 namespace Core {
@@ -19,7 +18,6 @@ namespace Windows {
 
 struct SchedulerItem
 {
-	
 	uint32_t semaphore;
 
 	bool operator < (const SchedulerItem& rhs) const
@@ -30,100 +28,72 @@ struct SchedulerItem
 };
 
 class SchedulerMaster :
-	public PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), ThreadPoolable, SCHEDULER_THREAD_PRIORITY>,
+	public PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY>,
 	public SchedulerImpl <SchedulerMaster, SchedulerItem>,
 	public WorkerThreads
 {
 public:
-	typedef SchedulerImpl <SchedulerWindows, SchedulerItem> Base;
-	typedef PostOffice <SchedulerWindows, sizeof (SchedulerIPC::SchedulerMessage), ThreadPoolable, SCHEDULER_THREAD_PRIORITY> Office;
+	typedef SchedulerImpl <SchedulerMaster, SchedulerItem> Base;
+	typedef PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY> Office;
 
-	SchedulerWindows () :
-		Base (thread_count ()),
-		in_proc_execute_ (thread_count ())
-	{}
-
-	void run (Runnable& startup, DeadlineTime deadline)
-	{
-		Office::initialize (SCHEDULER_MAILSLOT_NAME);
-		in_proc_execute_.run (startup, deadline);
-	}
-
-	/// Called by SchedulerImpl.
-	void execute (const SchedulerItem& item, DeadlineTime deadline)
-	{
-		Execute msg;
-		msg.executor = item.executor;
-		msg.deadline = deadline;
-		msg.scheduler_error = 0;
-		if (item.protection_domain)
-			item.protection_domain->port ().execute (msg);
-		else
-			in_proc_execute_.execute (msg);
-	}
+	/// Main loop.
+	/// \param startup System domain startup runnable object.
+	/// \param deadline Startup deadline.
+	/// \returns `false` if system domain is already running.
+	bool run (Runnable& startup, DeadlineTime deadline);
 
 	// Implementation of SchedulerAbstract.
-
-	virtual void schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback);
+	virtual void create_item ();
+	virtual void delete_item () NIRVANA_NOEXCEPT;
+	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
+	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
 
 	void core_free ();
 
-	virtual void shutdown ()
-	{
-		in_proc_execute_.shutdown ();
-	}
+	static void core_free_static ();
 
 	/// Process mailslot message.
 	void received (void* data, DWORD size);
 
+protected:
+	virtual void execute () NIRVANA_NOEXCEPT;
+
 private:
-	static SchedulerWindows& scheduler ()
+	static SchedulerMaster& scheduler ()
 	{
 		assert (scheduler_);
-		return static_cast <SchedulerWindows&> (*scheduler_);
+		return static_cast <SchedulerMaster&> (*scheduler_);
 	}
 
-	/// Helper class for executing in the current process.
-	class InProcExecute :
-		public CompletionPortReceiver
-	{
-	public:
-		InProcExecute (unsigned thread_count) :
-			buffers_ (thread_count)
-		{}
-
-		~InProcExecute ()
-		{}
-
-		void execute (const Execute& msg)
-		{
-			Execute* buffer = buffers_.next_buffer ();
-			*buffer = msg;
-			worker_threads_.post (*this, reinterpret_cast <OVERLAPPED*> (buffer), 0);
-		}
-
-		void run (Runnable& startup, DeadlineTime deadline)
-		{
-			worker_threads_.run (startup, deadline);
-		}
-
-		void shutdown ()
-		{
-			worker_threads_.shutdown ();
-		}
-
-	private:
-		virtual void received (OVERLAPPED* ovl, DWORD size);
-
-		RoundBuffers <Execute> buffers_;
-		WorkerThreads worker_threads_;
-	}
-	in_proc_execute_;
+private:
+	MessageBroker message_broker_;
 };
 
 inline
-void SchedulerWindows::received (void* data, DWORD size)
+void SchedulerMaster::received (void* data, DWORD size)
 {
+	switch (size) {
+		case sizeof (SchedulerMessage::Tagged):
+			switch (((const SchedulerMessage::Tagged*)data)->tag) {
+				case SchedulerMessage::Tagged::CREATE_ITEM:
+					Base::create_item ();
+					break;
+				case SchedulerMessage::Tagged::DELETE_ITEM:
+					Base::delete_item ();
+					break;
+				case SchedulerMessage::Tagged::CORE_FREE:
+					core_free ();
+					break;
+			}
+		break;
+
+		case sizeof (SchedulerMessage::Schedule) :
+		{
+			const SchedulerMessage::Schedule* msg = (const SchedulerMessage::Schedule*)data;
+			Base::schedule (msg->deadline, msg->executor_id);
+		}
+		break;
+	}
 	SchedulerMessage* msg = (SchedulerMessage*)data;
 
 	switch (msg->tag) {

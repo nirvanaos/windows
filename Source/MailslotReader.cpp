@@ -8,16 +8,16 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool MailslotReader::initialize (LPCWSTR mailslot_name, DWORD max_msg_size, CompletionPort& port)
+bool MailslotReader::create_mailslot (LPCWSTR mailslot_name, size_t max_msg_size)
 {
-	handle_ = CreateMailslotW (mailslot_name, max_msg_size, MAILSLOT_WAIT_FOREVER, nullptr);
+	assert (INVALID_HANDLE_VALUE == handle_);
+	handle_ = CreateMailslotW (mailslot_name, (DWORD)max_msg_size, MAILSLOT_WAIT_FOREVER, nullptr);
 	if (INVALID_HANDLE_VALUE == handle_) {
 		DWORD err = GetLastError ();
 		if (ERROR_ALREADY_EXISTS == err)
 			return false;
-		throw ::CORBA::INITIALIZE ();
+		throw_INITIALIZE ();
 	}
-	BufferPool::initialize (port, max_msg_size);
 	return true;
 }
 
@@ -26,7 +26,7 @@ void MailslotReader::enqueue_buffer (OVERLAPPED* ovl)
 	if (!ReadFile (handle_, data (ovl), (DWORD)buffer_size (), nullptr, ovl)) {
 		DWORD err = GetLastError ();
 		if (ERROR_IO_PENDING != err)
-			throw ::CORBA::INTERNAL ();
+			throw_INTERNAL ();
 	}
 }
 

@@ -1,15 +1,15 @@
 // Nirvana project.
 // Windows implementation.
-// ThreadPoolable class. Thread object for ThreadPool.
+// ThreadPostman class. Thread object for ThreadPool.
 
-#include "ThreadPoolable.h"
+#include "ThreadPostman.h"
 #include "CompletionPort.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-DWORD __stdcall ThreadPoolable::thread_proc (ThreadPoolable* _this)
+DWORD __stdcall ThreadPostman::thread_proc (ThreadPostman* _this)
 {
 	_this->completion_port_.thread_proc ();
 	return 0;

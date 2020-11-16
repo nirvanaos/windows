@@ -64,6 +64,9 @@ const unsigned SYNC_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For syncronization d
 const unsigned SYS_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For system-wide scheduler.
 const unsigned PROT_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For protection domain scheduler.
 
+typedef uint32_t ProtDomainId;
+typedef uint32_t ObjRefSignature;
+
 }
 }
 

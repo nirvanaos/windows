@@ -14,6 +14,9 @@
 #undef interface
 #endif
 
+#define OBJ_NAME_PREFIX L"Nirvana"
+#define MAILSLOT_PREFIX L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\"
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {
@@ -38,7 +41,10 @@ const int BACKGROUND_THREAD_PRIORITY_BOOSTED = THREAD_PRIORITY_HIGHEST;
 /// System scheduler threads must have maximal priority.
 const int SCHEDULER_THREAD_PRIORITY = THREAD_PRIORITY_TIME_CRITICAL;
 
-const DWORD SCHEDULER_ACK_TIMEOUT = 1000;
+/// Postman thread priority must be above worker thread priority.
+const int POSTMAN_THREAD_PRIORITY = THREAD_PRIORITY_HIGHEST;
+
+const DWORD PROCESS_START_ACK_TIMEOUT = 1000; // 1 sec
 
 const SIZE_T PAGE_SIZE = 4096;
 const SIZE_T PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks

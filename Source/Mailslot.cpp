@@ -18,7 +18,7 @@ bool Mailslot::open (const wchar_t* name)
 		DWORD err = GetLastError ();
 		if (ERROR_FILE_NOT_FOUND == err)
 			return false;
-		throw ::CORBA::INTERNAL ();
+		throw_INTERNAL ();
 	}
 	return true;
 }
@@ -35,7 +35,7 @@ void Mailslot::send (const void* msg, uint32_t size)
 {
 	DWORD cb;
 	if (!WriteFile (mailslot_, msg, sizeof (msg), &cb, nullptr))
-		throw ::CORBA::INTERNAL ();
+		throw_COMM_FAILURE ();
 }
 
 }

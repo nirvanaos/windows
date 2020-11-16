@@ -90,7 +90,7 @@ private:
 
 	static const unsigned SHIFT_BITS = 4;
 
-	// Low 2 bits of handle are always zero.
+	// Low 2 bits of a handle are always zero.
 	static const unsigned ALIGN_BITS = 2;
 
 	static const unsigned LOCK_BITS = SHIFT_BITS + ALIGN_BITS;

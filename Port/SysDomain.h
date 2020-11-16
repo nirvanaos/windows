@@ -5,7 +5,6 @@
 #ifndef NIRVANA_CORE_PORT_SYSDOMAIN_H_
 #define NIRVANA_CORE_PORT_SYSDOMAIN_H_
 
-#include "../Source/SchedulerIPC.h"
 #include "../Source/Mailslot.h"
 
 namespace Nirvana {
@@ -18,43 +17,37 @@ public:
 	class ProtDomainInfo
 	{
 	public:
-		ProtDomainInfo (uint32_t process_id) :
-			process_id_ (process_id)
-		{}
+		struct ProcessStart;
+		ProtDomainInfo (); // Will invoke CreateProcess().
+		ProtDomainInfo (const ProcessStart& message);
 
-		uint32_t process_id () const
+		ProtDomainInfo (ProtDomainInfo&& src) :
+			process_id_ (src.process_id_),
+			process_ (src.process_),
+			semaphore_ (src.semaphore_),
+			mailslot_ (std::move (src.mailslot_))
+		{
+			src.process_ = nullptr;
+			src.semaphore_ = nullptr;
+		}
+
+		void process_start ();
+
+		~ProtDomainInfo ();
+
+		uint32_t domain_id () const
 		{
 			return process_id_;
 		}
 
-		void process_start (uint32_t id)
-		{
-			if (process_id_ == id) {
-				static const wchar_t prefix [] = EXECUTE_MAILSLOT_PREFIX;
-				try {
-					execute_mailslot_.open (prefix, id);
-					ProcessStartAck msg = {0};
-					execute_mailslot_.send (msg);
-					return;
-				} catch (...) {
-				}
-			}
-			// TODO: Kill process by id.
-		}
-
-		void execute (const Execute& msg) NIRVANA_NOEXCEPT
-		{
-			try {
-				execute_mailslot_.send (msg);
-			} catch (...) {
-				// TODO: Process is dead, remove process info.
-			}
-		}
+	private:
+		void create_semaphore ();
 
 	private:
-		HANDLE process_;
-		Windows::Mailslot scheduler_mailslot_;
 		uint32_t process_id_;
+		void* process_;
+		void* semaphore_;
+		Windows::Mailslot mailslot_;
 	};
 };
 

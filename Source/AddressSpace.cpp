@@ -3,8 +3,6 @@
 #include <CORBA/CORBA.h>
 #include <algorithm>
 
-#define OBJ_NAME_PREFIX L"Nirvana"
-
 namespace Nirvana {
 namespace Core {
 namespace Windows {
@@ -260,7 +258,7 @@ AddressSpace::AddressSpace (DWORD process_id, HANDLE process_handle) :
 
 	if (GetCurrentProcessId () == process_id) {
 		LARGE_INTEGER size;
-		size.QuadPart = directory_size_ * sizeof (BlockInfo);
+		size.QuadPart = (LONGLONG)(directory_size_ * sizeof (BlockInfo));
 		mapping_ = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_READWRITE | SEC_RESERVE, size.HighPart, size.LowPart, name);
 		if (!mapping_)
 			throw_INITIALIZE ();

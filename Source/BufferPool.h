@@ -5,7 +5,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_BUFFERPOOL_H_
 #define NIRVANA_CORE_WINDOWS_BUFFERPOOL_H_
 
-#include "CompletionPortReceiver.h"
+#include "CompletionPort.h"
 
 namespace Nirvana {
 namespace Core {
@@ -41,7 +41,7 @@ public:
 	virtual void enqueue_buffer (OVERLAPPED* ovl) = 0;
 
 protected:
-	void initialize (CompletionPort& port, DWORD buffer_size);
+	void start (CompletionPort& port, size_t buffer_count, size_t buffer_size);
 	virtual void terminate ();
 
 	size_t buffer_size () const

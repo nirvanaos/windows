@@ -1,16 +1,30 @@
 // Nirvana project
 // Windows implementation.
-// SchedulerWindows class.
+// SchedulerMaster class.
 
-#include "SchedulerWindows.h"
+#include "SchedulerMaster.h"
 #include "../Port/Scheduler.h"
 #include <Thread.h>
+#include "MailslotName.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void SchedulerWindows::schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback)
+bool SchedulerMaster::run (Runnable& startup, DeadlineTime deadline)
+{
+	if (!(
+		Office::create_mailslot (SCHEDULER_MAILSLOT_NAME)
+		&&
+		message_broker_.create_mailslot (MailslotName (0))
+		))
+		return false;
+	Office::start ();
+	message_broker_.start ();
+	WorkerThreads::run (startup, deadline);
+}
+
+void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback)
 {
 	try {
 		Base::schedule (deadline, SchedulerItem (executor), deadline_prev);
@@ -27,12 +41,12 @@ void SchedulerWindows::schedule (DeadlineTime deadline, Executor& executor, Dead
 	}
 }
 
-void SchedulerWindows::core_free ()
+void SchedulerMaster::core_free ()
 {
 	Base::core_free ();
 }
 
-void SchedulerWindows::InProcExecute::received (OVERLAPPED* ovl, DWORD size)
+void SchedulerMaster::InProcExecute::received (OVERLAPPED* ovl, DWORD size)
 {
 	Execute* exec = reinterpret_cast <Execute*> (ovl);
 	ThreadWorker::execute (*reinterpret_cast <Executor*> (exec->executor), (Word)exec->scheduler_error);
