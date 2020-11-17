@@ -10,6 +10,8 @@ namespace Port {
 
 class Scheduler
 {
+	///@{
+	/// Members called from Core.
 public:
 	static void create_item ()
 	{
@@ -34,6 +36,12 @@ public:
 	static void shutdown () NIRVANA_NOEXCEPT
 	{
 		singleton_->shutdown ();
+	}
+	///@}
+
+	static void worker_thread_proc ()
+	{
+		singleton_->worker_thread_proc ();
 	}
 
 protected:

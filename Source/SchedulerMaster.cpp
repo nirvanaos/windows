@@ -72,6 +72,11 @@ void SchedulerMaster::shutdown () NIRVANA_NOEXCEPT
 	worker_threads_.shutdown ();
 }
 
+void SchedulerMaster::worker_thread_proc () NIRVANA_NOEXCEPT
+{
+	worker_threads_.thread_proc ();
+}
+
 void SchedulerMaster::WorkerThreads::received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT
 {
 	Executor* executor = reinterpret_cast <Executor*> (ovl);

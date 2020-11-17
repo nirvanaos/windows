@@ -6,6 +6,7 @@
 #include "WorkerSemaphore.h"
 #include "CompletionPort.h"
 #include <ExecDomain.h>
+#include "../Port/Scheduler.h"
 
 namespace Nirvana {
 namespace Core {
@@ -16,7 +17,7 @@ unsigned long __stdcall ThreadWorker::thread_proc (ThreadWorker* _this)
 	Core::Thread& thread = static_cast <Core::Thread&> (*_this);
 	current_ = &thread;
 	thread.neutral_context ().port ().convert_to_fiber ();
-	WorkerThreadsBase::singleton ().thread_proc ();
+	Port::Scheduler::worker_thread_proc ();
 	thread.neutral_context ().port ().convert_to_thread ();
 	return 0;
 }
@@ -34,7 +35,7 @@ void CALLBACK ThreadWorker::main_fiber_proc (MainFiberParam* param)
 	// Release main fiber to pool for reuse.
 	param->main_domain.reset ();
 	// Do worker thread proc.
-	WorkerThreadsBase::singleton ().thread_proc ();
+	Port::Scheduler::worker_thread_proc ();
 	// Switch back to main fiber.
 	main_domain->switch_to ();
 }

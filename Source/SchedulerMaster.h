@@ -82,6 +82,7 @@ public:
 	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
 	virtual void shutdown () NIRVANA_NOEXCEPT;
+	virtual void worker_thread_proc () NIRVANA_NOEXCEPT;
 
 	/// Process mailslot message.
 	void received (void* data, DWORD size) NIRVANA_NOEXCEPT;

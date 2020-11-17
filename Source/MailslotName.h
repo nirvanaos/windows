@@ -20,7 +20,7 @@ public:
 private:
 	WCHAR name_ [sizeof (MAILSLOT_PREFIX) + 8];
 
-	static const WCHAR prefix_ [sizeof (MAILSLOT_PREFIX)];
+	static const WCHAR prefix_ [];
 };
 
 }

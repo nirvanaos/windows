@@ -190,6 +190,11 @@ void SchedulerSlave::shutdown () NIRVANA_NOEXCEPT
 	worker_threads_.shutdown ();
 }
 
+void SchedulerSlave::worker_thread_proc () NIRVANA_NOEXCEPT
+{
+	worker_threads_.thread_proc ();
+}
+
 inline
 void SchedulerSlave::core_free () NIRVANA_NOEXCEPT
 {

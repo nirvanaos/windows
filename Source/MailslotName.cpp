@@ -6,7 +6,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-const WCHAR MailslotName::prefix_ [sizeof (MAILSLOT_PREFIX)] = MAILSLOT_PREFIX;
+const WCHAR MailslotName::prefix_ [] = MAILSLOT_PREFIX;
 
 MailslotName::MailslotName (DWORD id)
 {
