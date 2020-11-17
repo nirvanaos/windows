@@ -192,7 +192,7 @@ void SchedulerSlave::shutdown () NIRVANA_NOEXCEPT
 
 void SchedulerSlave::worker_thread_proc () NIRVANA_NOEXCEPT
 {
-	worker_threads_.thread_proc ();
+	worker_threads_.thread_proc (*this);
 }
 
 inline

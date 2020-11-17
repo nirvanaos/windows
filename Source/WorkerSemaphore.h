@@ -8,6 +8,8 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+class SchedulerSlave;
+
 class WorkerSemaphore
 {
 public:
@@ -16,7 +18,7 @@ public:
 		return Port::SystemInfo::hardware_concurrency ();
 	}
 
-	void thread_proc ();
+	void thread_proc (SchedulerSlave& scheduler);
 
 	WorkerSemaphore ()
 	{
