@@ -11,9 +11,9 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-/// Derived class should override void received() method to process data.
+/// Derived class should override `virtual void received()` method to process data.
 /// Overridden method should get data pointer by call data(ovl), read the data
-/// and immediatelly call enqueue_buffer() method.
+/// and immediatelly call `enqueue_buffer()` method.
 class NIRVANA_NOVTABLE BufferPool :
 	public CompletionPortReceiver
 {
@@ -24,7 +24,7 @@ private:
 	BufferPool& operator = (const BufferPool&);
 
 public:
-	BufferPool () :
+	BufferPool () NIRVANA_NOEXCEPT :
 		handle_ (INVALID_HANDLE_VALUE),
 		begin_ (nullptr),
 		end_ (nullptr),
@@ -32,34 +32,34 @@ public:
 	{}
 
 	/// Returns data buffer pointer for specified OVERLAPPED pointer.
-	static void* data (OVERLAPPED* ovl)
+	static void* data (OVERLAPPED* ovl) NIRVANA_NOEXCEPT
 	{
 		return ovl + 1;
 	}
 
 	/// Override in derived class.
-	virtual void enqueue_buffer (OVERLAPPED* ovl) = 0;
+	virtual void enqueue_buffer (OVERLAPPED* ovl) NIRVANA_NOEXCEPT = 0;
 
 protected:
 	void start (CompletionPort& port, size_t buffer_count, size_t buffer_size);
-	virtual void terminate ();
+	virtual void terminate () NIRVANA_NOEXCEPT;
 
-	size_t buffer_size () const
+	size_t buffer_size () const NIRVANA_NOEXCEPT
 	{
 		return buffer_size_;
 	}
 
-	OVERLAPPED* begin () const
+	OVERLAPPED* begin () const NIRVANA_NOEXCEPT
 	{
 		return begin_;
 	}
 
-	OVERLAPPED* end () const
+	OVERLAPPED* end () const NIRVANA_NOEXCEPT
 	{
 		return end_;
 	}
 
-	OVERLAPPED* next (OVERLAPPED* ovl) const
+	OVERLAPPED* next (OVERLAPPED* ovl) const NIRVANA_NOEXCEPT
 	{
 		return (OVERLAPPED*)(((BYTE*)(ovl + 1)) + buffer_size_);
 	}

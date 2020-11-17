@@ -10,6 +10,7 @@ namespace Windows {
 
 SchedulerSlave::SchedulerSlave () :
 	sys_process_ (nullptr),
+	executor_id_ (0),
 	error_ (0),
 	queue_ (Port::SystemInfo::hardware_concurrency ())
 {}
@@ -102,12 +103,13 @@ void SchedulerSlave::terminate ()
 	}
 }
 
-bool SchedulerSlave::run (Runnable& startup, DeadlineTime deadline)
+bool SchedulerSlave::run (int argc, char* argv [], DeadlineTime deadline)
 {
 	try {
 		if (!initialize ())
 			return false;
 		message_broker_.start ();
+		StartupProt startup (argc, argv);
 		worker_threads_.run (startup, deadline);
 	} catch (...) {
 		terminate ();
@@ -152,7 +154,6 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) NIRVAN
 		queue_.insert (deadline, &executor);
 	} catch (...) {
 		on_error (CORBA::SystemException::EC_NO_MEMORY);
-		executor.execute (CORBA::SystemException::EC_NO_MEMORY);
 	}
 
 	try {

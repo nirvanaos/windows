@@ -11,6 +11,11 @@ namespace Windows {
 class WorkerSemaphore
 {
 public:
+	static unsigned int thread_count ()
+	{
+		return Port::SystemInfo::hardware_concurrency ();
+	}
+
 	void thread_proc ();
 
 	WorkerSemaphore ()

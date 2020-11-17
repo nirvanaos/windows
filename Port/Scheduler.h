@@ -36,9 +36,6 @@ public:
 		singleton_->shutdown ();
 	}
 
-	static void run_system_domain (Runnable& startup, DeadlineTime deadline);
-	static void run_protection_domain (uint64_t protection_domain, Runnable& startup, DeadlineTime deadline);
-
 protected:
 	static Windows::SchedulerAbstract* singleton_;
 };

@@ -1,7 +1,8 @@
 #include <core.h>
 #include "../Source/PostOffice.h"
 #include "../Source/Mailslot.h"
-#include "../Source/ThreadPoolable.h"
+#include "../Source/MailslotName.h"
+#include "../Source/ThreadPostman.h"
 #include <gtest/gtest.h>
 #include <atomic>
 
@@ -9,9 +10,6 @@ namespace TestThreadPool {
 
 using namespace ::std;
 using namespace ::Nirvana::Core::Windows;
-
-#define OBJ_NAME_PREFIX L"Nirvana"
-const WCHAR mailslot_prefix [] = L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\unit_test_mailslot";
 
 struct Message
 {
@@ -21,13 +19,14 @@ struct Message
 const unsigned TAG = 123456789;
 
 class PostOffice :
-	public ::Nirvana::Core::Windows::PostOffice <PostOffice, sizeof (Message), ThreadPoolable, THREAD_PRIORITY_NORMAL>
+	public ::Nirvana::Core::Windows::PostOffice <PostOffice, sizeof (Message), THREAD_PRIORITY_NORMAL>
 {
-	typedef ::Nirvana::Core::Windows::PostOffice <PostOffice, sizeof (Message), ThreadPoolable, THREAD_PRIORITY_NORMAL> Base;
+	typedef ::Nirvana::Core::Windows::PostOffice <PostOffice, sizeof (Message), THREAD_PRIORITY_NORMAL> Base;
 public:
 	PostOffice ()
 	{
-		Base::initialize (mailslot_prefix, GetCurrentProcessId ());
+		Base::create_mailslot (MailslotName (GetCurrentProcessId ()));
+		Base::start ();
 	}
 
 	void received (void* message, DWORD size)
@@ -75,9 +74,9 @@ protected:
 TEST_F (TestThreadPool, PostOffice)
 {
 	Mailslot mailslot;
-	EXPECT_FALSE (mailslot.open (mailslot_prefix, GetCurrentProcessId ()));
+	EXPECT_FALSE (mailslot.open (MailslotName (GetCurrentProcessId ())));
 	PostOffice po;
-	EXPECT_TRUE (mailslot.open (mailslot_prefix, GetCurrentProcessId ()));
+	EXPECT_TRUE (mailslot.open (MailslotName (GetCurrentProcessId ())));
 
 	static const unsigned MESSAGE_CNT = 100;
 	for (unsigned i = 0; i < MESSAGE_CNT; ++i) {

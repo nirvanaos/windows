@@ -6,6 +6,7 @@
 #define NIRVANA_CORE_WINDOWS_COMPLETIONPORT_H_
 
 #include "CompletionPortReceiver.h"
+#include "../Port/SystemInfo.h"
 
 namespace Nirvana {
 namespace Core {
@@ -19,6 +20,11 @@ private:
 	CompletionPort& operator = (const CompletionPort&) = delete;
 
 public:
+	static unsigned int thread_count ()
+	{
+		return Port::SystemInfo::hardware_concurrency ();
+	}
+
 	CompletionPort ();
 
 	~CompletionPort ()
@@ -40,7 +46,7 @@ public:
 	}
 
 	/// On close completion port all threads will return with `ERROR_ABANDONED_WAIT_0` error code.
-	virtual void terminate ()
+	virtual void terminate () NIRVANA_NOEXCEPT
 	{
 		HANDLE port = completion_port_;
 		completion_port_ = nullptr;
@@ -49,7 +55,7 @@ public:
 	}
 
 	/// Worker thread procedure.
-	void thread_proc ();
+	void thread_proc () NIRVANA_NOEXCEPT;
 
 protected:
 	/// Ensure that port exists.
@@ -60,7 +66,6 @@ protected:
 	}
 
 private:
-	bool dispatch ();
 	void create (HANDLE hfile, CompletionPortReceiver* receiver);
 
 private:

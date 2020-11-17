@@ -19,6 +19,13 @@ public:
 		singleton_ = this;
 	}
 
+#ifdef _DEBUG
+	~SchedulerBase ()
+	{
+		singleton_ = nullptr;
+	}
+#endif
+
 	static Impl& singleton ()
 	{
 		assert (singleton_);

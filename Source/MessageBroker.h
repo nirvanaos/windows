@@ -18,7 +18,7 @@ public:
 		return handle_;
 	}
 
-	virtual void received (void* message, DWORD size)
+	virtual void received (void* message, DWORD size) NIRVANA_NOEXCEPT
 	{}
 };
 

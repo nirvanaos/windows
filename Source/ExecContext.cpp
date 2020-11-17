@@ -30,7 +30,7 @@ void __stdcall ExecContext::fiber_proc (void*)
 			ed->execute_loop ();
 		} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
 			thread.exec_domain (nullptr);
-			ed->on_exec_domain_crash ();
+			ed->on_exec_domain_crash (CORBA::SystemException::EC_UNKNOWN);
 		}
 	}
 }

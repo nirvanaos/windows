@@ -13,7 +13,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	try {
 		thread.neutral_context().port ().convert_to_fiber ();
 	} catch (...) {
-		thread.exec_domain ()->on_crash (CORBA::SystemException::EC_NO_MEMORY);
+		thread.exec_domain ()->on_exec_domain_crash (CORBA::SystemException::EC_NO_MEMORY);
 		thread.on_thread_proc_end ();
 		return 0;
 	}

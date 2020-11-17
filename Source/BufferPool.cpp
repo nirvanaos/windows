@@ -26,7 +26,7 @@ void BufferPool::start (CompletionPort& port, size_t buffer_count, size_t buffer
 	}
 }
 
-void BufferPool::terminate ()
+void BufferPool::terminate () NIRVANA_NOEXCEPT
 {
 	g_core_heap.release (begin_, (BYTE*)end_ - (BYTE*)begin_);
 	begin_ = end_ = nullptr;

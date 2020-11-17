@@ -36,10 +36,10 @@ protected:
 	}
 
 	/// Stop all work.
-	virtual void terminate ();
+	virtual void terminate () NIRVANA_NOEXCEPT;
 
 	/// Enqueue read request.
-	virtual void enqueue_buffer (OVERLAPPED* ovl);
+	virtual void enqueue_buffer (OVERLAPPED* ovl) NIRVANA_NOEXCEPT;
 
 private:
 	void cancel_buffer (OVERLAPPED* ovl)

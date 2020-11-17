@@ -71,19 +71,20 @@ public:
 	{}
 
 	/// Main loop.
-	/// \param startup System domain startup runnable object.
-	/// \param deadline Startup deadline.
+	/// \param argc Command line argumens count.
+	/// \param argv Command line argumens.
 	/// \returns `false` if system domain is already running.
-	bool run (Runnable& startup, DeadlineTime deadline);
+	bool run (int argc, char* argv []);
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();
 	virtual void delete_item () NIRVANA_NOEXCEPT;
 	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
+	virtual void shutdown () NIRVANA_NOEXCEPT;
 
 	/// Process mailslot message.
-	void received (void* data, DWORD size);
+	void received (void* data, DWORD size) NIRVANA_NOEXCEPT;
 
 	/// Called by SchedulerImpl
 	void execute (SchedulerItem& item) NIRVANA_NOEXCEPT
@@ -95,6 +96,8 @@ public:
 	}
 
 private:
+	void on_error (int err) NIRVANA_NOEXCEPT;
+
 	/// Helper class for executing in the current process.
 	class WorkerThreads :
 		public Windows::WorkerThreads <CompletionPort>,
@@ -107,7 +110,7 @@ private:
 		}
 
 	private:
-		virtual void received (OVERLAPPED* ovl, DWORD size);
+		virtual void received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT;
 
 	}
 	worker_threads_;
@@ -117,13 +120,17 @@ private:
 };
 
 inline
-void SchedulerMaster::received (void* data, DWORD size)
+void SchedulerMaster::received (void* data, DWORD size) NIRVANA_NOEXCEPT
 {
 	switch (size) {
 		case sizeof (SchedulerMessage::Tagged):
 			switch (((const SchedulerMessage::Tagged*)data)->tag) {
 				case SchedulerMessage::Tagged::CREATE_ITEM:
-					Base::create_item ();
+					try {
+						Base::create_item ();
+					} catch (...) {
+						on_error (CORBA::SystemException::EC_NO_MEMORY);
+					}
 					break;
 				case SchedulerMessage::Tagged::DELETE_ITEM:
 					Base::delete_item ();
@@ -134,17 +141,29 @@ void SchedulerMaster::received (void* data, DWORD size)
 			}
 		break;
 
-		case sizeof (SchedulerMessage::Schedule) :
-		{
+		case sizeof (SchedulerMessage::Schedule) : {
 			const SchedulerMessage::Schedule* msg = (const SchedulerMessage::Schedule*)data;
-			Base::schedule (msg->deadline, msg->executor_id);
+			try {
+				Base::schedule (msg->deadline, msg->executor_id);
+			} catch (...) {
+				on_error (CORBA::SystemException::EC_NO_MEMORY);
+				// Fallback
+				HANDLE h = (HANDLE)msg->executor_id;
+				if (WAIT_OBJECT_0 == WaitForSingleObject (h, 0))
+					Base::free_cores_.increment ();
+				if (ReleaseSemaphore (h, 1, nullptr))
+					Base::free_cores_.decrement ();
+			}
 		}
 		break;
 
-		case sizeof (SchedulerMessage::ReSchedule) :
-		{
+		case sizeof (SchedulerMessage::ReSchedule) : {
 			const SchedulerMessage::ReSchedule* msg = (const SchedulerMessage::ReSchedule*)data;
-			Base::reschedule (msg->deadline, msg->executor_id, msg->deadline_prev);
+			try {
+				Base::reschedule (msg->deadline, msg->executor_id, msg->deadline_prev);
+			} catch (...) {
+				on_error (CORBA::SystemException::EC_NO_MEMORY);
+			}
 		}
 		break;
 	}

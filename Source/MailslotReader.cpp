@@ -21,16 +21,14 @@ bool MailslotReader::create_mailslot (LPCWSTR mailslot_name, size_t max_msg_size
 	return true;
 }
 
-void MailslotReader::enqueue_buffer (OVERLAPPED* ovl)
+void MailslotReader::enqueue_buffer (OVERLAPPED* ovl) NIRVANA_NOEXCEPT
 {
 	if (!ReadFile (handle_, data (ovl), (DWORD)buffer_size (), nullptr, ovl)) {
-		DWORD err = GetLastError ();
-		if (ERROR_IO_PENDING != err)
-			throw_INTERNAL ();
+		assert (ERROR_IO_PENDING == GetLastError ());
 	}
 }
 
-void MailslotReader::terminate ()
+void MailslotReader::terminate () NIRVANA_NOEXCEPT
 {
 	if (INVALID_HANDLE_VALUE != handle_) {
 		for (OVERLAPPED* p = begin (); p != end (); p = next (p)) {

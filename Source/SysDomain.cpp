@@ -38,14 +38,14 @@ SysDomain::ProtDomainInfo::~ProtDomainInfo ()
 	if (semaphore_) {
 		// Release unused processor cores
 		while (WAIT_OBJECT_0 == WaitForSingleObject (semaphore_, 0))
-			Windows::SchedulerMaster::core_free_static ();
+			Windows::SchedulerMaster::singleton ().core_free ();
 		CloseHandle (semaphore_);
 	}
 }
 
 void SysDomain::ProtDomainInfo::create_semaphore ()
 {
-	if (!(semaphore_ = CreateSemaphoreW (nullptr, 0, (LONG)g_system_info.hardware_concurrency (), nullptr)))
+	if (!(semaphore_ = CreateSemaphoreW (nullptr, 0, (LONG)SystemInfo::hardware_concurrency (), nullptr)))
 		throw_NO_MEMORY ();
 }
 

@@ -17,7 +17,8 @@ struct Message : ESIOP::Message
 		PROCESS_START = (uint16_t)ESIOP::Message::Type::RESERVED_MESSAGES,
 		PROCESS_START_RESPONSE,
 		PROCESS_STOP,
-		SYSTEM_ERROR
+		SYSTEM_ERROR,
+		SHUTDOWN
 	};
 
 	struct Header
@@ -82,11 +83,20 @@ struct Message : ESIOP::Message
 		{}
 	};
 
+	struct Shutdown : Header
+	{
+		Shutdown () :
+			Header (Type::SHUTDOWN)
+		{}
+	};
+
 	union Buffer
 	{
 		ESIOP::Message::Buffer esiop;
 		ProcessStart process_start;
 		ProcessStop process_stop;
+		SystemError system_error;
+		Shutdown shutdown;
 	};
 };
 

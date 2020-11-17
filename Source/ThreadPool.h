@@ -24,9 +24,9 @@ class ThreadPool :
 	typedef CoreAllocator <Worker> Allocator;
 
 public:
-	static unsigned int thread_count ()
+	static unsigned int thread_count () NIRVANA_NOEXCEPT
 	{
-		return Port::SystemInfo::hardware_concurrency ();
+		return Master::thread_count ();
 	}
 
 	ThreadPool () :
@@ -58,7 +58,7 @@ public:
 		allocator.deallocate (threads_, thread_count ());
 	}
 
-	Worker* threads ()
+	Worker* threads () NIRVANA_NOEXCEPT
 	{
 		return threads_;
 	}
@@ -73,14 +73,14 @@ public:
 	}
 
 	//! Terminate threads.
-	void terminate ();
+	void terminate () NIRVANA_NOEXCEPT;
 
 private:
 	Worker* threads_;
 };
 
 template <class Master, class Worker>
-void ThreadPool <Master, Worker>::terminate ()
+void ThreadPool <Master, Worker>::terminate () NIRVANA_NOEXCEPT
 {
 	Master::terminate ();
 	for (Worker* p = threads_, *end = p + thread_count (); p != end; ++p) {

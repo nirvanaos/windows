@@ -22,16 +22,15 @@ void CompletionPort::create (HANDLE hfile, CompletionPortReceiver* receiver)
 	completion_port_ = port;
 }
 
-inline bool CompletionPort::dispatch ()
+void CompletionPort::thread_proc () NIRVANA_NOEXCEPT
 {
-	if (completion_port_) {
+	while (completion_port_) {
 		ULONG_PTR key;
 		OVERLAPPED* ovl;
 		DWORD size;
-		if (GetQueuedCompletionStatus (completion_port_, &size, &key, &ovl, INFINITE)) {
+		if (GetQueuedCompletionStatus (completion_port_, &size, &key, &ovl, INFINITE))
 			reinterpret_cast <CompletionPortReceiver*> (key)->received (ovl, size);
-			return true;
-		} else {
+		else {
 			DWORD err = GetLastError ();
 			switch (err) {
 			case ERROR_OPERATION_ABORTED:
@@ -39,16 +38,10 @@ inline bool CompletionPort::dispatch ()
 				break;
 
 			default:
-				throw_INTERNAL ();
+				assert (false);
 			}
 		}
 	}
-	return false;
-}
-
-void CompletionPort::thread_proc ()
-{
-	while (dispatch ());
 }
 
 }

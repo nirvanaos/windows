@@ -66,6 +66,7 @@ const unsigned PROT_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For protection domai
 
 typedef uint32_t ProtDomainId;
 typedef uint32_t ObjRefSignature;
+typedef uint32_t UserToken;
 
 }
 }

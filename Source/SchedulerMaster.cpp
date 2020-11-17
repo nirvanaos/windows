@@ -4,14 +4,14 @@
 
 #include "SchedulerMaster.h"
 #include "../Port/Scheduler.h"
-#include <Thread.h>
 #include "MailslotName.h"
+#include <StartupSys.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool SchedulerMaster::run (Runnable& startup, DeadlineTime deadline)
+bool SchedulerMaster::run (int argc, char* argv [])
 {
 	if (!(
 		Office::create_mailslot (SCHEDULER_MAILSLOT_NAME)
@@ -21,8 +21,16 @@ bool SchedulerMaster::run (Runnable& startup, DeadlineTime deadline)
 		return false;
 	Office::start ();
 	message_broker_.start ();
-	worker_threads_.run (startup, deadline);
+	StartupSys startup (argc, argv);
+	worker_threads_.run (startup, StartupSys::default_deadline ());
 	return true;
+}
+
+void SchedulerMaster::on_error (int err) NIRVANA_NOEXCEPT
+{
+	int zero = 0;
+	if (error_.compare_exchange_strong (zero, err))
+		abort (); // TODO: Send SystemError message to all domains.
 }
 
 void SchedulerMaster::create_item ()
@@ -37,10 +45,34 @@ void SchedulerMaster::delete_item () NIRVANA_NOEXCEPT
 
 void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT
 {
-	Base::schedule (deadline, executor);
+	try {
+		Base::schedule (deadline, executor);
+	} catch (...) {
+		on_error (CORBA::SystemException::EC_NO_MEMORY);
+	}
 }
 
-void SchedulerMaster::WorkerThreads::received (OVERLAPPED* ovl, DWORD size)
+bool SchedulerMaster::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT
+{
+	if (error_)
+		return false;
+
+	try {
+		if (!Base::reschedule (deadline, executor, old))
+			return false;
+	} catch (...) {
+		on_error (CORBA::SystemException::EC_NO_MEMORY);
+		return false;
+	}
+	return true;
+}
+
+void SchedulerMaster::shutdown () NIRVANA_NOEXCEPT
+{
+	worker_threads_.shutdown ();
+}
+
+void SchedulerMaster::WorkerThreads::received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT
 {
 	Executor* executor = reinterpret_cast <Executor*> (ovl);
 	ThreadWorker::execute (*executor, 0);

@@ -20,7 +20,7 @@ namespace Windows {
 /// \tparam Thr Thread class. Thread must start in the constructor and join in the destructor.
 /// Thread constructor gets reference to PostOfficeBase as parameter./// \tparam PRIORITY Priority of the worker threads.
 
-/// Thread procedure must call PostOffice::dispatch() method while it returns true.
+/// Thread procedure must call PostOffice::thread_proc() method.
 template <class T, size_t BUF_SIZE, int PRIORITY>
 class PostOffice :
 	public MailslotReader,
@@ -32,7 +32,7 @@ class PostOffice :
 
 public:
 	/// Derived class T must override this method to receive messages.
-	void received (void* message, DWORD size)
+	void received (void* message, DWORD size) NIRVANA_NOEXCEPT
 	{}
 
 	/// Destructor calls terminate().
@@ -61,14 +61,14 @@ public:
 	}
 
 	/// Terminate the post office work.
-	virtual void terminate ()
+	virtual void terminate () NIRVANA_NOEXCEPT
 	{
 		MailslotReader::terminate ();
 		Pool::terminate ();
 	}
 
 private:
-	virtual void received (OVERLAPPED* ovl, DWORD size)
+	virtual void received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT
 	{
 		// Copy message to stack
 		LONG_PTR buf [MAX_WORDS];

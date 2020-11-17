@@ -2,12 +2,13 @@
 #define NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
 
 #include "SchedulerBase.h"
-#include <PriorityQueue.h>
-#include <SkipListWithPool.h>
 #include "WorkerThreads.h"
 #include "WorkerSemaphore.h"
 #include "MessageBroker.h"
 #include "Mailslot.h"
+#include <PriorityQueue.h>
+#include <SkipListWithPool.h>
+#include <StartupProt.h>
 #include <atomic>
 
 namespace Nirvana {
@@ -31,10 +32,11 @@ public:
 	}
 
 	/// Main loop.
-	/// \param startup Protection domain startup runnable object.
+	/// \param argc Command line argumens count.
+	/// \param argv Command line argumens.
 	/// \param deadline Startup deadline.
 	/// \returns `false` if system domain is not running.
-	bool run (Runnable& startup, DeadlineTime deadline);
+	bool run (int argc, char* argv [], DeadlineTime deadline = StartupProt::default_deadline ());
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();
