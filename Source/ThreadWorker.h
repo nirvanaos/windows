@@ -1,12 +1,14 @@
 // Nirvana project
 // Windows implementation.
-// Port::ThreadWorker class.
+// ThreadWorker class.
 // Platform-specific worker thread implementation.
 
-#ifndef NIRVANA_CORE_PORT_THREADWORKER_H_
-#define NIRVANA_CORE_PORT_THREADWORKER_H_
+#ifndef NIRVANA_CORE_WINDOWS_THREADWORKER_H_
+#define NIRVANA_CORE_WINDOWS_THREADWORKER_H_
 
-#include "Thread.h"
+#include <ThreadWorker.h>
+#include "Thread.inl"
+#include "ExecContext.inl"
 
 namespace Nirvana {
 namespace Core {
@@ -14,34 +16,36 @@ namespace Core {
 class Runnable;
 
 namespace Windows {
+
 class WorkerSemaphore;
 class CompletionPort;
-}
-
-namespace Port {
 
 class ThreadWorker :
-	public Thread
+	public Port::Thread,
+	public Core::ThreadWorker
 {
 public:
-	void run_main (Runnable& startup, DeadlineTime deadline);
-	void create ();
+	void create ()
+	{
+		Port::Thread::create (this, WORKER_THREAD_PRIORITY);
+	}
 
-protected:
-	ThreadWorker (Windows::TaskMaster& master) :
-		master_ (master)
+	void run_main (Runnable& startup, DeadlineTime deadline);
+
+	ThreadWorker (Windows::WorkerSemaphore& master)
 	{}
 
-	~ThreadWorker ();
+	ThreadWorker (Windows::CompletionPort& master)
+	{}
+
+	~ThreadWorker ()
+	{}
 
 private:
-	friend class Thread;
+	friend class Port::Thread;
 	static unsigned long __stdcall thread_proc (ThreadWorker* _this);
 	struct MainFiberParam;
 	static void __stdcall main_fiber_proc (MainFiberParam* param);
-
-private:
-	Windows::TaskMaster& master_;
 };
 
 }

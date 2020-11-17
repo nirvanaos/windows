@@ -15,7 +15,7 @@ namespace Port {
 struct SysDomain::ProtDomainInfo::ProcessStart : Windows::Message::ProcessStart
 {};
 
-SysDomain::ProtDomainInfo::ProtDomainInfo () :
+SysDomain::ProtDomainInfo::ProtDomainInfo (int platform) :
 	process_ (nullptr),
 	semaphore_ (nullptr)
 {

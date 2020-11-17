@@ -26,7 +26,7 @@ class ThreadPool :
 public:
 	static unsigned int thread_count ()
 	{
-		return Port::g_system_info.hardware_concurrency ();
+		return Port::SystemInfo::hardware_concurrency ();
 	}
 
 	ThreadPool () :
@@ -73,17 +73,20 @@ public:
 	}
 
 	//! Terminate threads.
-	void terminate ()
-	{
-		Master::terminate ();
-		for (Worker* p = threads_, *end = p + thread_count (); p != end; ++p) {
-			p->port ().join ();
-		}
-	}
+	void terminate ();
 
 private:
 	Worker* threads_;
 };
+
+template <class Master, class Worker>
+void ThreadPool <Master, Worker>::terminate ()
+{
+	Master::terminate ();
+	for (Worker* p = threads_, *end = p + thread_count (); p != end; ++p) {
+		p->join ();
+	}
+}
 
 }
 }

@@ -18,7 +18,7 @@ public:
 	{
 	public:
 		struct ProcessStart;
-		ProtDomainInfo (); // Will invoke CreateProcess().
+		ProtDomainInfo (int platform); // Will invoke CreateProcess().
 		ProtDomainInfo (const ProcessStart& message);
 
 		ProtDomainInfo (ProtDomainInfo&& src) :

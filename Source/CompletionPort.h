@@ -34,7 +34,7 @@ public:
 	}
 
 	/// Post an I/O completion packet to an I/O completion port.
-	void post (CompletionPortReceiver& receiver, OVERLAPPED* param, DWORD size)
+	void post (CompletionPortReceiver& receiver, OVERLAPPED* param, DWORD size) NIRVANA_NOEXCEPT
 	{
 		verify (PostQueuedCompletionStatus (completion_port_, size, (ULONG_PTR)&receiver, param));
 	}

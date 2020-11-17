@@ -16,12 +16,6 @@ class ThreadPostman :
 	public Port::Thread
 {
 public:
-	/// For template compatibility with Core::Tread
-	ThreadPostman& port ()
-	{
-		return *this;
-	}
-
 	ThreadPostman (CompletionPort& completion_port) :
 		completion_port_ (completion_port)
 	{}

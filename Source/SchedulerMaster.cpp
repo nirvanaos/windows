@@ -21,36 +21,30 @@ bool SchedulerMaster::run (Runnable& startup, DeadlineTime deadline)
 		return false;
 	Office::start ();
 	message_broker_.start ();
-	WorkerThreads::run (startup, deadline);
+	worker_threads_.run (startup, deadline);
+	return true;
 }
 
-void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor, DeadlineTime deadline_prev, bool nothrow_fallback)
+void SchedulerMaster::create_item ()
 {
-	try {
-		Base::schedule (deadline, SchedulerItem (executor), deadline_prev);
-	} catch (...) {
-		if (nothrow_fallback) {
-			// Fallback
-			Execute exec;
-			exec.executor = (uint64_t)&executor;
-			exec.deadline = deadline;
-			exec.scheduler_error = CORBA::SystemException::EC_NO_MEMORY;
-			in_proc_execute_.execute (exec);
-		} else
-			throw;
-	}
+	Base::create_item ();
 }
 
-void SchedulerMaster::core_free ()
+void SchedulerMaster::delete_item () NIRVANA_NOEXCEPT
 {
-	Base::core_free ();
+	Base::delete_item ();
 }
 
-void SchedulerMaster::InProcExecute::received (OVERLAPPED* ovl, DWORD size)
+void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT
 {
-	Execute* exec = reinterpret_cast <Execute*> (ovl);
-	ThreadWorker::execute (*reinterpret_cast <Executor*> (exec->executor), (Word)exec->scheduler_error);
-	scheduler ().core_free ();
+	Base::schedule (deadline, executor);
+}
+
+void SchedulerMaster::WorkerThreads::received (OVERLAPPED* ovl, DWORD size)
+{
+	Executor* executor = reinterpret_cast <Executor*> (ovl);
+	ThreadWorker::execute (*executor, 0);
+	SchedulerMaster::singleton ().core_free ();
 }
 
 }

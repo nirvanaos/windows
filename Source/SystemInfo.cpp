@@ -5,7 +5,7 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-SystemInfo g_system_info;
+SystemInfo SystemInfo::singleton_;
 
 SystemInfo::SystemInfo ()
 {

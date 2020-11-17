@@ -2,6 +2,7 @@
 #include "SchedulerSlave.h"
 #include <Scheduler.h>
 #include "MailslotName.h"
+#include "SchedulerMessage.h"
 
 namespace Nirvana {
 namespace Core {
@@ -10,7 +11,7 @@ namespace Windows {
 SchedulerSlave::SchedulerSlave () :
 	sys_process_ (nullptr),
 	error_ (0),
-	queue_ (thread_count ())
+	queue_ (Port::SystemInfo::hardware_concurrency ())
 {}
 
 SchedulerSlave::SchedulerSlave (uint32_t sys_process_id, uint32_t sys_semaphore) :
@@ -27,7 +28,7 @@ void SchedulerSlave::initialize (uint32_t sys_process_id, uint32_t sys_semaphore
 	HANDLE sem;
 	if (!DuplicateHandle (sys_process_, (HANDLE)sys_semaphore, GetCurrentProcess (), &sem, 0, FALSE, DUPLICATE_SAME_ACCESS))
 		throw_INTERNAL ();
-	this->semaphore (sem);
+	worker_threads_.semaphore (sem);
 	executor_id_ = sys_semaphore;
 }
 
@@ -107,7 +108,7 @@ bool SchedulerSlave::run (Runnable& startup, DeadlineTime deadline)
 		if (!initialize ())
 			return false;
 		message_broker_.start ();
-		WorkerThreads::run (startup, deadline);
+		worker_threads_.run (startup, deadline);
 	} catch (...) {
 		terminate ();
 		throw;
@@ -175,12 +176,17 @@ bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, Dead
 	}
 
 	try {
-		scheduler_mailslot_.send (SchedulerMessage::Reschedule (deadline, executor_id_, old));
+		scheduler_mailslot_.send (SchedulerMessage::ReSchedule (deadline, executor_id_, old));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
 		return false;
 	}
 	return true;
+}
+
+void SchedulerSlave::shutdown () NIRVANA_NOEXCEPT
+{
+	worker_threads_.shutdown ();
 }
 
 inline

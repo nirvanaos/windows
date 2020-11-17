@@ -16,7 +16,8 @@ struct Message : ESIOP::Message
 	{
 		PROCESS_START = (uint16_t)ESIOP::Message::Type::RESERVED_MESSAGES,
 		PROCESS_START_RESPONSE,
-		PROCESS_STOP
+		PROCESS_STOP,
+		SYSTEM_ERROR
 	};
 
 	struct Header
@@ -68,6 +69,16 @@ struct Message : ESIOP::Message
 		ProcessStop (uint32_t id) :
 			Header (Type::PROCESS_STOP),
 			process_id (id)
+		{}
+	};
+
+	struct SystemError : Header
+	{
+		int32_t error_code;
+
+		SystemError (int32_t err) :
+			Header (Type::SYSTEM_ERROR),
+			error_code (err)
 		{}
 	};
 

@@ -1,7 +1,6 @@
 #ifndef NIRVANA_CORE_PORT_WORKER_SEMAPHORE_H_
 #define NIRVANA_CORE_PORT_WORKER_SEMAPHORE_H_
 
-#include "SchedulerAbstract.h"
 #include "../Port/SystemInfo.h"
 #include "win32.h"
 
@@ -9,17 +8,11 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class WorkerSemaphore : public SchedulerAbstract
+class WorkerSemaphore
 {
 public:
-	void thread_proc ()
-	{
-		while (WaitForMultipleObjects ((DWORD)std::size (handles_), handles_, FALSE, INFINITE) == WAIT_OBJECT_0) {
-			execute ();
-		}
-	}
+	void thread_proc ();
 
-protected:
 	WorkerSemaphore ()
 	{
 		handles_ [0] = nullptr;
@@ -42,21 +35,21 @@ protected:
 		handles_ [WORKER_SEMAPHORE] = sem;
 	}
 
+	HANDLE semaphore ()
+	{
+		assert (handles_ [WORKER_SEMAPHORE]);
+		return handles_ [WORKER_SEMAPHORE];
+	}
+
 	void start ()
 	{
-		if (!handles_ [WORKER_SEMAPHORE])
-			verify (handles_ [WORKER_SEMAPHORE] = CreateSemaphoreW (nullptr, 0, (LONG)Port::g_system_info.hardware_concurrency (), nullptr));
+		assert (handles_ [WORKER_SEMAPHORE]);
 		ResetEvent (handles_ [SHUTDOWN_EVENT]);
 	}
 
 	void terminate () NIRVANA_NOEXCEPT
 	{
 		SetEvent (handles_ [SHUTDOWN_EVENT]);
-	}
-
-	virtual void shutdown () NIRVANA_NOEXCEPT
-	{
-		terminate ();
 	}
 
 private:

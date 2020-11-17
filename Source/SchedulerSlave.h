@@ -1,10 +1,11 @@
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
 
+#include "SchedulerBase.h"
 #include <PriorityQueue.h>
 #include <SkipListWithPool.h>
-#include "SchedulerMessage.h"
 #include "WorkerThreads.h"
+#include "WorkerSemaphore.h"
 #include "MessageBroker.h"
 #include "Mailslot.h"
 #include <atomic>
@@ -14,7 +15,7 @@ namespace Core {
 namespace Windows {
 
 class SchedulerSlave :
-	public WorkerThreads
+	public SchedulerBase <SchedulerSlave>
 {
 public:
 	/// Used when process started by the system domain.
@@ -40,9 +41,10 @@ public:
 	virtual void delete_item () NIRVANA_NOEXCEPT;
 	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
+	virtual void shutdown () NIRVANA_NOEXCEPT;
 
-protected:
-	virtual void execute () NIRVANA_NOEXCEPT;
+	// Called from worker thread.
+	void execute () NIRVANA_NOEXCEPT;
 
 private:
 	bool initialize ();
@@ -59,6 +61,7 @@ private:
 	uint32_t executor_id_;
 	std::atomic <int> error_;
 	SkipListWithPool <PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;
+	WorkerThreads <WorkerSemaphore> worker_threads_;
 };
 
 }

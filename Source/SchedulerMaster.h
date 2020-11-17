@@ -5,13 +5,12 @@
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERMASTER_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERMASTER_H_
 
-#include "PostOffice.h"
-#include "Mailslot.h"
-#include "WorkerThreads.h"
+#include "SchedulerBase.h"
 #include <SchedulerImpl.h>
+#include "PostOffice.h"
+#include "WorkerThreads.h"
 #include "SchedulerMessage.h"
 #include "MessageBroker.h"
-#include "RoundBuffers.h"
 
 namespace Nirvana {
 namespace Core {
@@ -20,6 +19,9 @@ namespace Windows {
 class SchedulerItem
 {
 public:
+	SchedulerItem ()
+	{}
+
 	SchedulerItem (uint32_t executor_id) :
 		executor_ (executor_id | IS_SEMAPHORE)
 	{}
@@ -52,17 +54,21 @@ public:
 	}
 
 private:
-	static const uintptr_t IS_SEMAPHORE = 1 << sizeof (uintptr_t) * 8 - 1;
+	static const uintptr_t IS_SEMAPHORE = ~((~(uintptr_t)0) >> 1);
 	uintptr_t executor_;
 };
 
 class SchedulerMaster :
+	public SchedulerBase <SchedulerMaster>,
 	public PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY>,
 	public SchedulerImpl <SchedulerMaster, SchedulerItem>
 {
-public:
 	typedef SchedulerImpl <SchedulerMaster, SchedulerItem> Base;
 	typedef PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY> Office;
+public:
+	SchedulerMaster () :
+		error_ (0)
+	{}
 
 	/// Main loop.
 	/// \param startup System domain startup runnable object.
@@ -76,62 +82,38 @@ public:
 	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
 
-	void core_free ();
-
-	static void core_free_static ();
-
 	/// Process mailslot message.
 	void received (void* data, DWORD size);
 
-protected:
-	virtual void execute () NIRVANA_NOEXCEPT;
-
-private:
-	static SchedulerMaster& scheduler ()
+	/// Called by SchedulerImpl
+	void execute (SchedulerItem& item) NIRVANA_NOEXCEPT
 	{
-		assert (scheduler_);
-		return static_cast <SchedulerMaster&> (*scheduler_);
+		if (item.is_semaphore ())
+			ReleaseSemaphore (item.semaphore (), 1, nullptr);
+		else
+			worker_threads_.execute (item.executor ());
 	}
 
 private:
 	/// Helper class for executing in the current process.
-	class InProcExecute :
+	class WorkerThreads :
+		public Windows::WorkerThreads <CompletionPort>,
 		public CompletionPortReceiver
 	{
 	public:
-		InProcExecute (unsigned thread_count) :
-			buffers_ (thread_count)
-		{}
-
-		~InProcExecute ()
-		{}
-
-		void execute (const Execute& msg)
+		void execute (Executor& executor) NIRVANA_NOEXCEPT
 		{
-			Execute* buffer = buffers_.next_buffer ();
-			*buffer = msg;
-			worker_threads_.post (*this, reinterpret_cast <OVERLAPPED*> (buffer), 0);
-		}
-
-		void run (Runnable& startup, DeadlineTime deadline)
-		{
-			worker_threads_.run (startup, deadline);
-		}
-
-		void shutdown ()
-		{
-			worker_threads_.shutdown ();
+			post (*this, reinterpret_cast <OVERLAPPED*> (&executor), 0);
 		}
 
 	private:
 		virtual void received (OVERLAPPED* ovl, DWORD size);
 
-		RoundBuffers <Execute> buffers_;
-		WorkerThreads worker_threads_;
 	}
-	in_proc_execute_;
+	worker_threads_;
 
 	MessageBroker message_broker_;
+	std::atomic <int> error_;
 };
 
 inline

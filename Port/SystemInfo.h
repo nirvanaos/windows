@@ -14,18 +14,20 @@ namespace Port {
 class SystemInfo
 {
 public:
-	SystemInfo ();
-
-	unsigned int hardware_concurrency ()
+	static unsigned int hardware_concurrency ()
 	{
-		return hardware_concurrency_;
+		return singleton_.hardware_concurrency_;
 	}
 
 private:
+	SystemInfo ();
+
+private:
+	static SystemInfo singleton_;
+
 	unsigned int hardware_concurrency_;
 };
 
-static SystemInfo g_system_info;
 
 }
 }

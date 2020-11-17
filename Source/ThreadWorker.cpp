@@ -2,30 +2,29 @@
 // Windows implementation.
 // ThreadWorkerBase class.
 
-#include "ThreadWorker.h"
-#include "TaskMaster.h"
-#include "ExecContextInternal.h"
+#include "WorkerThreads.h"
+#include "WorkerSemaphore.h"
+#include "CompletionPort.h"
 #include <ExecDomain.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
+
+unsigned long __stdcall ThreadWorker::thread_proc (ThreadWorker* _this)
+{
+	Core::Thread& thread = static_cast <Core::Thread&> (*_this);
+	current_ = &thread;
+	thread.neutral_context ().port ().convert_to_fiber ();
+	WorkerThreadsBase::singleton ().thread_proc ();
+	thread.neutral_context ().port ().convert_to_thread ();
+	return 0;
+}
 
 struct ThreadWorker::MainFiberParam
 {
 	Core_var <ExecDomain> main_domain;
-	Windows::TaskMaster* master;
 };
-
-DWORD WINAPI ThreadWorker::thread_proc (ThreadWorker* _this)
-{
-	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*_this);
-	current_ = &thread;
-	thread.neutral_context ().port ().convert_to_fiber ();
-	_this->master_.thread_proc ();
-	thread.neutral_context ().port ().convert_to_thread ();
-	return 0;
-}
 
 void CALLBACK ThreadWorker::main_fiber_proc (MainFiberParam* param)
 {
@@ -35,14 +34,9 @@ void CALLBACK ThreadWorker::main_fiber_proc (MainFiberParam* param)
 	// Release main fiber to pool for reuse.
 	param->main_domain.reset ();
 	// Do worker thread proc.
-	param->master->thread_proc ();
+	WorkerThreadsBase::singleton ().thread_proc ();
 	// Switch back to main fiber.
 	main_domain->switch_to ();
-}
-
-void ThreadWorker::create ()
-{
-	Thread::create (this, Windows::WORKER_THREAD_PRIORITY);
 }
 
 void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
@@ -61,7 +55,6 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	ExecDomain& main_domain = *param.main_domain;
 
 	// Create fiber for neutral context
-	param.master = &master_;
 	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_fiber_proc, &param);
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
@@ -79,7 +72,7 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	thread.neutral_context ().switch_to ();
 
 	// Do fiber_proc for this worker thread
-	ExecContext::fiber_proc (nullptr);
+	Port::ExecContext::fiber_proc (nullptr);
 	assert (!handle_); // Prevent join to self.
 
 	// Restore priority and release resources
