@@ -16,7 +16,7 @@ int main (int argc, char** argv)
 	if (!hproc)
 		return GetLastError ();
 
-	HANDLE hsem = (HANDLE)strtoul (argv [2], &end, 10);
+	HANDLE hsem = (HANDLE)(uintptr_t)strtoul (argv [2], &end, 10);
 	if (*end)
 		return -1;
 

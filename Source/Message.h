@@ -59,7 +59,7 @@ struct Message : ESIOP::Message
 		ProcessStartResponse (uint32_t process_id, void* semaphore) :
 			Header (Type::PROCESS_START_RESPONSE),
 			sys_process_id (process_id),
-			executor_id ((uint32_t)semaphore)
+			executor_id ((uint32_t)(uintptr_t)semaphore)
 		{}
 	};
 

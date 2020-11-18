@@ -149,7 +149,7 @@ void SchedulerMaster::received (void* data, DWORD size) NIRVANA_NOEXCEPT
 			} catch (...) {
 				on_error (CORBA::SystemException::EC_NO_MEMORY);
 				// Fallback
-				HANDLE h = (HANDLE)msg->executor_id;
+				HANDLE h = (HANDLE)(uintptr_t)msg->executor_id;
 				if (WAIT_OBJECT_0 == WaitForSingleObject (h, 0))
 					Base::free_cores_.increment ();
 				if (ReleaseSemaphore (h, 1, nullptr))

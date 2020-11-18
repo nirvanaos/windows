@@ -27,7 +27,7 @@ void SchedulerSlave::initialize (uint32_t sys_process_id, uint32_t sys_semaphore
 		throw_INITIALIZE ();
 
 	HANDLE sem;
-	if (!DuplicateHandle (sys_process_, (HANDLE)sys_semaphore, GetCurrentProcess (), &sem, 0, FALSE, DUPLICATE_SAME_ACCESS))
+	if (!DuplicateHandle (sys_process_, (HANDLE)(uintptr_t)sys_semaphore, GetCurrentProcess (), &sem, 0, FALSE, DUPLICATE_SAME_ACCESS))
 		throw_INTERNAL ();
 	worker_threads_.semaphore (sem);
 	executor_id_ = sys_semaphore;
