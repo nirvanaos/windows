@@ -103,13 +103,12 @@ void SchedulerSlave::terminate ()
 	}
 }
 
-bool SchedulerSlave::run (int argc, char* argv [], DeadlineTime deadline)
+bool SchedulerSlave::run (Runnable& startup, DeadlineTime deadline)
 {
 	try {
 		if (!initialize ())
 			return false;
 		message_broker_.start ();
-		StartupProt startup (argc, argv);
 		worker_threads_.run (startup, deadline);
 	} catch (...) {
 		terminate ();

@@ -16,7 +16,8 @@ class SystemInfo
 public:
 	static unsigned int hardware_concurrency () NIRVANA_NOEXCEPT
 	{
-		return singleton_.hardware_concurrency_;
+		return 1;
+		//return singleton_.hardware_concurrency_;
 	}
 
 private:

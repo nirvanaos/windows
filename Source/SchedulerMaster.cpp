@@ -5,13 +5,12 @@
 #include "SchedulerMaster.h"
 #include "../Port/Scheduler.h"
 #include "MailslotName.h"
-#include <StartupSys.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool SchedulerMaster::run (int argc, char* argv [])
+bool SchedulerMaster::run (Runnable& startup, DeadlineTime deadline)
 {
 	if (!(
 		Office::create_mailslot (SCHEDULER_MAILSLOT_NAME)
@@ -21,8 +20,7 @@ bool SchedulerMaster::run (int argc, char* argv [])
 		return false;
 	Office::start ();
 	message_broker_.start ();
-	StartupSys startup (argc, argv);
-	worker_threads_.run (startup, StartupSys::default_deadline ());
+	worker_threads_.run (startup, deadline);
 	return true;
 }
 

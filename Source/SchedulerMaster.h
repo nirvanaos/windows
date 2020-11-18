@@ -71,10 +71,10 @@ public:
 	{}
 
 	/// Main loop.
-	/// \param argc Command line argumens count.
-	/// \param argv Command line argumens.
+	/// \param startup The startup Runnable object.
+	/// \param deadline Startup deadline.
 	/// \returns `false` if system domain is already running.
-	bool run (int argc, char* argv []);
+	bool run (Runnable& startup, DeadlineTime deadline);
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();

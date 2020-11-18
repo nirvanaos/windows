@@ -33,10 +33,10 @@ public:
 			Pool::threads ()->run_main (startup, deadline);
 
 		} catch (...) {
-			terminate ();
+			Pool::terminate ();
 			throw;
 		}
-		terminate ();
+		Pool::terminate ();
 	}
 
 	void shutdown ()

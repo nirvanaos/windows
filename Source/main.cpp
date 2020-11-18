@@ -1,3 +1,6 @@
+#include <StartupSys.h>
+#include <StartupProt.h>
+#include <Scheduler.h>
 #include "SchedulerMaster.h"
 #include "SchedulerSlave.h"
 #include "Message.h"
@@ -7,6 +10,7 @@
 
 using namespace std;
 using namespace Nirvana;
+using namespace Nirvana::Core;
 using namespace Nirvana::Core::Windows;
 
 bool shutdown ()
@@ -23,24 +27,27 @@ bool shutdown ()
 
 int main (int argc, char* argv [])
 {
-	bool master = false;
-
 	++argv;
 	if (--argc > 0) {
 		const char* arg = *argv;
 		if ('-' == arg [0]) {
 			switch (arg [1]) {
 
-				case 's' :
-					master;
+				case 's': {
 					--argc;
 					++argv;
-					break;
+					StartupSys startup (argc, argv);
+					if (!Scheduler::run_sys_domain (startup, StartupSys::default_deadline ())) {
+						cout << "System is already running." << endl;
+						return -1;
+					} else
+						return 0;
+				}
 
 				case 'p': {
 					uint32_t sys_process_id = 0;
 					uint32_t semaphore = 0;
-					DeadlineTime startup_deadline = INFINITE_DEADLINE;
+					DeadlineTime startup_deadline = StartupProt::default_deadline ();
 					if (--argc > 0) {
 						++argv;
 						char* end;
@@ -63,7 +70,8 @@ int main (int argc, char* argv [])
 						cout << "Invalid command line." << endl;
 						return -1;
 					} else {
-						if (!SchedulerSlave (sys_process_id, semaphore).run (argc, argv, startup_deadline)) {
+						StartupProt startup (argc, argv);
+						if (!SchedulerSlave (sys_process_id, semaphore).run (startup, startup_deadline)) {
 							cout << "System is not running." << endl;
 							return -1;
 						} else
@@ -83,16 +91,11 @@ int main (int argc, char* argv [])
 		}
 	}
 
-	if (master) {
-		if (!SchedulerMaster ().run (argc, argv)) {
-			cout << "System is already running." << endl;
-			return -1;
-		}
-	} else {
-		if (!SchedulerSlave ().run (argc, argv)) {
-			cout << "System is not running." << endl;
-			return -1;
-		}
+	StartupProt startup (argc, argv);
+	if (!SchedulerSlave ().run (startup, StartupProt::default_deadline ())) {
+		cout << "System is not running." << endl;
+		return -1;
 	}
+
 	return 0;
 }

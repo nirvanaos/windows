@@ -21,10 +21,11 @@ ExecContext::ExecContext (bool neutral) :
 
 void __stdcall ExecContext::fiber_proc (void*)
 {
-	for (;;) { // The fiber procedure never completes.
+	for (;;) {
 		Core::Thread& thread = Core::Thread::current ();
 		ExecDomain* ed = thread.exec_domain ();
-		assert (ed);
+		if (!ed)
+			break; // This is for main thread only. The fiber procedure never completes.
 		DWORD exc;
 		__try {
 			ed->execute_loop ();

@@ -64,6 +64,10 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	thread.neutral_context ().port ().attach (worker_fiber);
 	current_ = &thread;
 
+#ifdef _DEBUG
+	DWORD dbg_main_thread = GetCurrentThreadId ();
+#endif
+
 	// Set main thread priority to WORKER_THREAD_PRIORITY
 	int prio = GetThreadPriority (GetCurrentThread ());
 	SetThreadPriority (GetCurrentThread (), Windows::WORKER_THREAD_PRIORITY);
@@ -74,6 +78,8 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 
 	// Do fiber_proc for this worker thread
 	Port::ExecContext::fiber_proc (nullptr);
+
+	assert (dbg_main_thread == GetCurrentThreadId ());
 	assert (!handle_); // Prevent join to self.
 
 	// Restore priority and release resources
