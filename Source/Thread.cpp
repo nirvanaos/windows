@@ -1,5 +1,4 @@
-#include "ThreadInternal.h"
-#include <CORBA/Exception.h>
+#include "Thread.inl"
 
 namespace Nirvana {
 namespace Core {
