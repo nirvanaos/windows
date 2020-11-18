@@ -1,7 +1,7 @@
 // Nirvana project
 // Protection domain memory service over Win32 API
 
-#include "ProtDomainMemoryInternal.h"
+#include "Memory.inl"
 #include <Nirvana/real_copy.h>
 #include <CORBA/CORBA.h>
 
@@ -12,9 +12,9 @@ namespace Port {
 using namespace ::Nirvana::Core::Windows;
 using namespace std;
 
-ProtDomainMemory::AddressSpace ProtDomainMemory::space_;
+Memory::AddressSpace Memory::space_;
 
-DWORD ProtDomainMemory::Block::commit (size_t offset, size_t size)
+DWORD Memory::Block::commit (size_t offset, size_t size)
 { // This operation must be thread-safe.
 
 	assert (offset + size <= ALLOCATION_GRANULARITY);
@@ -91,7 +91,7 @@ restart:
 	return ret;
 }
 
-DWORD ProtDomainMemory::Block::check_committed (size_t offset, size_t size)
+DWORD Memory::Block::check_committed (size_t offset, size_t size)
 {
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
@@ -104,7 +104,7 @@ DWORD ProtDomainMemory::Block::check_committed (size_t offset, size_t size)
 	return bs.page_state_bits;
 }
 
-bool ProtDomainMemory::Block::need_remap_to_share (size_t offset, size_t size)
+bool Memory::Block::need_remap_to_share (size_t offset, size_t size)
 {
 	const State& st = state ();
 	if (st.state != State::MAPPED)
@@ -122,7 +122,7 @@ bool ProtDomainMemory::Block::need_remap_to_share (size_t offset, size_t size)
 	return false;
 }
 
-void ProtDomainMemory::Block::prepare_to_share_no_remap (size_t offset, size_t size)
+void Memory::Block::prepare_to_share_no_remap (size_t offset, size_t size)
 {
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
@@ -149,7 +149,7 @@ void ProtDomainMemory::Block::prepare_to_share_no_remap (size_t offset, size_t s
 	}
 }
 
-void ProtDomainMemory::Block::remap (const CopyReadOnly* copy_rgn)
+void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 {
 	assert (exclusive_locked ());
 
@@ -263,7 +263,7 @@ void ProtDomainMemory::Block::remap (const CopyReadOnly* copy_rgn)
 	}
 }
 
-void ProtDomainMemory::Block::aligned_copy (void* src, size_t size, UWord flags)
+void Memory::Block::aligned_copy (void* src, size_t size, UWord flags)
 {
 	// NOTE: Memory::DECOMMIT and Memory::RELEASE flags used only for optimozation.
 	// We don't perform actual decommit or release here.
@@ -306,7 +306,7 @@ void ProtDomainMemory::Block::aligned_copy (void* src, size_t size, UWord flags)
 	}
 
 	// Virtual copy.
-	if (!(flags & Memory::DECOMMIT))	// Memory::RELEASE includes flag DECOMMIT.
+	if (!(flags & Nirvana::Memory::DECOMMIT))	// Memory::RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
 	AddressSpace::Block::copy (src_block, offset, size, flags);
 	return;
@@ -317,7 +317,7 @@ fallback:
 	copy (offset, size, src, flags);
 }
 
-void ProtDomainMemory::Block::copy (size_t offset, size_t size, const void* src, UWord flags)
+void Memory::Block::copy (size_t offset, size_t size, const void* src, UWord flags)
 {
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
@@ -326,7 +326,7 @@ repeat:
 	DWORD page_state = check_committed (offset, size);
 	if (PageState::MASK_RO & page_state) {
 		// Some target pages are read-only
-		if (flags & Memory::READ_ONLY) {
+		if (flags & Nirvana::Memory::READ_ONLY) {
 			if (PageState::MASK_UNMAPPED & page_state) {
 				if (exclusive_lock ())
 					goto repeat;
@@ -341,20 +341,20 @@ repeat:
 				real_copy ((const BYTE*)src, (const BYTE*)src + size, ptmp + offset);
 				verify (UnmapViewOfFile (ptmp));
 				if (PageState::MASK_RW & page_state)
-					change_protection (offset, size, Memory::READ_ONLY);
+					change_protection (offset, size, Nirvana::Memory::READ_ONLY);
 			}
 		} else {
-			change_protection (offset, size, Memory::READ_WRITE);
+			change_protection (offset, size, Nirvana::Memory::READ_WRITE);
 			real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
 		}
 	} else {
 		real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
-		if (flags & Memory::READ_ONLY)
-			change_protection (offset, size, Memory::READ_ONLY);
+		if (flags & Nirvana::Memory::READ_ONLY)
+			change_protection (offset, size, Nirvana::Memory::READ_ONLY);
 	}
 }
 
-void ProtDomainMemory::Block::decommit (size_t offset, size_t size)
+void Memory::Block::decommit (size_t offset, size_t size)
 {
 	offset = round_up (offset, PAGE_SIZE);
 	size_t offset_end = round_down (offset + size, PAGE_SIZE);
@@ -415,7 +415,7 @@ void ProtDomainMemory::Block::decommit (size_t offset, size_t size)
 	}
 }
 
-void ProtDomainMemory::Block::change_protection (size_t offset, size_t size, UWord flags)
+void Memory::Block::change_protection (size_t offset, size_t size, UWord flags)
 {
 	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
@@ -439,7 +439,7 @@ void ProtDomainMemory::Block::change_protection (size_t offset, size_t size, UWo
 	const DWORD* states_src;
 	const DWORD* states_dst;
 
-	if (flags & Memory::READ_ONLY) {
+	if (flags & Nirvana::Memory::READ_ONLY) {
 		protect_mask = PageState::MASK_RO;
 		states_src = states_RW;
 		states_dst = states_RO;
@@ -484,7 +484,7 @@ void ProtDomainMemory::Block::change_protection (size_t offset, size_t size, UWo
 }
 
 inline
-bool ProtDomainMemory::Block::is_copy (Block& other, size_t offset, size_t size)
+bool Memory::Block::is_copy (Block& other, size_t offset, size_t size)
 {
 	const State& st = state (), & other_st = other.state ();
 	if (st.state != State::MAPPED || other_st.state != State::MAPPED)
@@ -505,13 +505,13 @@ bool ProtDomainMemory::Block::is_copy (Block& other, size_t offset, size_t size)
 	return true;
 }
 
-inline void ProtDomainMemory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi)
+inline void Memory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi)
 {
 	//space_.query (address, mbi);
 	verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 }
 
-HANDLE ProtDomainMemory::new_mapping ()
+HANDLE Memory::new_mapping ()
 {
 	HANDLE mapping = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, 0);
 	if (!mapping)
@@ -519,7 +519,7 @@ HANDLE ProtDomainMemory::new_mapping ()
 	return mapping;
 }
 
-uint32_t ProtDomainMemory::commit_no_check (void* ptr, size_t size, bool exclusive)
+uint32_t Memory::commit_no_check (void* ptr, size_t size, bool exclusive)
 {
 	uint32_t state_bits = 0; // Page states bit mask
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
@@ -533,7 +533,7 @@ uint32_t ProtDomainMemory::commit_no_check (void* ptr, size_t size, bool exclusi
 	return state_bits;
 }
 
-void ProtDomainMemory::prepare_to_share (void* src, size_t size, UWord flags)
+void Memory::prepare_to_share (void* src, size_t size, UWord flags)
 {
 	if (!size)
 		return;
@@ -550,7 +550,7 @@ void ProtDomainMemory::prepare_to_share (void* src, size_t size, UWord flags)
 	}
 }
 
-void ProtDomainMemory::change_protection (void* ptr, size_t size, UWord flags)
+void Memory::change_protection (void* ptr, size_t size, UWord flags)
 {
 	if (!size)
 		return;
@@ -569,12 +569,12 @@ void ProtDomainMemory::change_protection (void* ptr, size_t size, UWord flags)
 	}
 }
 
-void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
+void* Memory::allocate (void* dst, size_t size, UWord flags)
 {
 	if (!size)
 		throw_BAD_PARAM ();
 
-	if (flags & ~(Memory::RESERVED | Memory::EXACTLY | Memory::ZERO_INIT))
+	if (flags & ~(Nirvana::Memory::RESERVED | Nirvana::Memory::EXACTLY | Nirvana::Memory::ZERO_INIT))
 		throw_INV_FLAG ();
 
 	void* ret;
@@ -582,7 +582,7 @@ void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 		if (!(ret = space_.reserve (dst, size, flags)))
 			return nullptr;
 
-		if (!(Memory::RESERVED & flags)) {
+		if (!(Nirvana::Memory::RESERVED & flags)) {
 			try {
 				uint32_t prot_mask = commit_no_check (ret, size, true);
 				assert (!(prot_mask & PageState::MASK_RO));
@@ -592,7 +592,7 @@ void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 			}
 		}
 	} catch (const CORBA::NO_MEMORY&) {
-		if (flags & Memory::EXACTLY)
+		if (flags & Nirvana::Memory::EXACTLY)
 			ret = nullptr;
 		else
 			throw;
@@ -600,12 +600,12 @@ void* ProtDomainMemory::allocate (void* dst, size_t size, UWord flags)
 	return ret;
 }
 
-void ProtDomainMemory::release (void* dst, size_t size)
+void Memory::release (void* dst, size_t size)
 {
 	space_.release (dst, size);
 }
 
-void ProtDomainMemory::commit (void* ptr, size_t size)
+void Memory::commit (void* ptr, size_t size)
 {
 	if (!size)
 		return;
@@ -618,10 +618,10 @@ void ProtDomainMemory::commit (void* ptr, size_t size)
 
 	uint32_t prot_mask = commit_no_check (ptr, size);
 	if (prot_mask & PageState::MASK_RO)
-		change_protection (ptr, size, Memory::READ_WRITE);
+		change_protection (ptr, size, Nirvana::Memory::READ_WRITE);
 }
 
-void ProtDomainMemory::decommit (void* ptr, size_t size)
+void Memory::decommit (void* ptr, size_t size)
 {
 	if (!size)
 		return;
@@ -640,7 +640,7 @@ void ProtDomainMemory::decommit (void* ptr, size_t size)
 }
 
 inline
-uint32_t ProtDomainMemory::check_committed (void* ptr, size_t size)
+uint32_t Memory::check_committed (void* ptr, size_t size)
 {
 	uint32_t state_bits = 0;
 	for (const BYTE* begin = (const BYTE*)ptr, *end = begin + size; begin < end;) {
@@ -654,18 +654,18 @@ uint32_t ProtDomainMemory::check_committed (void* ptr, size_t size)
 	return state_bits;
 }
 
-void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
+void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 {
 	if (!size)
 		return dst;
 
-	if (flags & ~(Memory::READ_ONLY | Memory::RELEASE | Memory::ALLOCATE | Memory::EXACTLY))
+	if (flags & ~(Nirvana::Memory::READ_ONLY | Nirvana::Memory::RELEASE | Nirvana::Memory::ALLOCATE | Nirvana::Memory::EXACTLY))
 		throw_INV_FLAG ();
 
 	bool src_own = false, dst_own = false;
 
 	// release_flags can be 0, Memory::RELEASE, Memory::DECOMMIT.
-	UWord release_flags = flags & Memory::RELEASE;
+	UWord release_flags = flags & Nirvana::Memory::RELEASE;
 
 	// Source range have to be committed.
 	uint32_t src_prot_mask;
@@ -689,10 +689,10 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 	uintptr_t src_align = (uintptr_t)src % ALLOCATION_GRANULARITY;
 	try {
 		Region allocated = {0, 0};
-		if (!dst || (flags & Memory::ALLOCATE)) {
+		if (!dst || (flags & Nirvana::Memory::ALLOCATE)) {
 			if (dst) {
 				if (dst == src) {
-					if ((Memory::EXACTLY & flags) && Memory::RELEASE != (flags & Memory::RELEASE))
+					if ((Nirvana::Memory::EXACTLY & flags) && Nirvana::Memory::RELEASE != (flags & Nirvana::Memory::RELEASE))
 						return nullptr;
 					dst = nullptr;
 				} else {
@@ -701,23 +701,23 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 					allocated.ptr = dst;
 					allocated.size = size;
 					allocated.subtract (round_down (src, ALLOCATION_GRANULARITY), round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY));
-					dst = space_.reserve (allocated.ptr, allocated.size, flags | Memory::EXACTLY);
+					dst = space_.reserve (allocated.ptr, allocated.size, flags | Nirvana::Memory::EXACTLY);
 					if (!dst) {
-						if (flags & Memory::EXACTLY)
+						if (flags & Nirvana::Memory::EXACTLY)
 							return nullptr;
 						allocated.size = 0;
 					}
 				}
 			}
 			if (!dst) {
-				if (Memory::RELEASE == release_flags)
+				if (Nirvana::Memory::RELEASE == release_flags)
 					dst = src; // Memory::RELEASE is specified, so we can use source block as destination
 				else {
 					size_t dst_align = src_own ? src_align : 0;
 					size_t cb_res = size + dst_align;
 					BYTE* res = (BYTE*)space_.reserve (nullptr, cb_res, flags);
 					if (!res) {
-						assert (flags & Memory::EXACTLY);
+						assert (flags & Nirvana::Memory::EXACTLY);
 						return nullptr;
 					}
 					dst = res + dst_align;
@@ -742,7 +742,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 		if (dst == src) { // Special case - change protection.
 			// We allow to change protection of the not-allocated memory.
 			// This is necessary for core services like module load.
-			if (src_prot_mask & ((flags & Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO))
+			if (src_prot_mask & ((flags & Nirvana::Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO))
 				change_protection (src, size, flags);
 			return src;
 		}
@@ -758,7 +758,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 							// Copy overlapped part with Memory::DECOMMIT.
 							BYTE* overlapped_end = round_up (d_end - ((BYTE*)src + size - d_end), ALLOCATION_GRANULARITY);
 							assert (overlapped_end < d_end);
-							UWord overlapped_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
+							UWord overlapped_flags = (flags & ~Nirvana::Memory::RELEASE) | Nirvana::Memory::DECOMMIT;
 							while (d_p < overlapped_end) {
 								size_t cb = round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY - d_p;
 								Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
@@ -781,7 +781,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 							// Copy overlapped part with Memory::DECOMMIT.
 							BYTE* overlapped_begin = round_down ((BYTE*)dst + ((BYTE*)dst - (BYTE*)src), ALLOCATION_GRANULARITY);
 							assert (overlapped_begin > dst);
-							UWord overlapped_flags = (flags & ~Memory::RELEASE) | Memory::DECOMMIT;
+							UWord overlapped_flags = (flags & ~Nirvana::Memory::RELEASE) | Nirvana::Memory::DECOMMIT;
 							while (d_p > overlapped_begin) {
 								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
 								size_t cb = d_p - block_begin;
@@ -805,7 +805,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 				} else {
 					// Physical copy.
 					uint32_t dst_prot_mask = commit_no_check (dst, size);
-					if ((dst_prot_mask & PageState::MASK_RO) || (flags & Memory::READ_ONLY)) {
+					if ((dst_prot_mask & PageState::MASK_RO) || (flags & Nirvana::Memory::READ_ONLY)) {
 						if (dst < src) {
 							BYTE* d_p = (BYTE*)dst, *d_end = d_p + size;
 							BYTE* s_p = (BYTE*)src;
@@ -837,10 +837,10 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 				real_move ((const BYTE*)src, (const BYTE*)src + size, (BYTE*)dst);
 			}
 
-			if (flags & Memory::DECOMMIT) {
+			if (flags & Nirvana::Memory::DECOMMIT) {
 				// Release or decommit source. Regions can overlap.
 				Region reg = {src, size};
-				if (flags & (Memory::RELEASE & ~Memory::DECOMMIT)) {
+				if (flags & (Nirvana::Memory::RELEASE & ~Nirvana::Memory::DECOMMIT)) {
 					if (reg.subtract (round_up (dst, ALLOCATION_GRANULARITY), round_down ((BYTE*)dst + size, ALLOCATION_GRANULARITY)))
 						release (reg.ptr, reg.size);
 				} else {
@@ -853,7 +853,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 			throw;
 		}
 	} catch (const CORBA::NO_MEMORY&) {
-		if (Memory::EXACTLY & flags)
+		if (Nirvana::Memory::EXACTLY & flags)
 			dst = nullptr;
 		else
 			throw;
@@ -862,7 +862,7 @@ void* ProtDomainMemory::copy (void* dst, void* src, size_t size, UWord flags)
 	return dst;
 }
 
-uintptr_t ProtDomainMemory::query (const void* p, MemQuery q)
+uintptr_t Memory::query (const void* p, MemQuery q)
 {
 	{
 		switch (q) {
@@ -896,7 +896,7 @@ uintptr_t ProtDomainMemory::query (const void* p, MemQuery q)
 	}
 }
 
-bool ProtDomainMemory::is_readable (const void* p, size_t size)
+bool Memory::is_readable (const void* p, size_t size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
@@ -908,7 +908,7 @@ bool ProtDomainMemory::is_readable (const void* p, size_t size)
 	return true;
 }
 
-bool ProtDomainMemory::is_private (const void* p, size_t size)
+bool Memory::is_private (const void* p, size_t size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
@@ -920,7 +920,7 @@ bool ProtDomainMemory::is_private (const void* p, size_t size)
 	return true;
 }
 
-bool ProtDomainMemory::is_writable (const void* p, size_t size)
+bool Memory::is_writable (const void* p, size_t size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
@@ -932,7 +932,7 @@ bool ProtDomainMemory::is_writable (const void* p, size_t size)
 	return true;
 }
 
-bool ProtDomainMemory::is_copy (const void* p, const void* plocal, size_t size)
+bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 {
 	if ((uintptr_t)p % ALLOCATION_GRANULARITY == (uintptr_t)plocal % ALLOCATION_GRANULARITY) {
 		try {
@@ -955,7 +955,7 @@ bool ProtDomainMemory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
-long CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pex)
+long CALLBACK Memory::exception_filter (struct _EXCEPTION_POINTERS* pex)
 {
 	if (
 		pex->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION
@@ -991,7 +991,7 @@ long CALLBACK ProtDomainMemory::exception_filter (struct _EXCEPTION_POINTERS* pe
 }
 
 // Currently unused
-void ProtDomainMemory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex)
+void Memory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex)
 {
 	if (
 		pex->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION

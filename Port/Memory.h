@@ -2,8 +2,8 @@
 // Windows implementation.
 // Protection domain memory service over Win32 API
 
-#ifndef NIRVANA_CORE_PORT_PROTDOMAINMEMORY_H_
-#define NIRVANA_CORE_PORT_PROTDOMAINMEMORY_H_
+#ifndef NIRVANA_CORE_PORT_MEMORY_H_
+#define NIRVANA_CORE_PORT_MEMORY_H_
 
 #include <Nirvana/Memory.h>
 
@@ -15,7 +15,7 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-class ProtDomainMemory
+class Memory
 {
 	static const size_t PAGE_SIZE = 4096;
 	static const size_t PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
@@ -31,10 +31,10 @@ public:
 	static const size_t FIXED_PROTECTION_UNIT = PAGE_SIZE;
 
 	static const UWord FLAGS = 
-		Memory::ACCESS_CHECK |
-		Memory::HARDWARE_PROTECTION |
-		Memory::COPY_ON_WRITE |
-		Memory::SPACE_RESERVATION;
+		Nirvana::Memory::ACCESS_CHECK |
+		Nirvana::Memory::HARDWARE_PROTECTION |
+		Nirvana::Memory::COPY_ON_WRITE |
+		Nirvana::Memory::SPACE_RESERVATION;
 
 	// Memory::
 	static void* allocate (void* dst, size_t size, UWord flags);

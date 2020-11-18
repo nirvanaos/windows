@@ -1,4 +1,4 @@
-#include "../Port/ProtDomainMemory.h"
+#include "../Port/Memory.h"
 #include "AddressSpace.h"
 #include <CORBA/CORBA.h>
 #include <algorithm>

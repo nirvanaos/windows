@@ -12,7 +12,7 @@ namespace Nirvana {
 namespace Core {
 
 namespace Port {
-class ProtDomainMemory;
+class Memory;
 }
 
 namespace Windows {
@@ -209,7 +209,7 @@ public:
 		const State& state ();
 
 	protected:
-		friend class Port::ProtDomainMemory;
+		friend class Port::Memory;
 
 		void invalidate_state ()
 		{
@@ -260,7 +260,7 @@ public:
 	void check_allocated (void* ptr, size_t size);
 
 private:
-	friend class Port::ProtDomainMemory;
+	friend class Port::Memory;
 
 	void protect (void* address, size_t size, DWORD protection)
 	{

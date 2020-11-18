@@ -1,14 +1,14 @@
-#ifndef NIRVANA_CORE_WINDOWS_PROTDOMAINMEMORYINTERNAL_H_
-#define NIRVANA_CORE_WINDOWS_PROTDOMAINMEMORYINTERNAL_H_
+#ifndef NIRVANA_CORE_WINDOWS_MEMORY_INL_
+#define NIRVANA_CORE_WINDOWS_MEMORY_INL_
 
-#include "../Port/ProtDomainMemory.h"
+#include "../Port/Memory.h"
 #include "AddressSpace.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-class ProtDomainMemory::AddressSpace : public Windows::AddressSpace
+class Memory::AddressSpace : public Windows::AddressSpace
 {
 public:
 	AddressSpace () :
@@ -18,19 +18,19 @@ public:
 	}
 };
 
-inline void ProtDomainMemory::protect (void* address, size_t size, uint32_t protection)
+inline void Memory::protect (void* address, size_t size, uint32_t protection)
 {
 	//space_.protect (address, size, protection);
 	DWORD old;
 	verify (VirtualProtect (address, size, protection, &old));
 }
 
-class ProtDomainMemory::Block :
+class Memory::Block :
 	public Core::Windows::AddressSpace::Block
 {
 public:
 	Block (void* addr, bool exclusive = false) :
-		Core::Windows::AddressSpace::Block (ProtDomainMemory::space_, addr, exclusive)
+		Core::Windows::AddressSpace::Block (Memory::space_, addr, exclusive)
 	{}
 
 	DWORD commit (size_t offset, size_t size);
@@ -41,7 +41,7 @@ public:
 		if (need_remap_to_share (offset, size))
 			if (exclusive_lock () && need_remap_to_share (offset, size))
 				remap ();
-		if (!(flags & Memory::DECOMMIT)) // Memory::RELEASE includes flag DECOMMIT.
+		if (!(flags & Nirvana::Memory::DECOMMIT)) // Memory::RELEASE includes flag DECOMMIT.
 			prepare_to_share_no_remap (offset, size);
 	}
 
@@ -69,7 +69,7 @@ private:
 	void prepare_to_share_no_remap (size_t offset, size_t size);
 };
 
-struct ProtDomainMemory::Block::Regions
+struct Memory::Block::Regions
 {
 	Region begin [PAGES_PER_BLOCK];
 	Region* end;
