@@ -15,13 +15,14 @@ using namespace Nirvana::Core::Windows;
 bool shutdown ()
 {
 	Mailslot ms;
-	try {
-		ms.open (MailslotName (0));
-		ms.send (Message::Shutdown ());
-	} catch (...) {
-		return false;
+	if (ms.open (MailslotName (0))) {
+		try {
+			ms.send (Message::Shutdown ());
+			return true;
+		} catch (...) {
+		}
 	}
-	return true;
+	return false;
 }
 
 int main (int argc, char* argv [])
