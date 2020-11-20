@@ -35,37 +35,27 @@ public:
 	void received (void* message, DWORD size) NIRVANA_NOEXCEPT
 	{}
 
-	/// Destructor calls terminate().
-	~PostOffice ()
-	{
-		terminate ();
-	}
-
-	/// Create mailslot.
-	/// \param mailslot_name Name of the mailslot for incoming messages.
-	/// \returns `true` on success. `false` if mailslot already exists.
-	/// \throws CORBA::INITIALIZE
-	bool create_mailslot (LPCWSTR mailslot_name)
-	{
-		return MailslotReader::create_mailslot (mailslot_name, BUF_SIZE);
-	}
-
 	/// Put the post office to work.
 	/// Mailslot must be already created by the create_mailslot() call.
 	/// If exception occurs, terminate() will be called internally.
 	void start ()
 	{
 		// Start reading.
-		MailslotReader::start (*static_cast <CompletionPort*> (this), Pool::thread_count (), BUF_SIZE);
+		MailslotReader::start (*static_cast <CompletionPort*> (this));
 		Pool::start (PRIORITY);
 	}
 
 	/// Terminate the post office work.
-	virtual void terminate () NIRVANA_NOEXCEPT
+	void terminate () NIRVANA_NOEXCEPT
 	{
 		MailslotReader::terminate ();
 		Pool::terminate ();
 	}
+
+protected:
+	PostOffice () :
+		MailslotReader (Pool::thread_count (), BUF_SIZE)
+	{}
 
 private:
 	virtual void received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT

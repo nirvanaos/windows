@@ -21,6 +21,12 @@ SchedulerSlave::SchedulerSlave (uint32_t sys_process_id, uint32_t sys_semaphore)
 	initialize (sys_process_id, sys_semaphore);
 }
 
+SchedulerSlave::~SchedulerSlave ()
+{
+	if (sys_process_)
+		CloseHandle (sys_process_);
+}
+
 void SchedulerSlave::initialize (uint32_t sys_process_id, uint32_t sys_semaphore)
 {
 	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
@@ -101,6 +107,7 @@ void SchedulerSlave::terminate ()
 		}
 		sys_mailslot_.close ();
 	}
+	worker_threads_.terminate ();
 }
 
 bool SchedulerSlave::run (Runnable& startup, DeadlineTime deadline)

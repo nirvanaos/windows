@@ -9,27 +9,19 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void BufferPool::start (CompletionPort& port, size_t buffer_count, size_t buffer_size)
+BufferPool::BufferPool (size_t buffer_count, size_t buffer_size) NIRVANA_NOEXCEPT :
+begin_ (nullptr),
+end_ (nullptr),
+buffer_size_ (round_up (buffer_size, sizeof (LONG_PTR)))
 {
-	assert (handle_ != INVALID_HANDLE_VALUE);
-	port.add_receiver (handle_, *this);
-
-	buffer_size_ = round_up (buffer_size, sizeof (LONG_PTR));
-	size_t size = buffer_count * (sizeof (OVERLAPPED) + buffer_size);
-	begin_ = (OVERLAPPED*)g_core_heap.allocate (nullptr, size, 0);
+	size_t size = buffer_count * (sizeof (OVERLAPPED) + buffer_size_);
+	begin_ = (OVERLAPPED*)g_core_heap.allocate (nullptr, size, Memory::ZERO_INIT);
 	end_ = (OVERLAPPED*)(((BYTE*)begin_) + size);
-	for (OVERLAPPED* p = begin (); p != end (); p = next (p)) {
-		memset (p, 0, sizeof (OVERLAPPED));
-	}
-	for (OVERLAPPED* p = begin (); p != end (); p = next (p)) {
-		enqueue_buffer (p);
-	}
 }
 
-void BufferPool::terminate () NIRVANA_NOEXCEPT
+BufferPool::~BufferPool () NIRVANA_NOEXCEPT
 {
 	g_core_heap.release (begin_, (BYTE*)end_ - (BYTE*)begin_);
-	begin_ = end_ = nullptr;
 }
 
 }

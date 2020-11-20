@@ -66,9 +66,7 @@ class SchedulerMaster :
 	typedef SchedulerImpl <SchedulerMaster, SchedulerItem> Base;
 	typedef PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY> Office;
 public:
-	SchedulerMaster () :
-		error_ (0)
-	{}
+	SchedulerMaster ();
 
 	/// Main loop.
 	/// \param startup The startup Runnable object.
@@ -97,8 +95,10 @@ public:
 	}
 
 private:
+	void terminate ();
 	void on_error (int err) NIRVANA_NOEXCEPT;
 
+private:
 	/// Helper class for executing in the current process.
 	class WorkerThreads :
 		public Windows::WorkerThreads <CompletionPort>,

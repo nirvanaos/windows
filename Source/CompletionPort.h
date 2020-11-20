@@ -46,7 +46,7 @@ public:
 	}
 
 	/// On close completion port all threads will return with `ERROR_ABANDONED_WAIT_0` error code.
-	virtual void terminate () NIRVANA_NOEXCEPT
+	void terminate () NIRVANA_NOEXCEPT
 	{
 		HANDLE port = completion_port_;
 		completion_port_ = nullptr;

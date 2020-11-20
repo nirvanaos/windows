@@ -13,13 +13,7 @@ class MessageBroker :
 {
 	typedef PostOffice <MessageBroker, sizeof (Message::Buffer), POSTMAN_THREAD_PRIORITY> Base;
 public:
-	HANDLE mailslot_handle () const
-	{
-		return handle_;
-	}
-
-	virtual void received (void* message, DWORD size) NIRVANA_NOEXCEPT
-	{}
+	virtual void received (void* message, DWORD size) NIRVANA_NOEXCEPT;
 };
 
 }

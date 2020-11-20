@@ -1,6 +1,5 @@
 #include <StartupSys.h>
 #include <StartupProt.h>
-#include <Scheduler.h>
 #include "SchedulerMaster.h"
 #include "SchedulerSlave.h"
 #include "Message.h"
@@ -37,7 +36,7 @@ int main (int argc, char* argv [])
 					--argc;
 					++argv;
 					StartupSys startup (argc, argv);
-					if (!Scheduler::run_sys_domain (startup, StartupSys::default_deadline ())) {
+					if (!SchedulerMaster ().run (startup, StartupSys::default_deadline ())) {
 						cout << "System is already running." << endl;
 						return -1;
 					} else

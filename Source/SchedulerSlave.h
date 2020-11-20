@@ -24,11 +24,7 @@ public:
 	/// Used when process started by user.
 	SchedulerSlave ();
 
-	~SchedulerSlave ()
-	{
-		if (sys_process_)
-			CloseHandle (sys_process_);
-	}
+	~SchedulerSlave ();
 
 	/// Main loop.
 	/// \param startup The startup Runnable object.

@@ -21,22 +21,15 @@ public:
 	void run (Runnable& startup, DeadlineTime deadline)
 	{
 		Master::start ();
-		try {
 
-			// Create other worker threads
-			for (ThreadWorker* p = Pool::threads () + 1,
-				*end = Pool::threads () + Pool::thread_count (); p != end; ++p) {
-				p->create ();
-			}
-
-			// Run main
-			Pool::threads ()->run_main (startup, deadline);
-
-		} catch (...) {
-			Pool::terminate ();
-			throw;
+		// Create other worker threads
+		for (ThreadWorker* p = Pool::threads () + 1,
+			*end = Pool::threads () + Pool::thread_count (); p != end; ++p) {
+			p->create ();
 		}
-		Pool::terminate ();
+
+		// Run main
+		Pool::threads ()->run_main (startup, deadline);
 	}
 
 	void shutdown ()

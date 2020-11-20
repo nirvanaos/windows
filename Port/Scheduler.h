@@ -58,8 +58,7 @@ public:
 	/// 
 	/// \param startup The startup Runnable object.
 	/// \param deadline Startup deadline.
-	/// \returns `false` if system domain is already running.
-	static bool run_sys_domain (Runnable& startup, DeadlineTime deadline);
+	static void run_sys_domain (Runnable& startup, DeadlineTime deadline) NIRVANA_NOEXCEPT;
 
 	/// \summary Run procedure for the protection domain.
 	/// 
@@ -67,8 +66,7 @@ public:
 	/// 
 	/// \param startup The startup Runnable object.
 	/// \param deadline Startup deadline.
-	/// \returns `false` if system domain is not running.
-	static bool run_prot_domain (Runnable& startup, DeadlineTime deadline);
+	static void run_prot_domain (Runnable& startup, DeadlineTime deadline) NIRVANA_NOEXCEPT;
 	///@}
 
 	static void worker_thread_proc ()

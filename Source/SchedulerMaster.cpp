@@ -10,6 +10,17 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+SchedulerMaster::SchedulerMaster () :
+	error_ (0)
+{}
+
+void SchedulerMaster::terminate ()
+{
+	Office::terminate ();
+	message_broker_.terminate ();
+	worker_threads_.terminate ();
+}
+
 bool SchedulerMaster::run (Runnable& startup, DeadlineTime deadline)
 {
 	if (!(
@@ -18,9 +29,15 @@ bool SchedulerMaster::run (Runnable& startup, DeadlineTime deadline)
 		message_broker_.create_mailslot (MailslotName (0))
 		))
 		return false;
-	Office::start ();
-	message_broker_.start ();
-	worker_threads_.run (startup, deadline);
+	try {
+		Office::start ();
+		message_broker_.start ();
+		worker_threads_.run (startup, deadline);
+	} catch (...) {
+		terminate ();
+		throw;
+	}
+	terminate ();
 	return true;
 }
 
