@@ -10,8 +10,8 @@ namespace Windows {
 
 MailslotReader::MailslotReader (size_t buffer_count, DWORD max_msg_size) :
 	BufferPool (buffer_count, max_msg_size),
-	max_msg_size_ (max_msg_size),
-	handle_ (INVALID_HANDLE_VALUE)
+	handle_ (INVALID_HANDLE_VALUE),
+	max_msg_size_ (max_msg_size)
 {}
 
 MailslotReader::~MailslotReader ()

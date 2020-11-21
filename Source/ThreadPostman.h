@@ -3,7 +3,7 @@
 #ifndef NIRVANA_CORE_THREADPOSTMAN_H_
 #define NIRVANA_CORE_THREADPOSTMAN_H_
 
-#include "Thread.h"
+#include "Thread.inl"
 
 namespace Nirvana {
 namespace Core {

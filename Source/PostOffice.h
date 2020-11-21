@@ -27,7 +27,6 @@ class PostOffice :
 	public ThreadPool <CompletionPort, ThreadPostman>
 {
 	static const size_t MAX_WORDS = (BUF_SIZE + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR);
-	static const size_t BUF_SIZE = MAX_WORDS * sizeof (LONG_PTR);
 	typedef ThreadPool <CompletionPort, ThreadPostman> Pool;
 
 public:
