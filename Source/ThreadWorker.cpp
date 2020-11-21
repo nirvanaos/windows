@@ -42,6 +42,9 @@ void CALLBACK ThreadWorker::main_fiber_proc (MainFiberParam* param)
 
 void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 {
+	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
+	current_ = &thread;
+
 	// Convert main thread to fiber
 	void* main_fiber = ConvertThreadToFiber (nullptr);
 	if (!main_fiber)
@@ -60,9 +63,7 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
 
-	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
 	thread.neutral_context ().port ().attach (worker_fiber);
-	current_ = &thread;
 
 #ifdef _DEBUG
 	DWORD dbg_main_thread = GetCurrentThreadId ();

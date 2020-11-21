@@ -736,7 +736,7 @@ TEST_F (TestAPI, Semaphore)
 	cmd += L' ';
 	cmd += to_wstring ((uintptr_t)hsem);
 
-	STARTUPINFO si;
+	STARTUPINFOW si;
 	memset (&si, 0, sizeof (si));
 	si.cb = sizeof (si);
 	PROCESS_INFORMATION pi;
