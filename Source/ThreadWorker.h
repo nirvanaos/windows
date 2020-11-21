@@ -20,7 +20,7 @@ namespace Windows {
 class WorkerSemaphore;
 class CompletionPort;
 
-class ThreadWorker :
+class ThreadWorker final :
 	public Port::Thread,
 	public Core::ThreadWorker
 {
