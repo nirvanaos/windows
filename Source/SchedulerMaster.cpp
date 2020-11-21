@@ -30,16 +30,18 @@ bool SchedulerMaster::run (int argc, char* argv [])
 		message_broker_.create_mailslot (MailslotName (0))
 		))
 		return false;
+
+	StartupSys startup (argc, argv);
 	try {
 		Office::start ();
 		message_broker_.start ();
-		StartupSys startup (argc, argv);
 		worker_threads_.run (startup, StartupSys::default_deadline ());
 	} catch (...) {
 		terminate ();
 		throw;
 	}
 	terminate ();
+	startup.check ();
 	if (error_)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;

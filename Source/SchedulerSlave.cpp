@@ -113,17 +113,18 @@ void SchedulerSlave::terminate ()
 
 bool SchedulerSlave::run (int argc, char* argv [], DeadlineTime startup_deadline)
 {
+	if (!initialize ())
+		return false;
+	StartupProt startup (argc, argv);
 	try {
-		if (!initialize ())
-			return false;
 		message_broker_.start ();
-		StartupProt startup (argc, argv);
 		worker_threads_.run (startup, startup_deadline);
 	} catch (...) {
 		terminate ();
 		throw;
 	}
 	terminate ();
+	startup.check ();
 	if (error_)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;
