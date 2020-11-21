@@ -69,10 +69,8 @@ public:
 	SchedulerMaster ();
 
 	/// Main loop.
-	/// \param startup The startup Runnable object.
-	/// \param deadline Startup deadline.
 	/// \returns `false` if system domain is already running.
-	bool run (Runnable& startup, DeadlineTime deadline);
+	bool run (int argc, char* argv []);
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();

@@ -2,7 +2,6 @@
 #define NIRVANA_CORE_PORT_SCHEDULER_H_
 
 #include "../Source/SchedulerAbstract.h"
-#include <Runnable.h>
 
 namespace Nirvana {
 namespace Core {
@@ -52,21 +51,6 @@ public:
 		singleton_->shutdown ();
 	}
 
-	/// \summary Run procedure for the system domain.
-	/// 
-	/// Initializes system and schedules the `Runnable& startup` then runs until shutdown.
-	/// 
-	/// \param startup The startup Runnable object.
-	/// \param deadline Startup deadline.
-	static void run_sys_domain (Runnable& startup, DeadlineTime deadline) NIRVANA_NOEXCEPT;
-
-	/// \summary Run procedure for the protection domain.
-	/// 
-	/// Initializes system and schedules the `Runnable& startup` then runs until shutdown.
-	/// 
-	/// \param startup The startup Runnable object.
-	/// \param deadline Startup deadline.
-	static void run_prot_domain (Runnable& startup, DeadlineTime deadline) NIRVANA_NOEXCEPT;
 	///@}
 
 	static void worker_thread_proc ()

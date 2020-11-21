@@ -27,10 +27,8 @@ public:
 	~SchedulerSlave ();
 
 	/// Main loop.
-	/// \param startup The startup Runnable object.
-	/// \param deadline Startup deadline.
 	/// \returns `false` if system domain is not running.
-	bool run (Runnable& startup, DeadlineTime deadline);
+	bool run (int argc, char* argv [], DeadlineTime startup_deadline);
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();

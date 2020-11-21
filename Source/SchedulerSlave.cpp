@@ -3,6 +3,7 @@
 #include <Scheduler.h>
 #include "MailslotName.h"
 #include "SchedulerMessage.h"
+#include <StartupProt.h>
 
 namespace Nirvana {
 namespace Core {
@@ -110,18 +111,21 @@ void SchedulerSlave::terminate ()
 	worker_threads_.terminate ();
 }
 
-bool SchedulerSlave::run (Runnable& startup, DeadlineTime deadline)
+bool SchedulerSlave::run (int argc, char* argv [], DeadlineTime startup_deadline)
 {
 	try {
 		if (!initialize ())
 			return false;
 		message_broker_.start ();
-		worker_threads_.run (startup, deadline);
+		StartupProt startup (argc, argv);
+		worker_threads_.run (startup, startup_deadline);
 	} catch (...) {
 		terminate ();
 		throw;
 	}
 	terminate ();
+	if (error_)
+		CORBA::SystemException::_raise_by_code (error_);
 	return true;
 }
 
