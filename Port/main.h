@@ -1,8 +1,6 @@
-#include "SchedulerMaster.h"
-#include "SchedulerSlave.h"
-#include "Message.h"
-#include "Mailslot.h"
-#include "MailslotName.h"
+#include "../Source/SchedulerMaster.h"
+#include "../Source/SchedulerSlave.h"
+#include "../Source/shutdown.h"
 #include <iostream>
 #include <StartupProt.h>
 
@@ -10,19 +8,6 @@ using namespace std;
 using namespace Nirvana;
 using namespace Nirvana::Core;
 using namespace Nirvana::Core::Windows;
-
-bool shutdown ()
-{
-	Mailslot ms;
-	if (ms.open (MailslotName (0))) {
-		try {
-			ms.send (Message::Shutdown ());
-			return true;
-		} catch (...) {
-		}
-	}
-	return false;
-}
 
 int main (int argc, char* argv [])
 {
