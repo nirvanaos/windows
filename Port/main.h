@@ -1,10 +1,10 @@
 #include "../Source/SchedulerMaster.h"
 #include "../Source/SchedulerSlave.h"
 #include "../Source/shutdown.h"
-#include <iostream>
+#include "../Source/Console.h"
 #include <StartupProt.h>
+#include <exception>
 
-using namespace std;
 using namespace Nirvana;
 using namespace Nirvana::Core;
 using namespace Nirvana::Core::Windows;
@@ -22,7 +22,7 @@ int main (int argc, char* argv [])
 						--argc;
 						++argv;
 						if (!SchedulerMaster ().run (argc, argv)) {
-							cout << "System is already running." << endl;
+							Console::write ("System is already running.\n");
 							return -1;
 						} else
 							return 0;
@@ -51,11 +51,11 @@ int main (int argc, char* argv [])
 						}
 
 						if (!semaphore) {
-							cout << "Invalid command line." << endl;
+							Console::write ("Invalid command line.\n");
 							return -1;
 						} else {
 							if (!SchedulerSlave (sys_process_id, semaphore).run (argc, argv, startup_deadline)) {
-								cout << "System is not running." << endl;
+								Console::write ("System is not running.\n");
 								return -1;
 							} else
 								return 0;
@@ -67,7 +67,7 @@ int main (int argc, char* argv [])
 						if (shutdown ())
 							return 0;
 						else {
-							cout << "System is not running." << endl;
+							Console::write ("System is not running.\n");
 							return -1;
 						}
 				}
@@ -75,11 +75,12 @@ int main (int argc, char* argv [])
 		}
 
 		if (!SchedulerSlave ().run (argc, argv, StartupProt::default_deadline ())) {
-			cout << "System is not running." << endl;
+			Console::write ("System is not running.\n");
 			return -1;
 		}
-	} catch (const exception& ex) {
-		cout << ex.what () << endl;
+	} catch (const std::exception& ex) {
+		Console::write (ex.what ());
+		Console::write ("\n");
 		return -1;
 	}
 	return 0;
