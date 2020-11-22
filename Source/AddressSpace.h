@@ -97,24 +97,11 @@ public:
 /// \brief Logical address space of some Windows process.
 class AddressSpace
 {
+	AddressSpace (const AddressSpace&) = delete;
+	AddressSpace& operator = (const AddressSpace&) = delete;
 public:
-	AddressSpace ()
-	{}
-
-	AddressSpace (DWORD process_id, HANDLE process_handle) :
-		process_ (process_handle),
-		mapping_ (nullptr)
-	{
-		initialize (process_id, process_handle);
-	}
-	
-	void initialize (DWORD process_id, HANDLE process_handle);
-	void terminate ();
-
-	~AddressSpace ()
-	{
-		terminate ();
-	}
+	AddressSpace (DWORD process_id, HANDLE process_handle);
+	~AddressSpace ();
 
 	HANDLE process () const
 	{

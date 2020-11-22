@@ -8,11 +8,18 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-inline void Memory::protect (void* address, size_t size, uint32_t protection)
+inline
+void Memory::protect (void* address, size_t size, uint32_t protection)
 {
 	//space_.protect (address, size, protection);
 	DWORD old;
 	verify (VirtualProtect (address, size, protection, &old));
+}
+
+inline
+Windows::AddressSpace& Memory::space ()
+{
+	return *(Windows::AddressSpace*)space_;
 }
 
 class Memory::Block :
@@ -20,7 +27,7 @@ class Memory::Block :
 {
 public:
 	Block (void* addr, bool exclusive = false) :
-		Core::Windows::AddressSpace::Block (Memory::space_, addr, exclusive)
+		Core::Windows::AddressSpace::Block (Memory::space (), addr, exclusive)
 	{}
 
 	DWORD commit (size_t offset, size_t size);

@@ -4,12 +4,14 @@
 #include "../Source/Console.h"
 #include <StartupProt.h>
 #include <exception>
+#include <Heap.h>
 
 using namespace Nirvana;
 using namespace Nirvana::Core;
 using namespace Nirvana::Core::Windows;
 
-int main (int argc, char* argv [])
+inline
+int run (int argc, char* argv [])
 {
 	try {
 		++argv;
@@ -84,4 +86,11 @@ int main (int argc, char* argv [])
 		return -1;
 	}
 	return 0;
+}
+
+extern "C" int __cdecl nirvana_main (int argc, char* argv [], char** envp)
+{
+	int ret = run (argc, argv);
+	Heap::terminate ();
+	return ret;
 }

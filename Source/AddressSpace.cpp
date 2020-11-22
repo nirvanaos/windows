@@ -245,10 +245,12 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, UWord fl
 	} while (region_begin < block_end);
 }
 
-void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
+AddressSpace::AddressSpace (DWORD process_id, HANDLE process_handle) :
+	process_ (process_handle),
+	mapping_ (nullptr),
+	directory_ (nullptr)
 {
 	assert (!mapping_ && !directory_);
-	process_ = process_handle;
 
 	static const WCHAR fmt [] = OBJ_NAME_PREFIX L".mmap.%08X";
 	WCHAR name [_countof (fmt) + 8 - 3];
@@ -282,7 +284,7 @@ void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
 	}
 }
 
-void AddressSpace::terminate ()
+AddressSpace::~AddressSpace () NIRVANA_NOEXCEPT
 {
 	if (directory_) {
 #ifdef _WIN64

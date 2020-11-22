@@ -26,7 +26,7 @@ class Memory
 
 public:
 	static void initialize ();
-	static void terminate ();
+	static void terminate () NIRVANA_NOEXCEPT;
 
 	static const size_t ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
 	static const size_t SHARING_UNIT = ALLOCATION_GRANULARITY;
@@ -110,8 +110,10 @@ private:
 	// Create new mapping
 	static HANDLE new_mapping ();
 
+	static Windows::AddressSpace& space ();
+
 private:
-	static Windows::AddressSpace space_;
+	static int space_ [];
 	static void* handler_;
 };
 

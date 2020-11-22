@@ -16,7 +16,7 @@ void Console::write (const char* text)
 		SetConsoleCP (CP_UTF8);
 	}
 	DWORD cb;
-	WriteFile (handle_, text, strlen (text), &cb, nullptr);
+	WriteFile (handle_, text, (DWORD)strlen (text), &cb, nullptr);
 }
 
 }
