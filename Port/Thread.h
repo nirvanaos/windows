@@ -5,7 +5,12 @@
 #ifndef NIRVANA_CORE_PORT_THREAD_H_
 #define NIRVANA_CORE_PORT_THREAD_H_
 
+#include "ExecContext.h"
+
 typedef unsigned long (__stdcall *PTHREAD_START_ROUTINE) (void* lpThreadParameter);
+
+extern "C" __declspec (dllimport)
+void* __stdcall TlsGetValue (unsigned long dwTlsIndex);
 
 namespace Nirvana {
 namespace Core {
@@ -25,9 +30,18 @@ public:
 	/// \returns The current Core::Thread object.
 	static Core::Thread* current () NIRVANA_NOEXCEPT
 	{
-		return current_;
+		return (Core::Thread*)TlsGetValue (current_);
+	}
+
+	static Core::ExecContext* context () NIRVANA_NOEXCEPT
+	{
+		return ExecContext::current ();
 	}
 	///@}
+
+public:
+	static void initialize ();
+	static void terminate ();
 
 	template <class T>
 	void create (T* p, int priority) // THREAD_PRIORITY_NORMAL = 0
@@ -44,11 +58,13 @@ protected:
 
 	~Thread ();
 
+	static void current (Core::Thread& core_thread);
+
 private:
 	void create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority);
 
 protected:
-	static thread_local Core::Thread* current_;
+	static unsigned long current_;
 
 	void* handle_;
 };

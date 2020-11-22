@@ -8,17 +8,26 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-inline void ExecContext::convert_to_fiber ()
+inline
+void ExecContext::initialize ()
 {
-	assert (!fiber_);
-	// If dwFlags parameter is zero, the floating - point state on x86 systems is not switched and data 
-	// can be corrupted if a fiber uses floating - point arithmetic.
-	// This causes faster switching. Neutral execution context does not use floating - point arithmetic.
-	if (!(fiber_ = ConvertThreadToFiberEx (nullptr, 0)))
-		throw_NO_MEMORY ();
+	current_ = FlsAlloc (nullptr);
 }
 
-inline void ExecContext::convert_to_thread () NIRVANA_NOEXCEPT
+inline
+void ExecContext::terminate ()
+{
+	FlsFree (current_);
+}
+
+inline
+void ExecContext::current (Core::ExecContext& context)
+{
+	FlsSetValue (current_, &context);
+}
+
+inline
+void ExecContext::convert_to_thread () NIRVANA_NOEXCEPT
 {
 	assert (fiber_);
 	fiber_ = nullptr;

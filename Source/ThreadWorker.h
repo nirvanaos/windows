@@ -44,8 +44,8 @@ public:
 private:
 	friend class Port::Thread;
 	static unsigned long __stdcall thread_proc (ThreadWorker* _this);
-	struct MainFiberParam;
-	static void __stdcall main_fiber_proc (MainFiberParam* param);
+	struct MainNeutralFiberParam;
+	static void __stdcall main_neutral_fiber_proc (MainNeutralFiberParam* param);
 };
 
 }

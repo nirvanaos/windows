@@ -14,10 +14,14 @@ void __stdcall DeleteFiber (void*);
 extern "C" __declspec (dllimport)
 void __stdcall SwitchToFiber (void* lpFiber);
 
+extern "C" __declspec (dllimport)
+void* __stdcall FlsGetValue (unsigned long dwFlsIndex);
+
+
 namespace Nirvana {
 namespace Core {
 
-class ExecDomain;
+class ExecContext;
 
 namespace Port {
 
@@ -27,6 +31,11 @@ class ExecContext
 	///@{
 	/// Members called from Core.
 public:
+	static Core::ExecContext* current ()
+	{
+		return (Core::ExecContext*)FlsGetValue (current_);
+	}
+
 	/// Constructor.
 	/// 
 	/// \param neutral `true` if neutral context is created.
@@ -70,9 +79,16 @@ public:
 		return f;
 	}
 
-	static void __stdcall fiber_proc (void*);
+	static void initialize ();
+	static void terminate ();
+
+	static void current (Core::ExecContext& context);
+
+	static void __stdcall fiber_proc (Core::ExecContext* context);
 
 private:
+	static unsigned long current_;
+
 	void* fiber_;
 };
 
