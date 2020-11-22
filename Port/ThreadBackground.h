@@ -6,14 +6,14 @@
 #ifndef NIRVANA_CORE_PORT_THREADBACKGROUND_H_
 #define NIRVANA_CORE_PORT_THREADBACKGROUND_H_
 
-#include "../Source/Thread.h"
+#include <Thread.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
 class ThreadBackground :
-	public Thread
+	public Core::Thread
 {
 	///@{
 	/// Members called from Core.

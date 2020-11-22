@@ -21,13 +21,12 @@ class WorkerSemaphore;
 class CompletionPort;
 
 class ThreadWorker final :
-	public Port::Thread,
 	public Core::ThreadWorker
 {
 public:
 	void create ()
 	{
-		Port::Thread::create (this, WORKER_THREAD_PRIORITY);
+		port ().create (this, WORKER_THREAD_PRIORITY);
 	}
 
 	void run_main (Runnable& startup, DeadlineTime deadline);
@@ -40,6 +39,11 @@ public:
 
 	~ThreadWorker ()
 	{}
+
+	void join ()
+	{
+		Port::Thread::join ();
+	}
 
 private:
 	friend class Port::Thread;

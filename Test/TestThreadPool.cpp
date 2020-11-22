@@ -29,6 +29,11 @@ public:
 		Base::start ();
 	}
 
+	~PostOffice ()
+	{
+		Base::terminate ();
+	}
+
 	void received (void* message, DWORD size)
 	{
 		assert (size == sizeof (Message));

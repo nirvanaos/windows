@@ -27,12 +27,21 @@ class Thread
 	///@{
 	/// Members called from Core.
 public:
-	/// \returns The current Core::Thread object.
+	/// \returns If thread class is derived from Core::Thread
+	/// returns a pointer of the current Core::Thread object.
+	/// Otherwise returns nullptr.
 	static Core::Thread* current () NIRVANA_NOEXCEPT
 	{
 		return (Core::Thread*)TlsGetValue (current_);
 	}
 
+	/// Returns a pointer of the current execution context.
+	/// For Windows it is implemented via FlsGetValue().
+	/// If the system does not support fiber local storage,
+	/// then pointer to current context must be stored as
+	/// variable in Core::Thread class and updated for each
+	/// ExecContext::switch_to() call. So context() can be
+	/// implemented as Thread::current ().port ().context_.
 	static Core::ExecContext* context () NIRVANA_NOEXCEPT
 	{
 		return ExecContext::current ();
@@ -42,6 +51,8 @@ public:
 public:
 	static void initialize ();
 	static void terminate ();
+
+	static void current (Core::Thread& core_thread);
 
 	template <class T>
 	void create (T* p, int priority) // THREAD_PRIORITY_NORMAL = 0
@@ -57,8 +68,6 @@ protected:
 	{}
 
 	~Thread ();
-
-	static void current (Core::Thread& core_thread);
 
 private:
 	void create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority);
