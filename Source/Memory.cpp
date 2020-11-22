@@ -12,7 +12,8 @@ namespace Port {
 using namespace ::Nirvana::Core::Windows;
 using namespace std;
 
-Memory::AddressSpace Memory::space_;
+AddressSpace Memory::space_;
+void* Memory::handler_;
 
 DWORD Memory::Block::commit (size_t offset, size_t size)
 { // This operation must be thread-safe.
@@ -1024,6 +1025,18 @@ void Memory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex)
 	}
 
 	throw_UNKNOWN ();
+}
+
+void Memory::initialize ()
+{
+	space_.initialize (GetCurrentProcessId (), GetCurrentProcess ());
+	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
+}
+
+void Memory::terminate ()
+{
+	space_.terminate ();
+	RemoveVectoredExceptionHandler (handler_);
 }
 
 }

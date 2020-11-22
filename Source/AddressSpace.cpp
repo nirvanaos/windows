@@ -245,9 +245,11 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, UWord fl
 	} while (region_begin < block_end);
 }
 
-AddressSpace::AddressSpace (DWORD process_id, HANDLE process_handle) :
-	process_ (process_handle)
+void AddressSpace::initialize (DWORD process_id, HANDLE process_handle)
 {
+	assert (!mapping_ && !directory_);
+	process_ = process_handle;
+
 	static const WCHAR fmt [] = OBJ_NAME_PREFIX L".mmap.%08X";
 	WCHAR name [_countof (fmt) + 8 - 3];
 	wsprintfW (name, fmt, process_id);
@@ -273,11 +275,14 @@ AddressSpace::AddressSpace (DWORD process_id, HANDLE process_handle) :
 #else
 	directory_ = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 #endif
-	if (!directory_)
+	if (!directory_) {
+		verify (CloseHandle (mapping_));
+		mapping_ = nullptr;
 		throw_INITIALIZE ();
+	}
 }
 
-AddressSpace::~AddressSpace ()
+void AddressSpace::terminate ()
 {
 	if (directory_) {
 #ifdef _WIN64
@@ -344,11 +349,11 @@ AddressSpace::~AddressSpace ()
 #endif
 		verify (UnmapViewOfFile (directory_));
 #endif
-		directory_ = 0;
+		directory_ = nullptr;
 	}
 	if (mapping_) {
 		verify (CloseHandle (mapping_));
-		mapping_ = 0;
+		mapping_ = nullptr;
 	}
 }
 

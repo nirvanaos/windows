@@ -98,8 +98,23 @@ public:
 class AddressSpace
 {
 public:
-	AddressSpace (DWORD process_id, HANDLE process_handle);
-	~AddressSpace ();
+	AddressSpace ()
+	{}
+
+	AddressSpace (DWORD process_id, HANDLE process_handle) :
+		process_ (process_handle),
+		mapping_ (nullptr)
+	{
+		initialize (process_id, process_handle);
+	}
+	
+	void initialize (DWORD process_id, HANDLE process_handle);
+	void terminate ();
+
+	~AddressSpace ()
+	{
+		terminate ();
+	}
 
 	HANDLE process () const
 	{
@@ -271,7 +286,7 @@ private:
 	BlockInfo* block_no_commit (const void* address);
 
 private:
-	const HANDLE process_;
+	HANDLE process_;
 	HANDLE mapping_;
 #ifdef _WIN64
 	static const size_t SECOND_LEVEL_BLOCK = ALLOCATION_GRANULARITY / sizeof (BlockInfo);

@@ -13,6 +13,9 @@ typedef struct _MEMORY_BASIC_INFORMATION MEMORY_BASIC_INFORMATION;
 
 namespace Nirvana {
 namespace Core {
+namespace Windows {
+class AddressSpace;
+}
 namespace Port {
 
 class Memory
@@ -20,7 +23,11 @@ class Memory
 	static const size_t PAGE_SIZE = 4096;
 	static const size_t PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
 	static const size_t ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
+
 public:
+	static void initialize ();
+	static void terminate ();
+
 	static const size_t ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
 	static const size_t SHARING_UNIT = ALLOCATION_GRANULARITY;
 	static const size_t GRANULARITY = ALLOCATION_GRANULARITY;
@@ -60,10 +67,9 @@ public:
 	//! For usage in proxies.
 	static void prepare_to_share (void* src, size_t size, UWord flags);
 
+private:
 	static long __stdcall exception_filter (struct _EXCEPTION_POINTERS* pex);
 	static void se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex);
-
-private:
 
 	struct Region
 	{
@@ -105,8 +111,8 @@ private:
 	static HANDLE new_mapping ();
 
 private:
-	class AddressSpace;
-	static AddressSpace space_;
+	static Windows::AddressSpace space_;
+	static void* handler_;
 };
 
 }

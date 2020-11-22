@@ -16,13 +16,13 @@ public:
 		buffer_idx_ (-1)
 	{
 		unsigned buf_cnt = clp2 (buf_cnt_min);
-		buffer_ = (Buf*)g_core_heap.allocate (nullptr, sizeof (Buf) * buf_cnt, 0);
+		buffer_ = (Buf*)g_core_heap->allocate (nullptr, sizeof (Buf) * buf_cnt, 0);
 		mask_ = (AtomicCounter <false>::IntegralType)buf_cnt - 1;
 	}
 
 	~RoundBuffers ()
 	{
-		g_core_heap.release (buffer_, sizeof (Buf) * (mask_ + 1));
+		g_core_heap->release (buffer_, sizeof (Buf) * (mask_ + 1));
 	}
 
 	Buf* next_buffer ()
