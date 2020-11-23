@@ -28,7 +28,7 @@ public:
 
 	/// Main loop.
 	/// \returns `false` if system domain is not running.
-	bool run (int argc, char* argv [], DeadlineTime startup_deadline);
+	bool run (Runnable& startup, DeadlineTime startup_deadline);
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();

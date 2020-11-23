@@ -70,7 +70,7 @@ public:
 
 	/// Main loop.
 	/// \returns `false` if system domain is already running.
-	bool run (int argc, char* argv []);
+	bool run (Runnable& startup, DeadlineTime startup_deadline);
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();

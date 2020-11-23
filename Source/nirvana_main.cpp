@@ -1,10 +1,14 @@
-#include "../Source/SchedulerMaster.h"
-#include "../Source/SchedulerSlave.h"
-#include "../Source/shutdown.h"
-#include "../Source/Console.h"
+#include "SchedulerMaster.h"
+#include "SchedulerSlave.h"
+#include "shutdown.h"
+#include "initterm.h"
+#include "Console.h"
 #include <StartupProt.h>
-#include <exception>
-#include <Heap.h>
+#include <StartupSys.h>
+
+#define entry_point nirvana_startup
+#define main nirvana_main
+#include "startup.h"
 
 using namespace Nirvana;
 using namespace Nirvana::Core;
@@ -23,11 +27,14 @@ int run (int argc, char* argv [])
 					case 's': {
 						--argc;
 						++argv;
-						if (!SchedulerMaster ().run (argc, argv)) {
+						StartupSys startup (argc, argv);
+						if (!SchedulerMaster ().run (startup, startup.default_deadline ())) {
 							Console::write ("System is already running.\n");
 							return -1;
-						} else
-							return 0;
+						} else {
+							startup.check ();
+							return startup.ret ();
+						}
 					}
 
 					case 'p': {
@@ -56,11 +63,14 @@ int run (int argc, char* argv [])
 							Console::write ("Invalid command line.\n");
 							return -1;
 						} else {
-							if (!SchedulerSlave (sys_process_id, semaphore).run (argc, argv, startup_deadline)) {
+							StartupProt startup (argc, argv);
+							if (!SchedulerSlave (sys_process_id, semaphore).run (startup, startup_deadline)) {
 								Console::write ("System is not running.\n");
 								return -1;
-							} else
-								return 0;
+							} else {
+								startup.check ();
+								return startup.ret ();
+							}
 						}
 						break;
 					}
@@ -76,21 +86,24 @@ int run (int argc, char* argv [])
 			}
 		}
 
-		if (!SchedulerSlave ().run (argc, argv, StartupProt::default_deadline ())) {
+		StartupProt startup (argc, argv);
+		if (!SchedulerSlave ().run (startup, StartupProt::default_deadline ())) {
 			Console::write ("System is not running.\n");
 			return -1;
+		} else {
+			startup.check ();
+			return startup.ret ();
 		}
 	} catch (const std::exception& ex) {
 		Console::write (ex.what ());
 		Console::write ("\n");
 		return -1;
 	}
-	return 0;
 }
 
-extern "C" int __cdecl nirvana_main (int argc, char* argv [], char** envp)
+extern "C" int __cdecl main (int argc, char* argv [], char** envp)
 {
 	int ret = run (argc, argv);
-	Heap::terminate ();
+	Nirvana::Core::Windows::terminate ();
 	return ret;
 }

@@ -3,7 +3,6 @@
 
 #include "../Port/Scheduler.h"
 #include "SchedulerAbstract.h"
-#include "Thread.inl"
 
 namespace Nirvana {
 namespace Core {
@@ -17,15 +16,15 @@ class NIRVANA_NOVTABLE SchedulerBase :
 public:
 	SchedulerBase ()
 	{
-		Port::Thread::initialize ();
 		singleton_ = this;
 	}
 
+#ifdef _DEBUG
 	~SchedulerBase ()
 	{
 		singleton_ = nullptr;
-		Port::Thread::terminate ();
 	}
+#endif
 
 	static Impl& singleton ()
 	{
