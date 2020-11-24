@@ -24,9 +24,9 @@ void Thread::terminate ()
 }
 
 inline
-void Thread::current (Core::Thread& core_thread)
+void Thread::current (Core::Thread* core_thread)
 {
-	TlsSetValue (current_, &core_thread);
+	TlsSetValue (current_, core_thread);
 }
 
 inline

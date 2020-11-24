@@ -1,5 +1,5 @@
-#ifndef NIRVANA_CORE_WINDOWS_INITTERM_H_
-#define NIRVANA_CORE_WINDOWS_INITTERM_H_
+#ifndef NIRVANA_CORE_WINDOWS_INITIALIZE_H_
+#define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
 
 #include <Heap.h>
 #include "Thread.inl"
@@ -11,7 +11,7 @@ namespace Core {
 namespace Windows {
 
 inline
-bool initialize ()
+bool initialize (void)
 {
   try {
     Heap::initialize ();
@@ -22,13 +22,6 @@ bool initialize ()
     return false;
   }
   return true;
-}
-
-inline
-void terminate () NIRVANA_NOEXCEPT
-{
-  Heap::terminate ();
-  Port::Thread::terminate ();
 }
 
 }

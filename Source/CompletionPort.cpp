@@ -35,6 +35,7 @@ void CompletionPort::thread_proc () NIRVANA_NOEXCEPT
 			switch (err) {
 			case ERROR_OPERATION_ABORTED:
 			case ERROR_ABANDONED_WAIT_0:
+			case ERROR_INVALID_HANDLE:
 				break;
 
 			default:

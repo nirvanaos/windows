@@ -9,7 +9,7 @@ namespace Port {
 DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 {
 	Legacy::Core::ThreadBackground& thread = static_cast <Legacy::Core::ThreadBackground&> (*_this);
-	Port::Thread::current (thread);
+	Port::Thread::current (&thread);
 	try {
 		thread.neutral_context().port ().convert_to_fiber ();
 	} catch (...) {

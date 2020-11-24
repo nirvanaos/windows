@@ -1,5 +1,4 @@
 #include "SchedulerMaster.h"
-#include "initterm.h"
 #include "Console.h"
 #include <GTestSys.h>
 

@@ -15,7 +15,7 @@ namespace Windows {
 unsigned long __stdcall ThreadWorker::thread_proc (ThreadWorker* _this)
 {
 	Core::Thread& thread = static_cast <Core::Thread&> (*_this);
-	Port::Thread::current (thread);
+	Port::Thread::current (&thread);
 	thread.neutral_context ().port ().convert_to_fiber ();
 	Port::Scheduler::worker_thread_proc ();
 	thread.neutral_context ().port ().convert_to_thread ();
@@ -29,7 +29,7 @@ struct ThreadWorker::MainNeutralFiberParam
 
 void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* param)
 {
-	Port::ExecContext::current (Core::Thread::current ().neutral_context ());
+	Port::ExecContext::current (&Core::Thread::current ().neutral_context ());
 	ExecDomain* main_domain = param->main_domain;
 	// Schedule startup runnable
 	main_domain->spawn (nullptr);
@@ -44,7 +44,7 @@ void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* para
 void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 {
 	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
-	Port::Thread::current (thread);
+	Port::Thread::current (&thread);
 
 	// Convert main thread to fiber
 	void* main_fiber = ConvertThreadToFiber (nullptr);
@@ -58,7 +58,7 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 
 	// Save for detach
 	ExecDomain& main_domain = *param.main_domain;
-	Port::ExecContext::current (main_domain);
+	Port::ExecContext::current (&main_domain);
 
 	// Create fiber for neutral context
 	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_neutral_fiber_proc, &param);
@@ -83,6 +83,9 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 
 	assert (dbg_main_thread == GetCurrentThreadId ());
 	assert (!handle_); // Prevent join to self.
+	
+	Port::Thread::current (nullptr);
+	Port::ExecContext::current (nullptr);
 
 	// Restore priority and release resources
 	SetThreadPriority (GetCurrentThread (), prio);

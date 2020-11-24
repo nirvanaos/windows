@@ -52,7 +52,7 @@ public:
 	static void initialize ();
 	static void terminate ();
 
-	static void current (Core::Thread& core_thread);
+	static void current (Core::Thread* core_thread);
 
 	template <class T>
 	void create (T* p, int priority) // THREAD_PRIORITY_NORMAL = 0

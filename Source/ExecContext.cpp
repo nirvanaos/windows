@@ -22,7 +22,7 @@ ExecContext::ExecContext (bool neutral) :
 void __stdcall ExecContext::fiber_proc (Core::ExecContext* context)
 {
 	if (context)
-		current (*context);
+		current (context);
 	assert (current ());
 	for (;;) {
 		Core::Thread& thread = Core::Thread::current ();
@@ -48,7 +48,7 @@ void ExecContext::convert_to_fiber ()
 	if (!(fiber_ = ConvertThreadToFiberEx (nullptr, 0)))
 		throw_NO_MEMORY ();
 
-	current (static_cast <Core::ExecContext&> (*this));
+	current (static_cast <Core::ExecContext*> (this));
 }
 
 }

@@ -82,7 +82,7 @@ public:
 	static void initialize ();
 	static void terminate ();
 
-	static void current (Core::ExecContext& context);
+	static void current (Core::ExecContext* context);
 
 	static void __stdcall fiber_proc (Core::ExecContext* context);
 

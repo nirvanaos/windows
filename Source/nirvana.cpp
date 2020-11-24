@@ -1,7 +1,6 @@
 #include "SchedulerMaster.h"
 #include "SchedulerSlave.h"
 #include "shutdown.h"
-#include "initterm.h"
 #include "Console.h"
 #include <StartupProt.h>
 #include <StartupSys.h>

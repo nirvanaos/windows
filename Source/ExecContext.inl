@@ -21,9 +21,9 @@ void ExecContext::terminate ()
 }
 
 inline
-void ExecContext::current (Core::ExecContext& context)
+void ExecContext::current (Core::ExecContext* context)
 {
-	FlsSetValue (current_, &context);
+	FlsSetValue (current_, context);
 }
 
 inline

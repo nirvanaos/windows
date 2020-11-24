@@ -7,6 +7,8 @@
 #define _SCRT_STARTUP_MAIN
 #include <exe_common.inl>
 
+#include "initialize.h"
+
 extern "C" int entry_point ()
 {
   // The /GS security cookie must be initialized before any exception handling
@@ -22,7 +24,5 @@ extern "C" int entry_point ()
 
 extern "C" int __cdecl main (int argc, char* argv [], char** envp)
 {
-  int ret = Nirvana::Core::Windows::MAIN (argc, argv);
-  Nirvana::Core::Windows::terminate ();
-  return ret;
+  return Nirvana::Core::Windows::MAIN (argc, argv);
 }
