@@ -6,16 +6,12 @@
 #include <StartupProt.h>
 #include <StartupSys.h>
 
-#define entry_point nirvana_startup
-#define main nirvana_main
-#include "startup.h"
-
-using namespace Nirvana;
-using namespace Nirvana::Core;
-using namespace Nirvana::Core::Windows;
+namespace Nirvana {
+namespace Core {
+namespace Windows {
 
 inline
-int run (int argc, char* argv [])
+int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 {
 	try {
 		++argv;
@@ -101,9 +97,9 @@ int run (int argc, char* argv [])
 	}
 }
 
-extern "C" int __cdecl main (int argc, char* argv [], char** envp)
-{
-	int ret = run (argc, argv);
-	Nirvana::Core::Windows::terminate ();
-	return ret;
 }
+}
+}
+
+#define MAIN nirvana
+#include "startup.h"

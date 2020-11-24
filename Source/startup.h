@@ -1,3 +1,8 @@
+#define CAT0(x, y) x##y
+#define CAT(x, y) CAT0(x, y)
+#define entry_point CAT(MAIN, _startup)
+#define main CAT(MAIN, _main)
+
 #define _VCRT_ALLOW_INTERNALS
 #define _SCRT_STARTUP_MAIN
 #include <exe_common.inl>
@@ -13,4 +18,11 @@ extern "C" int entry_point ()
     return -1;
 
   return __scrt_common_main_seh ();
+}
+
+extern "C" int __cdecl main (int argc, char* argv [], char** envp)
+{
+  int ret = Nirvana::Core::Windows::MAIN (argc, argv);
+  Nirvana::Core::Windows::terminate ();
+  return ret;
 }
