@@ -6,6 +6,7 @@
 #define NIRVANA_CORE_PORT_SYSTEMINFO_H_
 
 #include <core.h>
+#include <Section.h>
 
 namespace Nirvana {
 namespace Core {
@@ -18,6 +19,8 @@ public:
 	{
 		return singleton_.hardware_concurrency_;
 	}
+
+	static bool get_OLF_section (Section& section) NIRVANA_NOEXCEPT;
 
 private:
 	SystemInfo ();
