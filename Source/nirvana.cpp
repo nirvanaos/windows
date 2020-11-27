@@ -24,7 +24,7 @@ int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 						++argv;
 						StartupSys startup (argc, argv);
 						if (!SchedulerMaster ().run (startup, startup.default_deadline ())) {
-							Console::write ("System is already running.\n");
+							Console () << "System is already running.\n";
 							return -1;
 						} else {
 							startup.check ();
@@ -55,12 +55,12 @@ int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 						}
 
 						if (!semaphore) {
-							Console::write ("Invalid command line.\n");
+							Console () << "Invalid command line.\n";
 							return -1;
 						} else {
 							StartupProt startup (argc, argv);
 							if (!SchedulerSlave (sys_process_id, semaphore).run (startup, startup_deadline)) {
-								Console::write ("System is not running.\n");
+								Console () << "System is not running.\n";
 								return -1;
 							} else {
 								startup.check ();
@@ -74,7 +74,7 @@ int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 						if (shutdown ())
 							return 0;
 						else {
-							Console::write ("System is not running.\n");
+							Console () << "System is not running.\n";
 							return -1;
 						}
 				}
@@ -83,15 +83,14 @@ int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 
 		StartupProt startup (argc, argv);
 		if (!SchedulerSlave ().run (startup, StartupProt::default_deadline ())) {
-			Console::write ("System is not running.\n");
+			Console () << "System is not running.\n";
 			return -1;
 		} else {
 			startup.check ();
 			return startup.ret ();
 		}
 	} catch (const std::exception& ex) {
-		Console::write (ex.what ());
-		Console::write ("\n");
+		Console () << ex.what () << '\n';
 		return -1;
 	}
 }

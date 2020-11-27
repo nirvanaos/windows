@@ -24,7 +24,10 @@ public:
 	/// Used when process started by user.
 	SchedulerSlave ();
 
-	~SchedulerSlave ();
+	~SchedulerSlave ()
+	{
+		terminate ();
+	}
 
 	/// Main loop.
 	/// \returns `false` if system domain is not running.

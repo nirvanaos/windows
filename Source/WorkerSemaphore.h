@@ -29,7 +29,7 @@ public:
 	~WorkerSemaphore ()
 	{
 		for (HANDLE* p = handles_; p != std::end (handles_); ++p) {
-			HANDLE h = p;
+			HANDLE h = *p;
 			if (h)
 				CloseHandle (h);
 		}

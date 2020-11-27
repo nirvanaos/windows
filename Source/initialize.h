@@ -17,8 +17,7 @@ bool initialize (void)
     Heap::initialize ();
     Port::Thread::initialize ();
   } catch (const std::exception& ex) {
-    Console::write (ex.what ());
-    Console::write ("\n");
+    Console () << ex.what () << '\n';
     return false;
   }
   return true;

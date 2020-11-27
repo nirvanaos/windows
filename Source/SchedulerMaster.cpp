@@ -38,7 +38,6 @@ bool SchedulerMaster::run (Runnable& startup, DeadlineTime startup_deadline)
 		terminate ();
 		throw;
 	}
-	terminate ();
 	if (error_)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;

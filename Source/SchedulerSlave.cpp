@@ -21,12 +21,6 @@ SchedulerSlave::SchedulerSlave (uint32_t sys_process_id, uint32_t sys_semaphore)
 	initialize (sys_process_id, sys_semaphore);
 }
 
-SchedulerSlave::~SchedulerSlave ()
-{
-	if (sys_process_)
-		CloseHandle (sys_process_);
-}
-
 void SchedulerSlave::initialize (uint32_t sys_process_id, uint32_t sys_semaphore)
 {
 	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
@@ -108,6 +102,8 @@ void SchedulerSlave::terminate ()
 		sys_mailslot_.close ();
 	}
 	worker_threads_.terminate ();
+	if (sys_process_)
+		CloseHandle (sys_process_);
 }
 
 bool SchedulerSlave::run (Runnable& startup, DeadlineTime startup_deadline)
@@ -121,7 +117,6 @@ bool SchedulerSlave::run (Runnable& startup, DeadlineTime startup_deadline)
 		terminate ();
 		throw;
 	}
-	terminate ();
 	if (error_)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;

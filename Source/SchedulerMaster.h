@@ -67,6 +67,10 @@ class SchedulerMaster :
 	typedef PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY> Office;
 public:
 	SchedulerMaster ();
+	~SchedulerMaster ()
+	{
+		terminate ();
+	}
 
 	/// Main loop.
 	/// \returns `false` if system domain is already running.
