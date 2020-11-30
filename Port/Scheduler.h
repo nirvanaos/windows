@@ -22,7 +22,8 @@ public:
 	/// Release active item space.
 	static void delete_item () NIRVANA_NOEXCEPT
 	{
-		singleton_->delete_item ();
+		if (singleton_)
+			singleton_->delete_item ();
 	}
 
 	/// \summary Schedule execution.
