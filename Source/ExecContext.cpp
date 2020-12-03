@@ -23,7 +23,7 @@ void __stdcall ExecContext::fiber_proc (Core::ExecContext* context)
 {
 	if (context)
 		current (context);
-	assert (current ());
+	assert (current ()); // current () can be called in the special constructor for the main fiber.
 	for (;;) {
 		Core::Thread& thread = Core::Thread::current ();
 		ExecDomain* ed = thread.exec_domain ();
@@ -33,7 +33,6 @@ void __stdcall ExecContext::fiber_proc (Core::ExecContext* context)
 		__try {
 			ed->execute_loop ();
 		} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
-			thread.exec_domain (nullptr);
 			ed->on_exec_domain_crash (CORBA::SystemException::EC_UNKNOWN);
 		}
 	}
