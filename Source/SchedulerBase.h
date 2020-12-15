@@ -27,7 +27,7 @@ public:
 	static Impl& singleton ()
 	{
 		assert (singleton_);
-		assert (dynamic_cast <Impl*> (singleton_));
+		//assert (dynamic_cast <Impl*> (singleton_));
 		return static_cast <Impl&> (*singleton_);
 	}
 };
