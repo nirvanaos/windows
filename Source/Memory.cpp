@@ -476,7 +476,7 @@ void Memory::Block::change_protection (size_t offset, size_t size, UWord flags)
 			if (new_state != state) {
 				BYTE* ptr = address () + (region_begin - page_state) * PAGE_SIZE;
 				size_t size = (region_end - region_begin) * PAGE_SIZE;
-				space ().protect (ptr, size, new_state);
+				protect (ptr, size, new_state);
 			}
 		}
 
@@ -732,10 +732,8 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 			if (space ().allocated_block (dst)) {
 				space ().check_allocated (dst, size);
 				dst_own = true;
-			} else {
-				if (!is_writable (dst, size))
-					throw_NO_PERMISSION ();
-			}
+			} else if ((dst != src) && !is_writable (dst, size))
+				throw_NO_PERMISSION ();
 		}
 
 		assert (dst);
@@ -743,8 +741,14 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 		if (dst == src) { // Special case - change protection.
 			// We allow to change protection of the not-allocated memory.
 			// This is necessary for core services like module load.
-			if (src_prot_mask & ((flags & Nirvana::Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO))
-				change_protection (src, size, flags);
+			if (src_prot_mask & ((flags & Nirvana::Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO)) {
+				if (dst_own)
+					change_protection (src, size, flags);
+				else if ((uintptr_t)dst % PAGE_SIZE == 0)
+					protect (src, round_up (size, PAGE_SIZE), (flags & Nirvana::Memory::READ_ONLY) ? PageState::RO_UNMAPPED : PageState::RW_UNMAPPED);
+				else
+					throw_BAD_PARAM ();
+			}
 			return src;
 		}
 
