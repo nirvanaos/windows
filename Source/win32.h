@@ -7,6 +7,11 @@
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
+
+// We support Win 10 only.
+#define WINVER 0x0A00
+#define _WIN32_WINNT 0x0A00
+#define _ONECORE
 #include <windows.h>
 
 // "interface" is used as identifier in ORB.

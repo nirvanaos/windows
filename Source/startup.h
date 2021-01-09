@@ -1,3 +1,5 @@
+#include "win32.h"
+
 #define CAT0(x, y) x##y
 #define CAT(x, y) CAT0(x, y)
 #define entry_point CAT(MAIN, _startup)
