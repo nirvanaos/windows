@@ -1,5 +1,6 @@
 #include <ExecDomain.h>
 #include <Thread.h>
+#include "ExecContext.inl"
 #include "../Port/Memory.h"
 #include "win32.h"
 

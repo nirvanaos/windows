@@ -1,3 +1,6 @@
+#ifndef NIRVANA_CORE_WINDOWS_STARTUP_H_
+#define NIRVANA_CORE_WINDOWS_STARTUP_H_
+
 #include "win32.h"
 
 #define CAT0(x, y) x##y
@@ -28,3 +31,5 @@ extern "C" int __cdecl main (int argc, char* argv [], char** envp)
 {
   return Nirvana::Core::Windows::MAIN (argc, argv);
 }
+
+#endif
