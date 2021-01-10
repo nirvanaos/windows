@@ -29,7 +29,15 @@ extern "C" int entry_point ()
 
 extern "C" int __cdecl main (int argc, char* argv [], char** envp)
 {
-  return Nirvana::Core::Windows::MAIN (argc, argv);
+  // pre_c_initialization do not called in Release build.
+  // This is a fix for this strange bug.
+  if (!__argc) {
+    printf ("argc==0\n");
+    //if (pre_c_initialization ())
+    if ((*pre_c_initializer) ())
+      return -1;
+  }
+  return Nirvana::Core::Windows::MAIN (__argc, __argv);
 }
 
 #endif
