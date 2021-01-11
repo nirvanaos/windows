@@ -4,6 +4,7 @@
 #include "Console.h"
 #include <StartupProt.h>
 #include <StartupSys.h>
+#include "start.h"
 
 namespace Nirvana {
 namespace Core {
@@ -99,5 +100,4 @@ int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 }
 }
 
-#define MAIN nirvana
-#include "startup.h"
+NIRVANA_MAIN(nirvana)

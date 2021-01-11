@@ -1,6 +1,7 @@
-#include "SchedulerMaster.h"
 #include <GTestSys.h>
 #include <iostream>
+#include "SchedulerMaster.h"
+#include "start.h"
 
 namespace Nirvana {
 namespace Core {
@@ -28,5 +29,4 @@ int gtest_sys (int argc, char* argv []) NIRVANA_NOEXCEPT
 }
 }
 
-#define MAIN gtest_sys
-#include "startup.h"
+NIRVANA_MAIN(gtest_sys)
