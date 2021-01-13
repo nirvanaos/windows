@@ -101,7 +101,7 @@ class AddressSpace
 	AddressSpace& operator = (const AddressSpace&) = delete;
 public:
 	AddressSpace (DWORD process_id, HANDLE process_handle);
-	~AddressSpace ();
+	~AddressSpace () NIRVANA_NOEXCEPT;
 
 	HANDLE process () const
 	{

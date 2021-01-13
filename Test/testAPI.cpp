@@ -609,8 +609,8 @@ class WorkingSet
 {
 public:
 	WorkingSet () :
-		wsi_ ((PSAPI_WORKING_SET_INFORMATION*)malloc (sizeof (PSAPI_WORKING_SET_INFORMATION))),
-		wsi_cb_ (sizeof (PSAPI_WORKING_SET_INFORMATION))
+		wsi_cb_ (sizeof (PSAPI_WORKING_SET_INFORMATION)),
+		wsi_ ((PSAPI_WORKING_SET_INFORMATION*)malloc (sizeof (PSAPI_WORKING_SET_INFORMATION)))
 	{
 		wsi_->NumberOfEntries = 0;
 	}
