@@ -54,7 +54,9 @@ int start ()
 
   CmdLineParser cmdline;
 
-  return mainfn (cmdline.argc (), cmdline.argv ());
+  int ret = mainfn (cmdline.argc (), cmdline.argv ());
+  _cexit ();
+  return ret;
 }
 
 }
