@@ -1,3 +1,3 @@
-# Nirvana Port ibrary for the Windows host
+# Nirvana Port ibrary for Windows host
 
 This is a part of the Nirvana project.
