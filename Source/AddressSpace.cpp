@@ -25,7 +25,6 @@
 */
 #include "../Port/Memory.h"
 #include "AddressSpace.h"
-#include <CORBA/CORBA.h>
 #include <algorithm>
 
 namespace Nirvana {

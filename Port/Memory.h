@@ -28,6 +28,7 @@
 #ifndef NIRVANA_CORE_PORT_MEMORY_H_
 #define NIRVANA_CORE_PORT_MEMORY_H_
 
+#include <CORBA/CORBA.h>
 #include <Nirvana/Memory.h>
 
 struct _EXCEPTION_POINTERS;
