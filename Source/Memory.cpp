@@ -889,38 +889,36 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 	return dst;
 }
 
-uintptr_t Memory::query (const void* p, MemQuery q)
+uintptr_t Memory::query (const void* p, Nirvana::Memory::Query q)
 {
-	{
-		switch (q) {
+	switch (q) {
 
-		case MemQuery::ALLOCATION_SPACE_BEGIN:
-			{
-				SYSTEM_INFO sysinfo;
-				GetSystemInfo (&sysinfo);
-				return (uintptr_t)sysinfo.lpMinimumApplicationAddress;
-			}
-
-		case MemQuery::ALLOCATION_SPACE_END:
-			return (uintptr_t)space ().end ();
-
-		case MemQuery::ALLOCATION_UNIT:
-		case MemQuery::SHARING_UNIT:
-		case MemQuery::GRANULARITY:
-		case MemQuery::SHARING_ASSOCIATIVITY:
-		case MemQuery::OPTIMAL_COMMIT_UNIT:
-			return ALLOCATION_GRANULARITY;
-
-		case MemQuery::PROTECTION_UNIT:
-		case MemQuery::COMMIT_UNIT:
-			return PAGE_SIZE;
-
-		case MemQuery::FLAGS:
-			return FLAGS;
+	case Nirvana::Memory::Query::ALLOCATION_SPACE_BEGIN:
+		{
+			SYSTEM_INFO sysinfo;
+			GetSystemInfo (&sysinfo);
+			return (uintptr_t)sysinfo.lpMinimumApplicationAddress;
 		}
 
-		throw_BAD_PARAM ();
+	case Nirvana::Memory::Query::ALLOCATION_SPACE_END:
+		return (uintptr_t)space ().end ();
+
+	case Nirvana::Memory::Query::ALLOCATION_UNIT:
+	case Nirvana::Memory::Query::SHARING_UNIT:
+	case Nirvana::Memory::Query::GRANULARITY:
+	case Nirvana::Memory::Query::SHARING_ASSOCIATIVITY:
+	case Nirvana::Memory::Query::OPTIMAL_COMMIT_UNIT:
+		return ALLOCATION_GRANULARITY;
+
+	case Nirvana::Memory::Query::PROTECTION_UNIT:
+	case Nirvana::Memory::Query::COMMIT_UNIT:
+		return PAGE_SIZE;
+
+	case Nirvana::Memory::Query::FLAGS:
+		return FLAGS;
 	}
+
+	throw_BAD_PARAM ();
 }
 
 bool Memory::is_readable (const void* p, size_t size)
