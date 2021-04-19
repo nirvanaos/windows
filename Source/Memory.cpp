@@ -288,7 +288,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 
 void Memory::Block::aligned_copy (void* src, size_t size, UWord flags)
 {
-	// NOTE: Memory::DECOMMIT and Memory::RELEASE flags used only for optimozation.
+	// NOTE: Memory::SRC_DECOMMIT and Memory::SRC_RELEASE flags used only for optimozation.
 	// We don't perform actual decommit or release here.
 	assert (size);
 	size_t offset = (uintptr_t)src % ALLOCATION_GRANULARITY;
@@ -329,7 +329,7 @@ void Memory::Block::aligned_copy (void* src, size_t size, UWord flags)
 	}
 
 	// Virtual copy.
-	if (!(flags & Nirvana::Memory::DECOMMIT))	// Memory::RELEASE includes flag DECOMMIT.
+	if (!(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
 	AddressSpace::Block::copy (src_block, offset, size, flags);
 	return;
@@ -682,13 +682,13 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 	if (!size)
 		return dst;
 
-	if (flags & ~(Nirvana::Memory::READ_ONLY | Nirvana::Memory::RELEASE | Nirvana::Memory::ALLOCATE | Nirvana::Memory::EXACTLY))
+	if (flags & ~(Nirvana::Memory::READ_ONLY | Nirvana::Memory::SRC_RELEASE | Nirvana::Memory::DST_ALLOCATE | Nirvana::Memory::EXACTLY))
 		throw_INV_FLAG ();
 
 	bool src_own = false, dst_own = false;
 
-	// release_flags can be 0, Memory::RELEASE, Memory::DECOMMIT.
-	UWord release_flags = flags & Nirvana::Memory::RELEASE;
+	// release_flags can be 0, Memory::SRC_RELEASE, Memory::SRC_DECOMMIT.
+	UWord release_flags = flags & Nirvana::Memory::SRC_RELEASE;
 
 	// Source range have to be committed.
 	uint32_t src_prot_mask;
@@ -712,10 +712,10 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 	uintptr_t src_align = (uintptr_t)src % ALLOCATION_GRANULARITY;
 	try {
 		Region allocated = {0, 0};
-		if (!dst || (flags & Nirvana::Memory::ALLOCATE)) {
+		if (!dst || (flags & Nirvana::Memory::DST_ALLOCATE)) {
 			if (dst) {
 				if (dst == src) {
-					if ((Nirvana::Memory::EXACTLY & flags) && Nirvana::Memory::RELEASE != (flags & Nirvana::Memory::RELEASE))
+					if ((Nirvana::Memory::EXACTLY & flags) && Nirvana::Memory::SRC_RELEASE != (flags & Nirvana::Memory::SRC_RELEASE))
 						return nullptr;
 					dst = nullptr;
 				} else {
@@ -733,8 +733,8 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 				}
 			}
 			if (!dst) {
-				if (Nirvana::Memory::RELEASE == release_flags)
-					dst = src; // Memory::RELEASE is specified, so we can use source block as destination
+				if (Nirvana::Memory::SRC_RELEASE == release_flags)
+					dst = src; // Memory::SRC_RELEASE is specified, so we can use source block as destination
 				else {
 					size_t dst_align = src_own ? src_align : 0;
 					size_t cb_res = size + dst_align;
@@ -782,10 +782,10 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 						BYTE* d_p = (BYTE*)dst, * d_end = d_p + size;
 						BYTE* s_p = (BYTE*)src;
 						if (d_end > src) {
-							// Copy overlapped part with Memory::DECOMMIT.
+							// Copy overlapped part with Memory::SRC_DECOMMIT.
 							BYTE* overlapped_end = round_up (d_end - ((BYTE*)src + size - d_end), ALLOCATION_GRANULARITY);
 							assert (overlapped_end < d_end);
-							UWord overlapped_flags = (flags & ~Nirvana::Memory::RELEASE) | Nirvana::Memory::DECOMMIT;
+							UWord overlapped_flags = (flags & ~Nirvana::Memory::SRC_RELEASE) | Nirvana::Memory::SRC_DECOMMIT;
 							while (d_p < overlapped_end) {
 								size_t cb = round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY - d_p;
 								Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
@@ -805,10 +805,10 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 						BYTE* s_end = (BYTE*)src + size;
 						BYTE* d_p = (BYTE*)dst + size, * s_p = (BYTE*)src + size;
 						if (dst < s_end) {
-							// Copy overlapped part with Memory::DECOMMIT.
+							// Copy overlapped part with Memory::SRC_DECOMMIT.
 							BYTE* overlapped_begin = round_down ((BYTE*)dst + ((BYTE*)dst - (BYTE*)src), ALLOCATION_GRANULARITY);
 							assert (overlapped_begin > dst);
-							UWord overlapped_flags = (flags & ~Nirvana::Memory::RELEASE) | Nirvana::Memory::DECOMMIT;
+							UWord overlapped_flags = (flags & ~Nirvana::Memory::SRC_RELEASE) | Nirvana::Memory::SRC_DECOMMIT;
 							while (d_p > overlapped_begin) {
 								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
 								size_t cb = d_p - block_begin;
@@ -864,10 +864,10 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 				real_move ((const BYTE*)src, (const BYTE*)src + size, (BYTE*)dst);
 			}
 
-			if (flags & Nirvana::Memory::DECOMMIT) {
+			if (flags & Nirvana::Memory::SRC_DECOMMIT) {
 				// Release or decommit source. Regions can overlap.
 				Region reg = {src, size};
-				if (flags & (Nirvana::Memory::RELEASE & ~Nirvana::Memory::DECOMMIT)) {
+				if (flags & (Nirvana::Memory::SRC_RELEASE & ~Nirvana::Memory::SRC_DECOMMIT)) {
 					if (reg.subtract (round_up (dst, ALLOCATION_GRANULARITY), round_down ((BYTE*)dst + size, ALLOCATION_GRANULARITY)))
 						release (reg.ptr, reg.size);
 				} else {
@@ -889,32 +889,32 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 	return dst;
 }
 
-uintptr_t Memory::query (const void* p, Nirvana::Memory::Query q)
+uintptr_t Memory::query (const void* p, Nirvana::Memory::QueryParam q)
 {
 	switch (q) {
 
-	case Nirvana::Memory::Query::ALLOCATION_SPACE_BEGIN:
+	case Nirvana::Memory::QueryParam::ALLOCATION_SPACE_BEGIN:
 		{
 			SYSTEM_INFO sysinfo;
 			GetSystemInfo (&sysinfo);
 			return (uintptr_t)sysinfo.lpMinimumApplicationAddress;
 		}
 
-	case Nirvana::Memory::Query::ALLOCATION_SPACE_END:
+	case Nirvana::Memory::QueryParam::ALLOCATION_SPACE_END:
 		return (uintptr_t)space ().end ();
 
-	case Nirvana::Memory::Query::ALLOCATION_UNIT:
-	case Nirvana::Memory::Query::SHARING_UNIT:
-	case Nirvana::Memory::Query::GRANULARITY:
-	case Nirvana::Memory::Query::SHARING_ASSOCIATIVITY:
-	case Nirvana::Memory::Query::OPTIMAL_COMMIT_UNIT:
+	case Nirvana::Memory::QueryParam::ALLOCATION_UNIT:
+	case Nirvana::Memory::QueryParam::SHARING_UNIT:
+	case Nirvana::Memory::QueryParam::GRANULARITY:
+	case Nirvana::Memory::QueryParam::SHARING_ASSOCIATIVITY:
+	case Nirvana::Memory::QueryParam::OPTIMAL_COMMIT_UNIT:
 		return ALLOCATION_GRANULARITY;
 
-	case Nirvana::Memory::Query::PROTECTION_UNIT:
-	case Nirvana::Memory::Query::COMMIT_UNIT:
+	case Nirvana::Memory::QueryParam::PROTECTION_UNIT:
+	case Nirvana::Memory::QueryParam::COMMIT_UNIT:
 		return PAGE_SIZE;
 
-	case Nirvana::Memory::Query::FLAGS:
+	case Nirvana::Memory::QueryParam::FLAGS:
 		return FLAGS;
 	}
 

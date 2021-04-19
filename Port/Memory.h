@@ -86,7 +86,7 @@ public:
 
 	static bool is_copy (const void* p1, const void* p2, size_t size);
 
-	static uintptr_t query (const void* p, Nirvana::Memory::Query q);
+	static uintptr_t query (const void* p, Nirvana::Memory::QueryParam q);
 
 	//! For usage in proxies.
 	static void prepare_to_share (void* src, size_t size, UWord flags);

@@ -256,8 +256,8 @@ public:
 		bool can_move (size_t offset, size_t size, UWord flags)
 		{
 			bool move = false;
-			if (flags & Memory::DECOMMIT) {
-				if (flags & (Memory::RELEASE & ~Memory::DECOMMIT))
+			if (flags & Memory::SRC_DECOMMIT) {
+				if (flags & (Memory::SRC_RELEASE & ~Memory::SRC_DECOMMIT))
 					move = true;
 				else
 					move = !has_data_outside_of (offset, size);
