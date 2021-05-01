@@ -181,7 +181,7 @@ bool AddressSpace::Block::has_data_outside_of (size_t offset, size_t size, DWORD
 	return false;
 }
 
-void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, UWord flags)
+void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, unsigned flags)
 {
 	exclusive_lock ();
 	assert (size);
@@ -436,7 +436,7 @@ AddressSpace::BlockInfo* AddressSpace::allocated_block (const void* address)
 	return p;
 }
 
-void* AddressSpace::reserve (void* dst, size_t size, UWord flags)
+void* AddressSpace::reserve (void* dst, size_t size, unsigned flags)
 {
 	if (!size)
 		throw_BAD_PARAM ();
@@ -446,7 +446,7 @@ void* AddressSpace::reserve (void* dst, size_t size, UWord flags)
 	if (dst) {
 		tgt = round_down ((BYTE*)dst, ALLOCATION_GRANULARITY);
 		if (flags & Memory::EXACTLY)
-			size = round_up ((BYTE*)dst + size - tgt, ALLOCATION_GRANULARITY);
+			size = round_up ((size_t)((BYTE*)dst + size - tgt), ALLOCATION_GRANULARITY);
 		else
 			size = round_up (size, ALLOCATION_GRANULARITY);
 	} else {

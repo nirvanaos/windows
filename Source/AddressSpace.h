@@ -185,7 +185,7 @@ public:
 			return exclusive_;
 		}
 
-		void copy (Block& src, size_t offset, size_t size, UWord flags);
+		void copy (Block& src, size_t offset, size_t size, unsigned flags);
 		void unmap (HANDLE reserve = INVALID_HANDLE_VALUE);
 
 		struct State
@@ -253,7 +253,7 @@ public:
 			return *info;
 		}
 
-		bool can_move (size_t offset, size_t size, UWord flags)
+		bool can_move (size_t offset, size_t size, unsigned flags)
 		{
 			bool move = false;
 			if (flags & Memory::SRC_DECOMMIT) {
@@ -274,7 +274,7 @@ public:
 		bool exclusive_;
 	};
 
-	void* reserve (void* dst, size_t size, UWord flags);
+	void* reserve (void* dst, size_t size, unsigned flags);
 	void release (void* ptr, size_t size);
 
 	void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) const

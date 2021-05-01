@@ -55,7 +55,7 @@ from queue and remap stack memory. Default stack size for fibers is 1MB, but for
 fibers we can decrease stack size to save memory. If set to 0, neutral fibers have 
 default stack size.
 */
-const SIZE_T NEUTRAL_FIBER_STACK_SIZE = 0; // TODO: Decrease stack size.
+const size_t NEUTRAL_FIBER_STACK_SIZE = 0; // TODO: Decrease stack size.
 
 /// Worker thread priority should be greater than normal thread priority.
 const int WORKER_THREAD_PRIORITY = THREAD_PRIORITY_ABOVE_NORMAL;
@@ -74,9 +74,9 @@ const int POSTMAN_THREAD_PRIORITY = THREAD_PRIORITY_HIGHEST;
 
 const DWORD PROCESS_START_ACK_TIMEOUT = 1000; // 1 sec
 
-const SIZE_T PAGE_SIZE = 4096;
-const SIZE_T PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
-const SIZE_T ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
+const size_t PAGE_SIZE = 4096;
+const size_t PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
+const size_t ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
 
 }
 }

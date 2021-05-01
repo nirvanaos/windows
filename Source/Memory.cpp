@@ -286,7 +286,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 	}
 }
 
-void Memory::Block::aligned_copy (void* src, size_t size, UWord flags)
+void Memory::Block::aligned_copy (void* src, size_t size, unsigned flags)
 {
 	// NOTE: Memory::SRC_DECOMMIT and Memory::SRC_RELEASE flags used only for optimozation.
 	// We don't perform actual decommit or release here.
@@ -340,7 +340,7 @@ fallback:
 	copy (offset, size, src, flags);
 }
 
-void Memory::Block::copy (size_t offset, size_t size, const void* src, UWord flags)
+void Memory::Block::copy (size_t offset, size_t size, const void* src, unsigned flags)
 {
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
@@ -438,7 +438,7 @@ void Memory::Block::decommit (size_t offset, size_t size)
 	}
 }
 
-void Memory::Block::change_protection (size_t offset, size_t size, UWord flags)
+void Memory::Block::change_protection (size_t offset, size_t size, unsigned flags)
 {
 	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
@@ -556,7 +556,7 @@ uint32_t Memory::commit_no_check (void* ptr, size_t size, bool exclusive)
 	return state_bits;
 }
 
-void Memory::prepare_to_share (void* src, size_t size, UWord flags)
+void Memory::prepare_to_share (void* src, size_t size, unsigned flags)
 {
 	if (!size)
 		return;
@@ -573,7 +573,7 @@ void Memory::prepare_to_share (void* src, size_t size, UWord flags)
 	}
 }
 
-void Memory::change_protection (void* ptr, size_t size, UWord flags)
+void Memory::change_protection (void* ptr, size_t size, unsigned flags)
 {
 	if (!size)
 		return;
@@ -592,7 +592,7 @@ void Memory::change_protection (void* ptr, size_t size, UWord flags)
 	}
 }
 
-void* Memory::allocate (void* dst, size_t size, UWord flags)
+void* Memory::allocate (void* dst, size_t size, unsigned flags)
 {
 	if (!size)
 		throw_BAD_PARAM ();
@@ -677,7 +677,7 @@ uint32_t Memory::check_committed (void* ptr, size_t size)
 	return state_bits;
 }
 
-void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
+void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 {
 	if (!size)
 		return dst;
@@ -688,7 +688,7 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 	bool src_own = false, dst_own = false;
 
 	// release_flags can be 0, Memory::SRC_RELEASE, Memory::SRC_DECOMMIT.
-	UWord release_flags = flags & Nirvana::Memory::SRC_RELEASE;
+	unsigned release_flags = flags & Nirvana::Memory::SRC_RELEASE;
 
 	// Source range have to be committed.
 	uint32_t src_prot_mask;
@@ -785,7 +785,7 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 							// Copy overlapped part with Memory::SRC_DECOMMIT.
 							BYTE* overlapped_end = round_up (d_end - ((BYTE*)src + size - d_end), ALLOCATION_GRANULARITY);
 							assert (overlapped_end < d_end);
-							UWord overlapped_flags = (flags & ~Nirvana::Memory::SRC_RELEASE) | Nirvana::Memory::SRC_DECOMMIT;
+							unsigned overlapped_flags = (flags & ~Nirvana::Memory::SRC_RELEASE) | Nirvana::Memory::SRC_DECOMMIT;
 							while (d_p < overlapped_end) {
 								size_t cb = round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY - d_p;
 								Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
@@ -808,7 +808,7 @@ void* Memory::copy (void* dst, void* src, size_t size, UWord flags)
 							// Copy overlapped part with Memory::SRC_DECOMMIT.
 							BYTE* overlapped_begin = round_down ((BYTE*)dst + ((BYTE*)dst - (BYTE*)src), ALLOCATION_GRANULARITY);
 							assert (overlapped_begin > dst);
-							UWord overlapped_flags = (flags & ~Nirvana::Memory::SRC_RELEASE) | Nirvana::Memory::SRC_DECOMMIT;
+							unsigned overlapped_flags = (flags & ~Nirvana::Memory::SRC_RELEASE) | Nirvana::Memory::SRC_DECOMMIT;
 							while (d_p > overlapped_begin) {
 								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
 								size_t cb = d_p - block_begin;

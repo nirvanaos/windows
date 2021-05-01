@@ -61,14 +61,14 @@ public:
 	static const size_t FIXED_COMMIT_UNIT = PAGE_SIZE;
 	static const size_t FIXED_PROTECTION_UNIT = PAGE_SIZE;
 
-	static const UWord FLAGS = 
+	static const unsigned FLAGS = 
 		Nirvana::Memory::ACCESS_CHECK |
 		Nirvana::Memory::HARDWARE_PROTECTION |
 		Nirvana::Memory::COPY_ON_WRITE |
 		Nirvana::Memory::SPACE_RESERVATION;
 
 	// Memory::
-	static void* allocate (void* dst, size_t size, UWord flags);
+	static void* allocate (void* dst, size_t size, unsigned flags);
 
 	static void release (void* dst, size_t size);
 
@@ -76,7 +76,7 @@ public:
 
 	static void decommit (void* ptr, size_t size);
 
-	static void* copy (void* dst, void* src, size_t size, UWord flags);
+	static void* copy (void* dst, void* src, size_t size, unsigned flags);
 
 	static bool is_readable (const void* p, size_t size);
 
@@ -89,7 +89,7 @@ public:
 	static uintptr_t query (const void* p, Nirvana::Memory::QueryParam q);
 
 	//! For usage in proxies.
-	static void prepare_to_share (void* src, size_t size, UWord flags);
+	static void prepare_to_share (void* src, size_t size, unsigned flags);
 
 private:
 	static long __stdcall exception_filter (struct _EXCEPTION_POINTERS* pex);
@@ -129,7 +129,7 @@ private:
 
 	static uint32_t check_committed (void* ptr, size_t size);
 
-	static void change_protection (void* ptr, size_t size, UWord flags);
+	static void change_protection (void* ptr, size_t size, unsigned flags);
 
 	// Create new mapping
 	static HANDLE new_mapping ();

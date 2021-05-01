@@ -45,12 +45,12 @@ protected:
 	/// A number of iterations when we should call yield ().
 	/// SwitchToThread () experiences the expensive cost of a context switch, which can be 10000+ cycles.
 	/// It also suffers the cost of ring 3 to ring 0 transitions, which can be 1000+ cycles.
-	static const UWord ITERATIONS_YIELD = 11000;
+	static const unsigned ITERATIONS_YIELD = 11000;
 
 	/// Maximal number of iterations.
-	static const UWord ITERATIONS_MAX = 1000000;
+	static const unsigned ITERATIONS_MAX = 1000000;
 
-	static void yield (UWord iterations)
+	static void yield (unsigned iterations)
 	{
 		::SwitchToThread ();
 	}

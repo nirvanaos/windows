@@ -59,7 +59,7 @@ public:
 	DWORD commit (size_t offset, size_t size);
 	bool need_remap_to_share (size_t offset, size_t size);
 
-	void prepare_to_share (size_t offset, size_t size, UWord flags)
+	void prepare_to_share (size_t offset, size_t size, unsigned flags)
 	{
 		if (need_remap_to_share (offset, size))
 			if (exclusive_lock () && need_remap_to_share (offset, size))
@@ -68,13 +68,13 @@ public:
 			prepare_to_share_no_remap (offset, size);
 	}
 
-	void aligned_copy (void* src, size_t size, UWord flags);
-	void copy (size_t offset, size_t size, const void* src, UWord flags);
+	void aligned_copy (void* src, size_t size, unsigned flags);
+	void copy (size_t offset, size_t size, const void* src, unsigned flags);
 
 	void decommit (size_t offset, size_t size);
 	DWORD check_committed (size_t offset, size_t size);
 
-	void change_protection (size_t offset, size_t size, UWord flags);
+	void change_protection (size_t offset, size_t size, unsigned flags);
 
 	bool is_copy (Block& other, size_t offset, size_t size);
 
