@@ -1,3 +1,4 @@
+/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -23,30 +24,34 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_INITIALIZE_H_
-#define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
+#ifndef NIRVANA_CORE_PORT_EXECUTABLE_H_
+#define NIRVANA_CORE_PORT_EXECUTABLE_H_
 
-#include <Heap.h>
-#include "Thread.inl"
-#include "Console.h"
-#include <exception>
+#include <Nirvana/Nirvana.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
-inline
-bool initialize (void)
+class Executable
 {
-  try {
-    Heap::initialize ();
-    Port::Thread::initialize ();
-  } catch (const std::exception& ex) {
-    Console () << ex.what () << '\n';
-    return false;
-  }
-  return true;
-}
+public:
+	static Executable* load (const std::string& file);
+
+	void* address () const NIRVANA_NOEXCEPT
+	{
+		return module_;
+	}
+
+	~Executable ();
+
+private:
+	Executable (const std::string& path);
+	
+private:
+	void* module_;
+	std::string temp_path_;
+};
 
 }
 }

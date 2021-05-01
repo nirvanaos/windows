@@ -44,24 +44,41 @@ public:
 		argc_ (0)
 	{
 		LPWSTR* argv = CommandLineToArgvW (GetCommandLineW (), &argc_);
+		size_t ccnt = 0;
+		for (LPWSTR* arg = argv, *end = argv + argc_; arg != end; ++arg) {
+			ccnt += to_utf8 (*arg);
+		}
+		LPWCH env = GetEnvironmentStringsW ();
+		int env_cnt = 0;
+		for (LPWCH p = env; *p; p += wcslen (p)) {
+			++env_cnt;
+			ccnt += to_utf8 (p);
+		}
+		int ptr_cnt = argc_ + env_cnt + 1;
+		cb_ = ptr_cnt * sizeof (char*) + ccnt;
 		try {
-			size_t ccnt = 0;
-			for (LPWSTR* arg = argv, *end = argv + argc_; arg != end; ++arg)
-				ccnt += to_utf8 (*arg);
-			cb_ = argc_ * sizeof (char*) + ccnt;
 			char** uarg = argv_ = (char**)g_core_heap->allocate (nullptr, cb_, 0);
-			char* buf = (char*)(uarg + argc_);
+			envp_ = uarg + argc_;
+			char* buf = (char*)(uarg + ptr_cnt);
 			for (LPWSTR* arg = argv, *end = argv + argc_; arg != end; ++arg, ++uarg) {
 				*uarg = buf;
 				size_t cb = to_utf8 (*arg, buf, ccnt);
 				buf += cb;
 				ccnt -= cb;
 			}
+			for (LPWCH p = env; *p; p += wcslen (p), ++uarg) {
+				*uarg = buf;
+				size_t cb = to_utf8 (p, buf, ccnt);
+				buf += cb;
+				ccnt -= cb;
+			}
 		} catch (...) {
 			LocalFree (argv);
+			FreeEnvironmentStringsW (env);
 			throw;
 		}
 		LocalFree (argv);
+		FreeEnvironmentStringsW (env);
 	}
 
 	~CmdLineParser ()
@@ -69,7 +86,7 @@ public:
 		g_core_heap->release (argv_, cb_);
 	}
 
-	char** argv ()
+	char** argv () const
 	{
 		return argv_;
 	}
@@ -77,6 +94,11 @@ public:
 	int argc () const
 	{
 		return argc_;
+	}
+
+	char** envp () const
+	{
+		return envp_;
 	}
 
 private:
@@ -87,6 +109,7 @@ private:
 
 private:
 	char** argv_;
+	char** envp_;
 	size_t cb_;
 	int argc_;
 };

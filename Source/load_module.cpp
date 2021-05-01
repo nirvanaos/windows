@@ -1,3 +1,4 @@
+/// Protection domain (process) address space.
 /*
 * Nirvana Core. Windows port library.
 *
@@ -23,33 +24,18 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_INITIALIZE_H_
-#define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
-
-#include <Heap.h>
-#include "Thread.inl"
-#include "Console.h"
-#include <exception>
+#include "load_module.h"
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
-inline
-bool initialize (void)
+void* load_module (const char* path)
 {
-  try {
-    Heap::initialize ();
-    Port::Thread::initialize ();
-  } catch (const std::exception& ex) {
-    Console () << ex.what () << '\n';
-    return false;
-  }
-  return true;
+	return LoadLibrary (path);
 }
 
 }
 }
 }
-
-#endif

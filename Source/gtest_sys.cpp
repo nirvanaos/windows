@@ -33,10 +33,10 @@ namespace Core {
 namespace Windows {
 
 inline
-int gtest_sys (int argc, char* argv []) NIRVANA_NOEXCEPT
+int gtest_sys (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 {
 	try {
-		Test::GTestSys startup (argc, argv);
+		Test::GTestSys startup (argc, argv, envp);
 		if (!SchedulerMaster ().run (startup, startup.default_deadline ())) {
 			std::cout << "System is already running." << std::endl;
 			return -1;

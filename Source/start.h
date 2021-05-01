@@ -1,4 +1,3 @@
-/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -36,7 +35,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-template <int (*mainfn) (int, char**)> inline
+template <int (*mainfn) (int, char**, char**)> inline
 int start ()
 {
   // The /GS security cookie must be initialized before any exception handling
@@ -79,8 +78,7 @@ int start ()
   assert (!*__scrt_get_dyn_tls_dtor_callback ());
 
   CmdLineParser cmdline;
-
-  int ret = mainfn (cmdline.argc (), cmdline.argv ());
+  int ret = mainfn (cmdline.argc (), cmdline.argv (), cmdline.envp ());
   _cexit ();
   return ret;
 }

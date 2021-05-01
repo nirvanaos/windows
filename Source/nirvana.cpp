@@ -36,7 +36,7 @@ namespace Core {
 namespace Windows {
 
 inline
-int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
+int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 {
 	try {
 		++argv;
@@ -48,7 +48,7 @@ int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 					case 's': {
 						--argc;
 						++argv;
-						StartupSys startup (argc, argv);
+						StartupSys startup (argc, argv, envp);
 						if (!SchedulerMaster ().run (startup, startup.default_deadline ())) {
 							Console () << "System is already running.\n";
 							return -1;
@@ -84,7 +84,7 @@ int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 							Console () << "Invalid command line.\n";
 							return -1;
 						} else {
-							StartupProt startup (argc, argv);
+							StartupProt startup (argc, argv, envp);
 							if (!SchedulerSlave (sys_process_id, semaphore).run (startup, startup_deadline)) {
 								Console () << "System is not running.\n";
 								return -1;
@@ -107,7 +107,7 @@ int nirvana (int argc, char* argv []) NIRVANA_NOEXCEPT
 			}
 		}
 
-		StartupProt startup (argc, argv);
+		StartupProt startup (argc, argv, envp);
 		if (!SchedulerSlave ().run (startup, StartupProt::default_deadline ())) {
 			Console () << "System is not running.\n";
 			return -1;

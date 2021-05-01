@@ -1,3 +1,4 @@
+/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -23,30 +24,37 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_INITIALIZE_H_
-#define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
+#ifndef NIRVANA_CORE_PORT_MODULE_H_
+#define NIRVANA_CORE_PORT_MODULE_H_
 
-#include <Heap.h>
-#include "Thread.inl"
-#include "Console.h"
-#include <exception>
+#include <Nirvana/Nirvana.h>
+
+extern int __stdcall FreeLibrary (void* mod);
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
+namespace Port {
 
-inline
-bool initialize (void)
+class Module
 {
-  try {
-    Heap::initialize ();
-    Port::Thread::initialize ();
-  } catch (const std::exception& ex) {
-    Console () << ex.what () << '\n';
-    return false;
-  }
-  return true;
-}
+public:
+	static Module* load (const std::string& file)
+	{
+		return reinterpret_cast <Module*> (LoadLibraryA (file.c_str ()));
+	}
+
+	void* address () const NIRVANA_NOEXCEPT
+	{
+		return const_cast <Module*> (this);
+	}
+
+	~Module ()
+	{
+		FreeLibrary (this);
+	}
+
+	void operator delete (void*) NIRVANA_NOEXCEPT {};
+};
 
 }
 }

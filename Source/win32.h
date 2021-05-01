@@ -30,6 +30,7 @@
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
+#define NO_STRICT
 
 // We support Win 10 only.
 #define WINVER 0x0A00
