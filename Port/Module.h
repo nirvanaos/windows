@@ -28,8 +28,7 @@
 #define NIRVANA_CORE_PORT_MODULE_H_
 
 #include <Nirvana/Nirvana.h>
-
-extern int __stdcall FreeLibrary (void* mod);
+#include <Section.h>
 
 namespace Nirvana {
 namespace Core {
@@ -38,22 +37,38 @@ namespace Port {
 class Module
 {
 public:
-	static Module* load (const std::string& file)
+	Module (const char* file) :
+		module_ (nullptr)
 	{
-		return reinterpret_cast <Module*> (LoadLibraryA (file.c_str ()));
-	}
-
-	void* address () const NIRVANA_NOEXCEPT
-	{
-		return const_cast <Module*> (this);
+		load (file);
 	}
 
 	~Module ()
 	{
-		FreeLibrary (this);
+		unload ();
 	}
 
-	void operator delete (void*) NIRVANA_NOEXCEPT {};
+	void* address () const NIRVANA_NOEXCEPT
+	{
+		return module_;
+	}
+
+	const Section& metadata () const
+	{
+		return metadata_;
+	}
+
+protected:
+	Module () :
+		module_ (nullptr)
+	{}
+
+	void load (const char* file);
+	void unload ();
+
+private:
+	void* module_;
+	Section metadata_;
 };
 
 }

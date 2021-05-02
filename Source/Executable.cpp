@@ -24,41 +24,31 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/Executable.h"
-#include "load_module.h"
 #include "win32.h"
+#include <stdexcept>
 
 using namespace std;
 
 namespace Nirvana {
+namespace Legacy {
 namespace Core {
 namespace Port {
 
-Executable::Executable (const string& path) :
-	module_ (load_module (path.c_str ())),
-	temp_path_ (move (path))
-{}
-
-Executable::~Executable ()
+Executable::Executable (const char* file) :
+	Module ()
 {
-	FreeLibrary (module_);
-	verify (DeleteFileA (temp_path_.c_str ()));
-}
-
-Executable* Executable::load (const string& file)
-{
-	string full_path;
 	{
 		char buf [MAX_PATH + 1];
-		DWORD cc = GetFullPathNameA (file.c_str (), sizeof (buf), buf, nullptr);
+		DWORD cc = GetFullPathNameA (file, sizeof (buf), buf, nullptr);
 		if (!cc || cc > sizeof (buf) - 1)
-			throw_UNKNOWN (); // TODO: Improve error handling
-		full_path.assign (buf, cc);
+			throw runtime_error ("File not found");
+		string full_path (buf, cc);
 		if (!GetTempPath (sizeof (buf), buf))
 			throw_UNKNOWN ();
 		{
-			string temp_path = buf;
+			string temp_dir = buf;
 			for (;;) {
-				if (!GetTempFileNameA (temp_path.c_str (), "exe", 0, buf))
+				if (!GetTempFileNameA (temp_dir.c_str (), "exe", 0, buf))
 					throw_UNKNOWN ();
 				if (!CopyFileA (full_path.c_str (), buf, TRUE)) {
 					if (GetLastError () != ERROR_ALREADY_EXISTS)
@@ -67,11 +57,24 @@ Executable* Executable::load (const string& file)
 					break;
 			}
 		}
-		full_path = buf;
+		temp_path_ = buf;
 	}
-	return new Executable (full_path);
+
+	try {
+		Module::load (temp_path_.c_str ());
+	} catch (...) {
+		DeleteFileA (temp_path_.c_str ());
+		throw;
+	}
 }
 
+Executable::~Executable ()
+{
+	Module::unload ();
+	verify (DeleteFileA (temp_path_.c_str ()));
+}
+
+}
 }
 }
 }

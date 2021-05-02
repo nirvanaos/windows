@@ -50,7 +50,7 @@ public:
 		}
 		LPWCH env = GetEnvironmentStringsW ();
 		int env_cnt = 0;
-		for (LPWCH p = env; *p; p += wcslen (p)) {
+		for (LPWCH p = env; *p; p += wcslen (p) + 1) {
 			++env_cnt;
 			ccnt += to_utf8 (p);
 		}
@@ -58,7 +58,6 @@ public:
 		cb_ = ptr_cnt * sizeof (char*) + ccnt;
 		try {
 			char** uarg = argv_ = (char**)g_core_heap->allocate (nullptr, cb_, 0);
-			envp_ = uarg + argc_;
 			char* buf = (char*)(uarg + ptr_cnt);
 			for (LPWSTR* arg = argv, *end = argv + argc_; arg != end; ++arg, ++uarg) {
 				*uarg = buf;
@@ -72,6 +71,7 @@ public:
 				buf += cb;
 				ccnt -= cb;
 			}
+			*uarg = nullptr;
 		} catch (...) {
 			LocalFree (argv);
 			FreeEnvironmentStringsW (env);
@@ -98,7 +98,7 @@ public:
 
 	char** envp () const
 	{
-		return envp_;
+		return argc_ + argv_;
 	}
 
 private:
@@ -109,7 +109,6 @@ private:
 
 private:
 	char** argv_;
-	char** envp_;
 	size_t cb_;
 	int argc_;
 };

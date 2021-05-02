@@ -27,32 +27,25 @@
 #ifndef NIRVANA_CORE_PORT_EXECUTABLE_H_
 #define NIRVANA_CORE_PORT_EXECUTABLE_H_
 
-#include <Nirvana/Nirvana.h>
+#include "Module.h"
 
 namespace Nirvana {
+namespace Legacy {
 namespace Core {
 namespace Port {
 
-class Executable
+class Executable :
+	public Nirvana::Core::Port::Module
 {
 public:
-	static Executable* load (const std::string& file);
-
-	void* address () const NIRVANA_NOEXCEPT
-	{
-		return module_;
-	}
-
+	Executable (const char* file);
 	~Executable ();
 
 private:
-	Executable (const std::string& path);
-	
-private:
-	void* module_;
 	std::string temp_path_;
 };
 
+}
 }
 }
 }
