@@ -39,15 +39,14 @@ inline
 int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 {
 	try {
-		++argv;
-		if (--argc > 0) {
-			const char* arg = *argv;
+		if (argc > 1) {
+			const char* arg = argv [1];
 			if ('-' == arg [0]) {
 				switch (arg [1]) {
 
 					case 's': {
+						std::copy (argv + 2, argv + argc, argv + 1);
 						--argc;
-						++argv;
 						StartupSys startup (argc, argv, envp);
 						if (!SchedulerMaster ().run (startup, startup.default_deadline ())) {
 							Console () << "System is already running.\n";
@@ -62,19 +61,16 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 						uint32_t sys_process_id = 0;
 						uint32_t semaphore = 0;
 						DeadlineTime startup_deadline = StartupProt::default_deadline ();
-						if (--argc > 0) {
-							++argv;
+						if (argc >= 4 && argc <= 5) {
 							char* end;
-							sys_process_id = strtoul (*argv, &end, 16);
-							if (!*end && --argc > 0) {
-								++argv;
-								semaphore = strtoul (*argv, &end, 16);
-								if (*end || argc > 1)
+							sys_process_id = strtoul (argv [2], &end, 16);
+							if (!*end) {
+								semaphore = strtoul (argv [3], &end, 16);
+								if (*end)
 									semaphore = 0;
-								else if (argc > 0) {
-									++argv;
-									startup_deadline = strtoull (*argv, &end, 16);
-									if (end)
+								else if (argc >= 5) {
+									startup_deadline = strtoull (argv [4], &end, 16);
+									if (*end)
 										semaphore = 0;
 								}
 							}
@@ -84,7 +80,7 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 							Console () << "Invalid command line.\n";
 							return -1;
 						} else {
-							StartupProt startup (argc, argv, envp);
+							StartupProt startup (1, argv, envp);
 							if (!SchedulerSlave (sys_process_id, semaphore).run (startup, startup_deadline)) {
 								Console () << "System is not running.\n";
 								return -1;

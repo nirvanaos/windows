@@ -32,7 +32,7 @@ namespace Core {
 namespace Windows {
 
 SchedulerMaster::SchedulerMaster () :
-	error_ (0)
+	error_ (CORBA::Exception::EC_NO_EXCEPTION)
 {}
 
 void SchedulerMaster::terminate ()
@@ -59,14 +59,14 @@ bool SchedulerMaster::run (Runnable& startup, DeadlineTime startup_deadline)
 		terminate ();
 		throw;
 	}
-	if (error_)
+	if (error_ >= 0)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;
 }
 
 void SchedulerMaster::on_error (int err) NIRVANA_NOEXCEPT
 {
-	int zero = 0;
+	int zero = CORBA::Exception::EC_NO_EXCEPTION;
 	if (error_.compare_exchange_strong (zero, err))
 		abort (); // TODO: Send SystemError message to all domains.
 }
@@ -92,7 +92,7 @@ void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) NIRVA
 
 bool SchedulerMaster::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT
 {
-	if (error_)
+	if (error_ >= 0)
 		return false;
 
 	try {
@@ -118,7 +118,7 @@ void SchedulerMaster::worker_thread_proc () NIRVANA_NOEXCEPT
 void SchedulerMaster::WorkerThreads::received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT
 {
 	Executor* executor = reinterpret_cast <Executor*> (ovl);
-	ThreadWorker::execute (*executor, 0);
+	ThreadWorker::execute (*executor, CORBA::Exception::EC_NO_EXCEPTION);
 	SchedulerMaster::singleton ().core_free ();
 }
 

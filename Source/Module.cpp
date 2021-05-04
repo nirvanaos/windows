@@ -44,11 +44,13 @@ void Module::load (const char* path)
 		Nirvana::Core::PortableExecutable pe (mod);
 		if (!pe.find_OLF_section (metadata_))
 			throw runtime_error ("Invalid file format");
-		if (pe.header ()->SizeOfOptionalHeader == sizeof (llvm::COFF::PE32Header)) {
+		if (pe.header ()->SizeOfOptionalHeader >= sizeof (llvm::COFF::PE32Header)) {
 			const llvm::COFF::PE32Header* pehdr = (const llvm::COFF::PE32Header*)(pe.header () + 1);
-			if (pehdr->AddressOfEntryPoint) {
+			if (
+				(pehdr->Magic != llvm::COFF::PE32Header::PE32 && pehdr->Magic != llvm::COFF::PE32Header::PE32_PLUS)
+				|| pehdr->AddressOfEntryPoint
+				)
 				throw runtime_error ("Invalid file format");
-			}
 		} else
 			throw runtime_error ("Invalid file format");
 	} catch (...) {

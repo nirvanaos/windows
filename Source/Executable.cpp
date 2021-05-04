@@ -39,20 +39,21 @@ Executable::Executable (const char* file) :
 {
 	{
 		char buf [MAX_PATH + 1];
-		DWORD cc = GetFullPathNameA (file, sizeof (buf), buf, nullptr);
-		if (!cc || cc > sizeof (buf) - 1)
-			throw runtime_error ("File not found");
-		string full_path (buf, cc);
 		if (!GetTempPath (sizeof (buf), buf))
 			throw_UNKNOWN ();
 		{
 			string temp_dir = buf;
-			for (;;) {
-				if (!GetTempFileNameA (temp_dir.c_str (), "exe", 0, buf))
+			for (UINT uniq = GetTickCount ();; ++uniq) {
+				if (!GetTempFileNameA (temp_dir.c_str (), "nex", uniq, buf))
 					throw_UNKNOWN ();
-				if (!CopyFileA (full_path.c_str (), buf, TRUE)) {
-					if (GetLastError () != ERROR_ALREADY_EXISTS)
-						throw_UNKNOWN ();
+				if (!CopyFileA (file, buf, TRUE)) {
+					DWORD err = GetLastError ();
+					if (ERROR_ALREADY_EXISTS != err) {
+						if (ERROR_FILE_NOT_FOUND == err)
+							throw runtime_error ("File not found");
+						else
+							throw_UNKNOWN ();
+					}
 				} else
 					break;
 			}

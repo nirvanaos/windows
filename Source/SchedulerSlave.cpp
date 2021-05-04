@@ -36,7 +36,7 @@ namespace Windows {
 SchedulerSlave::SchedulerSlave () :
 	sys_process_ (nullptr),
 	executor_id_ (0),
-	error_ (0),
+	error_ (CORBA::Exception::EC_NO_EXCEPTION),
 	queue_ (Port::SystemInfo::hardware_concurrency ())
 {}
 
@@ -61,7 +61,7 @@ void SchedulerSlave::initialize (uint32_t sys_process_id, uint32_t sys_semaphore
 inline
 bool SchedulerSlave::initialize ()
 {
-	error_ = 0;
+	error_ = CORBA::Exception::EC_NO_EXCEPTION;
 
 	DWORD process_id = GetCurrentProcessId ();
 	message_broker_.create_mailslot (MailslotName (process_id));
@@ -142,14 +142,14 @@ bool SchedulerSlave::run (Runnable& startup, DeadlineTime startup_deadline)
 		terminate ();
 		throw;
 	}
-	if (error_)
+	if (error_ >= 0)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;
 }
 
 void SchedulerSlave::on_error (int err) NIRVANA_NOEXCEPT
 {
-	int zero = 0;
+	int zero = CORBA::Exception::EC_NO_EXCEPTION;
 	if (error_.compare_exchange_strong (zero, err))
 		Core::Scheduler::shutdown ();
 }
@@ -193,7 +193,7 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) NIRVAN
 
 bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT
 {
-	if (error_)
+	if (error_ >= 0)
 		return false;
 
 	try {
@@ -226,7 +226,7 @@ void SchedulerSlave::worker_thread_proc () NIRVANA_NOEXCEPT
 inline
 void SchedulerSlave::core_free () NIRVANA_NOEXCEPT
 {
-	if (!error_) {
+	if (error_ < 0) {
 		try {
 			scheduler_mailslot_.send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CORE_FREE));
 			return;
@@ -235,7 +235,7 @@ void SchedulerSlave::core_free () NIRVANA_NOEXCEPT
 		}
 	}
 
-	assert (error_);
+	assert (error_ >= 0);
 	// Fallback
 	execute ();
 }
@@ -244,7 +244,7 @@ void SchedulerSlave::execute () NIRVANA_NOEXCEPT
 {
 	Executor* executor;
 	if (queue_.delete_min (executor))
-		executor->execute ((CORBA::SystemException::Code)error_);
+		executor->execute (error_);
 	core_free ();
 }
 
