@@ -40,7 +40,7 @@ class ThreadBackground :
 	///@{
 	/// Members called from Core.
 protected:
-	ThreadBackground ();
+	ThreadBackground (bool process);
 	~ThreadBackground ();
 
 	/// Create thread
