@@ -28,6 +28,7 @@
 #define NIRVANA_CORE_PORT_EXECUTABLE_H_
 
 #include "Module.h"
+#include <Heap.h>
 
 namespace Nirvana {
 namespace Legacy {
@@ -42,7 +43,7 @@ public:
 	~Executable ();
 
 private:
-	std::string temp_path_;
+	std::basic_string <char, std::char_traits <char>, Nirvana::Core::CoreAllocator <char> > temp_path_;
 };
 
 }
