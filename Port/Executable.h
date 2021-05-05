@@ -43,7 +43,7 @@ public:
 	~Executable ();
 
 private:
-	std::basic_string <char, std::char_traits <char>, Nirvana::Core::CoreAllocator <char> > temp_path_;
+	Nirvana::Core::CoreString temp_path_;
 };
 
 }
