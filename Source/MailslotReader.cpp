@@ -24,6 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "MailslotReader.h"
+#include <Nirvana/throw_exception.h>
 
 namespace Nirvana {
 namespace Core {

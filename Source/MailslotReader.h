@@ -27,6 +27,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_MAILSLOTREADER_H_
 #define NIRVANA_CORE_WINDOWS_MAILSLOTREADER_H_
 
+#include <assert.h>
 #include "BufferPool.h"
 #include "CompletionPort.h"
 #include <Nirvana/real_copy.h>

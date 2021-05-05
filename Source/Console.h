@@ -27,7 +27,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_CONSOLE_H_
 #define NIRVANA_CORE_WINDOWS_CONSOLE_H_
 
-#include <core.h>
+#include <Nirvana/NirvanaBase.h>
 
 namespace Nirvana {
 namespace Core {

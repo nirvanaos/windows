@@ -1,4 +1,3 @@
-#include <core.h>
 #include "../Source/PostOffice.h"
 #include "../Source/Mailslot.h"
 #include "../Source/MailslotName.h"

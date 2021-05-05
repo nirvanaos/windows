@@ -29,6 +29,8 @@
 #ifndef NIRVANA_CORE_CONFIG_H_
 #define NIRVANA_CORE_CONFIG_H_
 
+#include <stdint.h>
+
 namespace Nirvana {
 namespace Core {
 

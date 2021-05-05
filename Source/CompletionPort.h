@@ -27,6 +27,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_COMPLETIONPORT_H_
 #define NIRVANA_CORE_WINDOWS_COMPLETIONPORT_H_
 
+#include <assert.h>
 #include "CompletionPortReceiver.h"
 #include "../Port/SystemInfo.h"
 

@@ -27,7 +27,6 @@
 #ifndef NIRVANA_CORE_WINDOWS_THREAD_INL_
 #define NIRVANA_CORE_WINDOWS_THREAD_INL_
 
-#include <core.h>
 #include "../Port/Thread.h"
 #include "ExecContext.inl"
 

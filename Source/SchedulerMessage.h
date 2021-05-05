@@ -30,7 +30,7 @@
 
 #define SCHEDULER_MAILSLOT_NAME MAILSLOT_PREFIX L"scheduler"
 
-#include <core.h>
+#include <Nirvana/NirvanaBase.h>
 
 namespace Nirvana {
 namespace Core {

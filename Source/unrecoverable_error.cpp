@@ -23,7 +23,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include <core.h>
+#include <unrecoverable_error.h>
+#include <assert.h>
 
 namespace Nirvana {
 namespace Core {
