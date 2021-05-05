@@ -45,7 +45,7 @@ unsigned long __stdcall ThreadWorker::thread_proc (ThreadWorker* _this)
 
 struct ThreadWorker::MainNeutralFiberParam
 {
-	Core_var <ExecDomain> main_domain;
+	Core_ref <ExecDomain> main_domain;
 };
 
 void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* param)
