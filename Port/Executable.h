@@ -40,6 +40,12 @@ class Executable :
 {
 public:
 	Executable (const char* file);
+
+	template <class T, class A>
+	Executable (const std::basic_string <char, T, A>& file) :
+		Executable (file.c_str ())
+	{}
+
 	~Executable ();
 
 private:

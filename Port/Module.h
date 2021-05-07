@@ -43,6 +43,11 @@ public:
 		load (file);
 	}
 
+	template <class T, class A>
+	Module (const std::basic_string <char, T, A>& file) :
+		Module (file.c_str ())
+	{}
+
 	~Module ()
 	{
 		unload ();
