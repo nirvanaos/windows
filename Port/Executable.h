@@ -41,8 +41,8 @@ class Executable :
 public:
 	Executable (const char* file);
 
-	template <class T, class A>
-	Executable (const std::basic_string <char, T, A>& file) :
+	template <class A>
+	Executable (const std::basic_string <char, std::char_traits <char>, A>& file) :
 		Executable (file.c_str ())
 	{}
 

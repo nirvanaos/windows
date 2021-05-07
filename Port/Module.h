@@ -43,8 +43,8 @@ public:
 		load (file);
 	}
 
-	template <class T, class A>
-	Module (const std::basic_string <char, T, A>& file) :
+	template <class A>
+	Module (const std::basic_string <char, std::char_traits <char>, A>& file) :
 		Module (file.c_str ())
 	{}
 
