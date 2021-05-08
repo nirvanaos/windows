@@ -705,7 +705,7 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 		src_own = true;
 	} else {
 		if (release_flags)
-			throw_BAD_PARAM (); // Can't release memory that is not own.
+			throw_FREE_MEM (); // Can't release memory that is not own.
 		src_prot_mask = check_committed (src, size);
 	}
 

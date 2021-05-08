@@ -499,7 +499,7 @@ void AddressSpace::release (void* dst, size_t size)
 	{
 		BlockInfo* block = allocated_block (begin);
 		if (!block)
-			throw_BAD_PARAM ();
+			throw_FREE_MEM ();
 		begin_handle = end_handle = block->mapping.exclusive_lock ();
 		for (BYTE* p = begin + ALLOCATION_GRANULARITY; p != end; p += ALLOCATION_GRANULARITY) {
 			BlockInfo* block = allocated_block (p);
@@ -508,7 +508,7 @@ void AddressSpace::release (void* dst, size_t size)
 					p -= ALLOCATION_GRANULARITY;
 					allocated_block (p)->mapping.exclusive_unlock ();
 				}
-				throw_BAD_PARAM ();
+				throw_FREE_MEM ();
 			}
 			end_handle = block->mapping.exclusive_lock ();
 		}
