@@ -48,7 +48,7 @@ Executable::Executable (const char* file) :
 					throw_UNKNOWN ();
 				if (!CopyFileA (file, buf, TRUE)) {
 					DWORD err = GetLastError ();
-					if (ERROR_ALREADY_EXISTS != err) {
+					if (ERROR_FILE_EXISTS != err) {
 						if (ERROR_FILE_NOT_FOUND == err)
 							throw runtime_error ("File not found");
 						else
