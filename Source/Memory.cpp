@@ -25,7 +25,6 @@
 */
 #include "Memory.inl"
 #include <Nirvana/real_copy.h>
-#include <CORBA/CORBA.h>
 
 namespace Nirvana {
 namespace Core {
