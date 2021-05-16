@@ -37,6 +37,10 @@ namespace Port {
 Executable::Executable (const char* file) :
 	Module ()
 {
+	DWORD att = GetFileAttributesA (file);
+	if (att & FILE_ATTRIBUTE_DIRECTORY)
+		throw runtime_error ("File not found");
+
 	{
 		char buf [MAX_PATH + 1];
 		if (!GetTempPath (sizeof (buf), buf))
@@ -48,12 +52,8 @@ Executable::Executable (const char* file) :
 					throw_UNKNOWN ();
 				if (!CopyFileA (file, buf, TRUE)) {
 					DWORD err = GetLastError ();
-					if (ERROR_FILE_EXISTS != err) {
-						if (ERROR_FILE_NOT_FOUND == err)
-							throw runtime_error ("File not found");
-						else
-							throw_UNKNOWN ();
-					}
+					if (ERROR_FILE_EXISTS != err)
+						throw_UNKNOWN ();
 				} else
 					break;
 			}
