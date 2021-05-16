@@ -32,7 +32,7 @@ namespace Port {
 
 unsigned long Chrono::time_increment_;
 
-void Chrono::initialize ()
+void Chrono::initialize () NIRVANA_NOEXCEPT
 {
 	// TODO: Use KeQueryTimeIncrement ();
 	uint64_t t0;
@@ -64,7 +64,7 @@ void Chrono::initialize ()
 	time_increment_ = (unsigned long)inc * 100;
 }
 
-uint64_t Chrono::system_clock ()
+uint64_t Chrono::system_clock () NIRVANA_NOEXCEPT
 {
 	FILETIME ft;
 	GetSystemTimePreciseAsFileTime (&ft);
@@ -74,7 +74,7 @@ uint64_t Chrono::system_clock ()
 	return (ui.QuadPart - WIN_TIME_OFFSET_SEC * 10000000UI64) * 100UI64;
 }
 
-uint64_t Chrono::steady_clock ()
+uint64_t Chrono::steady_clock () NIRVANA_NOEXCEPT
 {
 	ULONGLONG t;
 	QueryInterruptTimePrecise (&t);

@@ -27,7 +27,7 @@
 #ifndef NIRVANA_CORE_PORT_CHRONO_H_
 #define NIRVANA_CORE_PORT_CHRONO_H_
 
-#include <stdint.h>
+#include <Nirvana/NirvanaBase.h>
 
 namespace Nirvana {
 namespace Core {
@@ -36,15 +36,15 @@ namespace Port {
 class Chrono
 {
 public:
-	static void initialize ();
+	static void initialize () NIRVANA_NOEXCEPT;
 
 	static const uint16_t epoch = 2021;
 
-	static uint64_t system_clock ();
-	static uint64_t steady_clock ();
+	static uint64_t system_clock () NIRVANA_NOEXCEPT;
+	static uint64_t steady_clock () NIRVANA_NOEXCEPT;
 
 	/// Returns steady clock resolution in ns
-	static uint32_t steady_clock_resoluion ()
+	static uint32_t steady_clock_resoluion () NIRVANA_NOEXCEPT
 	{
 		return time_increment_;
 	}
