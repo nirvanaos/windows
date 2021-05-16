@@ -27,8 +27,6 @@
 #ifndef NIRVANA_CORE_PORT_BACKOFF_H_
 #define NIRVANA_CORE_PORT_BACKOFF_H_
 
-#include <Nirvana/Nirvana.h>
-
 extern "C" __declspec (dllimport)
 void __stdcall Sleep (unsigned long dwMilliseconds);
 

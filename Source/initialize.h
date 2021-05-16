@@ -29,6 +29,8 @@
 #include <Heap.h>
 #include "Thread.inl"
 #include "Console.h"
+#include "../Port/SystemInfo.h"
+#include "../Port/Chrono.h"
 #include <exception>
 
 namespace Nirvana {
@@ -39,6 +41,8 @@ inline
 bool initialize (void)
 {
   try {
+    Port::SystemInfo::initialize ();
+    Port::Chrono::initialize ();
     Heap::initialize ();
     Port::Thread::initialize ();
   } catch (const std::exception& ex) {

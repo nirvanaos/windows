@@ -23,27 +23,62 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "../Port/SystemInfo.h"
-#include <PortableExecutable.h>
+#include "../Port/Chrono.h"
 #include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-unsigned int SystemInfo::hardware_concurrency_;
+unsigned long Chrono::time_increment_;
 
-void SystemInfo::initialize ()
+void Chrono::initialize ()
 {
-	::SYSTEM_INFO si;
-	::GetSystemInfo (&si);
-	hardware_concurrency_ =  si.dwNumberOfProcessors;
+	// TODO: Use KeQueryTimeIncrement ();
+	uint64_t t0;
+	QueryInterruptTimePrecise (&t0);
+	uint64_t inc;
+	uint64_t t1;
+	for (;;) {
+		QueryInterruptTimePrecise (&t1);
+		if ((inc = t1 - t0))
+			break;
+	}
+	for (size_t check_cnt = 0; check_cnt < 3;) {
+		t0 = t1;
+		uint64_t inc1;
+		for (;;) {
+			QueryInterruptTimePrecise (&t1);
+			if ((inc1 = t1 - t0))
+				break;
+		}
+		if (inc1 == inc)
+			++check_cnt;
+		else {
+			if (inc1 < inc)
+				inc = inc1;
+			check_cnt = 0;
+		}
+	}
+
+	time_increment_ = (unsigned long)inc * 100;
 }
 
-bool SystemInfo::get_OLF_section (Section& section) NIRVANA_NOEXCEPT
+uint64_t Chrono::system_clock ()
 {
-	PortableExecutable pe (GetModuleHandleW (nullptr));
-	return pe.find_OLF_section (section);
+	FILETIME ft;
+	GetSystemTimePreciseAsFileTime (&ft);
+	ULARGE_INTEGER ui;
+	ui.LowPart = ft.dwLowDateTime;
+	ui.HighPart = ft.dwHighDateTime;
+	return (ui.QuadPart - WIN_TIME_OFFSET_SEC * 10000000UI64) * 100UI64;
+}
+
+uint64_t Chrono::steady_clock ()
+{
+	ULONGLONG t;
+	QueryInterruptTimePrecise (&t);
+	return t * 100UI64;
 }
 
 }

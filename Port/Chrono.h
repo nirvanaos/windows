@@ -1,3 +1,4 @@
+/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -23,29 +24,39 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "../Port/SystemInfo.h"
-#include <PortableExecutable.h>
-#include "win32.h"
+#ifndef NIRVANA_CORE_PORT_CHRONO_H_
+#define NIRVANA_CORE_PORT_CHRONO_H_
+
+#include <stdint.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-unsigned int SystemInfo::hardware_concurrency_;
-
-void SystemInfo::initialize ()
+class Chrono
 {
-	::SYSTEM_INFO si;
-	::GetSystemInfo (&si);
-	hardware_concurrency_ =  si.dwNumberOfProcessors;
+public:
+	static void initialize ();
+
+	static const uint16_t epoch = 2021;
+
+	static uint64_t system_clock ();
+	static uint64_t steady_clock ();
+
+	/// Returns steady clock resolution in ns
+	static uint32_t steady_clock_resoluion ()
+	{
+		return time_increment_;
+	}
+
+private:
+	static unsigned long time_increment_; // Time between system ticks in nanoseconds
+
+	static const uint64_t WIN_TIME_OFFSET_SEC = 13253068800UI64;
+};
+
+}
+}
 }
 
-bool SystemInfo::get_OLF_section (Section& section) NIRVANA_NOEXCEPT
-{
-	PortableExecutable pe (GetModuleHandleW (nullptr));
-	return pe.find_OLF_section (section);
-}
-
-}
-}
-}
+#endif

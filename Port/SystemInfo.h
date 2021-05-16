@@ -38,9 +38,11 @@ namespace Port {
 class SystemInfo
 {
 public:
+	static void initialize ();
+
 	static unsigned int hardware_concurrency () NIRVANA_NOEXCEPT
 	{
-		return singleton_.hardware_concurrency_;
+		return hardware_concurrency_;
 	}
 
 	static bool get_OLF_section (Section& section) NIRVANA_NOEXCEPT;
@@ -49,9 +51,7 @@ private:
 	SystemInfo ();
 
 private:
-	static SystemInfo singleton_;
-
-	unsigned int hardware_concurrency_;
+	static unsigned int hardware_concurrency_;
 };
 
 
