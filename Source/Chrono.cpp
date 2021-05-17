@@ -34,7 +34,6 @@ unsigned long Chrono::time_increment_;
 
 void Chrono::initialize () NIRVANA_NOEXCEPT
 {
-	// TODO: Use KeQueryTimeIncrement ();
 	uint64_t t0;
 	QueryInterruptTimePrecise (&t0);
 	uint64_t inc;
