@@ -661,10 +661,18 @@ TEST_F (TestAPI, ZeroedPage)
 	// Try to detect if Windows support zeroed page COW.
 	static const size_t PAGE_COUNT = 32;
 
+	PROCESS_MEMORY_COUNTERS pmc [4];
+	for (auto p = begin (pmc); p != end (pmc); ++p)
+		p->cb = sizeof (*pmc);
+
+	GetProcessMemoryInfo (GetCurrentProcess (), pmc + 0, sizeof (*pmc));
+
 	PSAPI_WORKING_SET_EX_INFORMATION page_info [PAGE_COUNT];
 
 	int* mem = (int*)VirtualAlloc (nullptr, PAGE_COUNT * PAGE_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	ASSERT_TRUE (mem);
+
+	GetProcessMemoryInfo (GetCurrentProcess (), pmc + 1, sizeof (*pmc));
 
 	for (size_t i = 0; i < PAGE_COUNT; ++i) {
 		page_info [i].VirtualAddress = mem + i * PAGE_SIZE / sizeof (int);
@@ -679,6 +687,8 @@ TEST_F (TestAPI, ZeroedPage)
 	for (const int* p = mem, *end = mem + PAGE_COUNT * PAGE_SIZE / sizeof (int); p != end; ++p) {
 		EXPECT_EQ (*p, 0);
 	}
+
+	GetProcessMemoryInfo (GetCurrentProcess (), pmc + 2, sizeof (*pmc));
 
 	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), page_info, sizeof (page_info)));
 
@@ -696,12 +706,14 @@ TEST_F (TestAPI, ZeroedPage)
 		page_info_w [i].VirtualAddress = mem + i * PAGE_SIZE / sizeof (int);
 	}
 
+	GetProcessMemoryInfo (GetCurrentProcess (), pmc + 3, sizeof (*pmc));
+
 	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), page_info_w, sizeof (page_info_w)));
 
 	// Page state does not change after write.
 	EXPECT_EQ (memcmp (page_info, page_info_w, sizeof (page_info)), 0);
 
-	// Windows does not use zero page COW unlike Linux.
+	// CONCLUSION: Windows does not use zero page COW unlike Linux.
 	VirtualFree (mem, 0, MEM_RELEASE);
 }
 
