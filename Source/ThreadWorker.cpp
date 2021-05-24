@@ -53,7 +53,7 @@ void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* para
 	Port::ExecContext::current (&Core::Thread::current ().neutral_context ());
 	ExecDomain* main_domain = param->main_domain;
 	// Schedule startup runnable
-	main_domain->spawn (nullptr);
+	main_domain->spawn (g_core_free_sync_context);
 	// Release main fiber to pool for reuse.
 	param->main_domain.reset ();
 	// Do worker thread proc.
