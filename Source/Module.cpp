@@ -35,12 +35,35 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-void Module::load (const char* path)
+Module::Module (const char* path)
 {
-	void* mod = LoadLibraryA (path);
-	if (!mod)
+	DWORD att = GetFileAttributesA (path);
+	if (att & FILE_ATTRIBUTE_DIRECTORY)
 		throw runtime_error ("File not found");
+
+	{
+		char buf [MAX_PATH + 1];
+		if (!GetTempPath (sizeof (buf), buf))
+			throw_UNKNOWN ();
+		{
+			string temp_dir = buf;
+			for (UINT uniq = GetTickCount ();; ++uniq) {
+				if (!GetTempFileNameA (temp_dir.c_str (), "nex", uniq, buf))
+					throw_UNKNOWN ();
+				if (!CopyFileA (path, buf, TRUE)) {
+					DWORD err = GetLastError ();
+					if (ERROR_FILE_EXISTS != err)
+						throw_UNKNOWN ();
+				} else
+					break;
+			}
+		}
+		temp_path_ = buf;
+	}
+	void* mod = LoadLibraryA (temp_path_.c_str ());
 	try {
+		if (!mod)
+			throw runtime_error ("Can not load module");
 		Nirvana::Core::PortableExecutable pe (mod);
 		if (!pe.find_OLF_section (metadata_))
 			throw runtime_error ("Invalid file format");
@@ -48,7 +71,7 @@ void Module::load (const char* path)
 		if (!pehdr || pehdr->AddressOfEntryPoint)
 			throw runtime_error ("Invalid file format");
 	} catch (...) {
-		FreeLibrary (mod);
+		unload ();
 		throw;
 	}
 	module_ = mod;
@@ -56,10 +79,10 @@ void Module::load (const char* path)
 
 void Module::unload ()
 {
-	if (module_) {
+	if (module_)
 		FreeLibrary (module_);
-		module_ = nullptr;
-	}
+	if (!temp_path_.empty ())
+		DeleteFileA (temp_path_.c_str ());
 }
 
 }

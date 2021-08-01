@@ -100,11 +100,6 @@ typedef uint32_t UserToken;
 /// If module was not used during this period of time, it will be unloaded.
 const uint64_t MODULE_UNLOAD_TIMEOUT = 30000000000; // 30 sec
 
-/// When one exeution domain started a module loading, other requested the same module will wait.
-/// To avoid priority inversion we should ensure that the deadline of ED that loads module is not too large.
-/// If it is too large, we temporary boost the deadline.
-const uint64_t MODULE_LOAD_DEADLINE = 1000000000; // 1 sec
-
 /// ORB proxy garbage collection deadline. May be INFINITE_DEADLINE
 const uint64_t PROXY_GC_DEADLINE = 10000000000; // 10 sec
 

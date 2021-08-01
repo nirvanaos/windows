@@ -29,6 +29,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include <Section.h>
+#include <Heap.h>
 
 namespace Nirvana {
 namespace Core {
@@ -37,11 +38,7 @@ namespace Port {
 class Module
 {
 public:
-	Module (const char* file) :
-		module_ (nullptr)
-	{
-		load (file);
-	}
+	Module (const char* file);
 
 	template <class A>
 	Module (const std::basic_string <char, std::char_traits <char>, A>& file) :
@@ -63,17 +60,13 @@ public:
 		return metadata_;
 	}
 
-protected:
-	Module () :
-		module_ (nullptr)
-	{}
-
-	void load (const char* file);
+private:
 	void unload ();
 
 private:
 	void* module_;
 	Section metadata_;
+	Nirvana::Core::CoreString temp_path_;
 };
 
 }
