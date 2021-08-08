@@ -125,7 +125,7 @@ private:
 
 	static void protect (void* address, size_t size, uint32_t protection);
 
-	static void query (const void* address, MEMORY_BASIC_INFORMATION& mbi);
+	static void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) NIRVANA_NOEXCEPT;
 
 	static uint32_t check_committed (void* ptr, size_t size);
 

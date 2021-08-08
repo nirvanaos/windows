@@ -527,7 +527,7 @@ bool Memory::Block::is_copy (Block& other, size_t offset, size_t size)
 	return true;
 }
 
-inline void Memory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi)
+inline void Memory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi) NIRVANA_NOEXCEPT
 {
 	//space ().query (address, mbi);
 	verify (VirtualQuery (address, &mbi, sizeof (mbi)));
@@ -892,29 +892,47 @@ uintptr_t Memory::query (const void* p, Nirvana::Memory::QueryParam q)
 {
 	switch (q) {
 
-	case Nirvana::Memory::QueryParam::ALLOCATION_SPACE_BEGIN:
+		case Nirvana::Memory::QueryParam::ALLOCATION_SPACE_BEGIN:
 		{
 			SYSTEM_INFO sysinfo;
 			GetSystemInfo (&sysinfo);
 			return (uintptr_t)sysinfo.lpMinimumApplicationAddress;
 		}
 
-	case Nirvana::Memory::QueryParam::ALLOCATION_SPACE_END:
-		return (uintptr_t)space ().end ();
+		case Nirvana::Memory::QueryParam::ALLOCATION_SPACE_END:
+			return (uintptr_t)space ().end ();
 
-	case Nirvana::Memory::QueryParam::ALLOCATION_UNIT:
-	case Nirvana::Memory::QueryParam::SHARING_UNIT:
-	case Nirvana::Memory::QueryParam::GRANULARITY:
-	case Nirvana::Memory::QueryParam::SHARING_ASSOCIATIVITY:
-	case Nirvana::Memory::QueryParam::OPTIMAL_COMMIT_UNIT:
-		return ALLOCATION_GRANULARITY;
+		case Nirvana::Memory::QueryParam::ALLOCATION_UNIT:
+		case Nirvana::Memory::QueryParam::SHARING_UNIT:
+		case Nirvana::Memory::QueryParam::GRANULARITY:
+		case Nirvana::Memory::QueryParam::SHARING_ASSOCIATIVITY:
+		case Nirvana::Memory::QueryParam::OPTIMAL_COMMIT_UNIT:
+			return ALLOCATION_GRANULARITY;
 
-	case Nirvana::Memory::QueryParam::PROTECTION_UNIT:
-	case Nirvana::Memory::QueryParam::COMMIT_UNIT:
-		return PAGE_SIZE;
+		case Nirvana::Memory::QueryParam::PROTECTION_UNIT:
+		case Nirvana::Memory::QueryParam::COMMIT_UNIT:
+			return PAGE_SIZE;
 
-	case Nirvana::Memory::QueryParam::FLAGS:
-		return FLAGS;
+		case Nirvana::Memory::QueryParam::FLAGS:
+			return FLAGS;
+
+		case Nirvana::Memory::QueryParam::MEMORY_STATE:
+		{
+			MEMORY_BASIC_INFORMATION mbi;
+			query (p, mbi);
+			switch (mbi.State) {
+				case MEM_FREE:
+					return (uintptr_t)Nirvana::Memory::MemoryState::MEM_NOT_ALLOCATED;
+				case MEM_RESERVE:
+					return (uintptr_t)Nirvana::Memory::MemoryState::MEM_RESERVED;
+				default:
+					if (mbi.Protect & PageState::MASK_RW)
+						return (uintptr_t)Nirvana::Memory::MemoryState::MEM_READ_WRITE;
+					else
+						return (uintptr_t)Nirvana::Memory::MemoryState::MEM_READ_ONLY;
+			}
+		}
+
 	}
 
 	throw_BAD_PARAM ();
