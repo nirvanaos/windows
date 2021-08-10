@@ -76,8 +76,7 @@ PLAIN_MEMORY provides the best performance but wastes a lot of physical memory.
 */
 
 #if !defined (__clang__)
-//#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS
-#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::COMMITTED_BITMAP
+#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS
 #else
 #define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::COMMITTED_BITMAP
 #endif
