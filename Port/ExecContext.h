@@ -70,6 +70,10 @@ public:
 			DeleteFiber (fiber_);
 	}
 
+	/// Aborts execution of the context.
+	/// Dangerous method used for POSIX compatibility.
+	NIRVANA_NORETURN void abort ();
+
 protected:
 	/// Switch to this context.
 	void switch_to () NIRVANA_NOEXCEPT
@@ -110,6 +114,7 @@ public:
 
 private:
 	static unsigned long current_;
+	static const unsigned long STATUS_ABORT = 0xE0000001;
 
 	void* fiber_;
 };

@@ -28,6 +28,7 @@
 #define NIRVANA_CORE_PORT_MODULE_H_
 
 #include <Nirvana/Nirvana.h>
+#include <Nirvana/ModuleInit.h>
 #include <Section.h>
 #include <Heap.h>
 
@@ -59,6 +60,18 @@ public:
 	{
 		return metadata_;
 	}
+
+	/// \brief Call mi->initialize ();
+	///
+	/// Implementation must catch all possible failures including the access violation, abort() call etc.
+	/// In case of such failures the exception must be thrown.
+	static void call_initialize (ModuleInit::_ptr_type mi);
+
+	/// \brief Call mi->terminate ();
+	///
+	/// Implementation must catch all possible failures including the access violation, abort() call etc.
+	/// In case of such failures the exception must be thrown.
+	static void call_terminate (ModuleInit::_ptr_type mi);
 
 private:
 	void unload ();

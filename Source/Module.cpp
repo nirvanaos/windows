@@ -77,6 +77,24 @@ Module::Module (const char* path)
 	module_ = mod;
 }
 
+void Module::call_initialize (ModuleInit::_ptr_type mi)
+{
+	__try {
+		mi->initialize ();
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		throw_UNKNOWN ();
+	}
+}
+
+void Module::call_terminate (ModuleInit::_ptr_type mi)
+{
+	__try {
+		mi->terminate ();
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		throw_UNKNOWN ();
+	}
+}
+
 void Module::unload ()
 {
 	if (module_)

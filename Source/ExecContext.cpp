@@ -76,6 +76,11 @@ void ExecContext::convert_to_fiber ()
 	current (static_cast <Core::ExecContext*> (this));
 }
 
+NIRVANA_NORETURN void ExecContext::abort ()
+{
+	RaiseException (STATUS_ABORT, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+}
+
 }
 }
 }
