@@ -29,13 +29,12 @@
 namespace Nirvana {
 namespace Core {
 namespace Port {
-
+/* Unused
 NIRVANA_NORETURN void _unrecoverable_error (const char* file, unsigned line)
 {
 	assert (false);
-	abort ();
 }
-
+*/
 }
 }
 }
