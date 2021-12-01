@@ -103,6 +103,18 @@ void Module::unload ()
 		DeleteFileA (temp_path_.c_str ());
 }
 
+void Module::get_data_sections (forward_list <Section, UserAllocator <Section>>& sections)
+{
+	Nirvana::Core::PortableExecutable pe (module_);
+	for (const COFF::Section* s = pe.sections (), *end = s + pe.section_count (); s != end; ++s) {
+		if (s->Characteristics & IMAGE_SCN_MEM_WRITE
+			&& !COFF::is_section (*s, ".msvcjmc")
+			&& !COFF::is_section (*s, OLF_BIND)
+			)
+			sections.push_front ({ pe.section_address (*s), s->VirtualSize });
+	}
+}
+
 }
 }
 }

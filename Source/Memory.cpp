@@ -662,17 +662,20 @@ void Memory::decommit (void* ptr, size_t size)
 }
 
 inline
-uint32_t Memory::check_committed (void* ptr, size_t size)
+uint32_t Memory::check_committed (void* ptr, size_t size, uint32_t& type)
 {
 	uint32_t state_bits = 0;
+	uint32_t t = 0;
 	for (const BYTE* begin = (const BYTE*)ptr, *end = begin + size; begin < end;) {
 		MEMORY_BASIC_INFORMATION mbi;
 		query (begin, mbi);
 		if (!(mbi.Protect & PageState::MASK_ACCESS))
 			throw_BAD_PARAM ();
 		state_bits |= mbi.Protect;
+		t |= mbi.Type;
 		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
 	}
+	type = t;
 	return state_bits;
 }
 
@@ -691,6 +694,7 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 
 	// Source range have to be committed.
 	uint32_t src_prot_mask;
+	uint32_t src_type;
 	if (space ().allocated_block (src)) {
 		src_prot_mask = 0;
 		for (BYTE* p = (BYTE*)src, *end = p + size; p < end;) {
@@ -705,7 +709,7 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 	} else {
 		if (release_flags)
 			throw_FREE_MEM (); // Can't release memory that is not own.
-		src_prot_mask = check_committed (src, size);
+		src_prot_mask = check_committed (src, size, src_type);
 	}
 
 	uintptr_t src_align = (uintptr_t)src % ALLOCATION_GRANULARITY;
@@ -765,9 +769,16 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 			if (src_prot_mask & ((flags & Nirvana::Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO)) {
 				if (dst_own)
 					change_protection (src, size, flags);
-				else if ((uintptr_t)dst % PAGE_SIZE == 0)
-					protect (src, round_up (size, PAGE_SIZE), (flags & Nirvana::Memory::READ_ONLY) ? PageState::RO_UNMAPPED : PageState::RW_UNMAPPED);
-				else
+				else if ((uintptr_t)dst % PAGE_SIZE == 0) {
+					uint32_t prot;
+					if (flags & Nirvana::Memory::READ_ONLY)
+						prot = PAGE_READONLY;
+					else if (src_type == MEM_IMAGE)
+						prot = PAGE_WRITECOPY;
+					else
+						prot = PAGE_READWRITE;
+					protect (src, round_up (size, PAGE_SIZE), prot);
+				} else
 					throw_BAD_PARAM ();
 			}
 			return src;

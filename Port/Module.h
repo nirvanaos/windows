@@ -31,6 +31,8 @@
 #include <Nirvana/ModuleInit.h>
 #include <Section.h>
 #include <Heap.h>
+#include <UserAllocator.h>
+#include <forward_list>
 
 namespace Nirvana {
 namespace Core {
@@ -39,6 +41,17 @@ namespace Port {
 class Module
 {
 public:
+	void* address () const NIRVANA_NOEXCEPT
+	{
+		return module_;
+	}
+
+	const Section& metadata () const NIRVANA_NOEXCEPT
+	{
+		return metadata_;
+	}
+
+protected:
 	Module (const char* file);
 
 	template <class A>
@@ -49,16 +62,6 @@ public:
 	~Module ()
 	{
 		unload ();
-	}
-
-	void* address () const NIRVANA_NOEXCEPT
-	{
-		return module_;
-	}
-
-	const Section& metadata () const
-	{
-		return metadata_;
 	}
 
 	/// \brief Call mi->initialize ();
@@ -72,6 +75,11 @@ public:
 	/// Implementation must catch all possible failures including the access violation, abort() call etc.
 	/// In case of such failures the exception must be thrown.
 	static void call_terminate (ModuleInit::_ptr_type mi);
+
+	/// \brief Return all read/write data sections
+	/// 
+	/// \param sections List of r/w data sections
+	void get_data_sections (std::forward_list <Section, UserAllocator <Section>>& sections);
 
 private:
 	void unload ();

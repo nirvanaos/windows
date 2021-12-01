@@ -49,9 +49,23 @@ int start ()
   if (!__scrt_initialize_crt (__scrt_module_type::exe))
     __scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
 
+  if (!__scrt_initialize_onexit_tables (__scrt_module_type::exe))
+    __scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
+
+#ifdef _M_IX86
+  // Clear the x87 exception flags.  Any other floating point initialization
+  // should already have taken place before this function is called.
+  _asm { fnclex }
+#endif
+
   // Initialize C
   if (_initterm_e (__xi_a, __xi_z) != 0)
     return 255;
+
+  // Before we begin C++ initialization, set the unhandled exception
+  // filter so that unhandled C++ exceptions result in std::terminate
+  // being called:
+  __scrt_set_unhandled_exception_filter ();
 
   // Initialize C++
   _initterm (__xc_a, __xc_z);
