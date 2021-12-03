@@ -684,7 +684,11 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 	if (!size)
 		return dst;
 
-	if (flags & ~(Nirvana::Memory::READ_ONLY | Nirvana::Memory::SRC_RELEASE | Nirvana::Memory::DST_ALLOCATE | Nirvana::Memory::EXACTLY))
+	if (flags != Nirvana::Memory::SIMPLE_COPY && (flags & ~(Nirvana::Memory::READ_ONLY
+		| Nirvana::Memory::SRC_RELEASE
+		| Nirvana::Memory::DST_ALLOCATE
+		| Nirvana::Memory::EXACTLY
+		)))
 		throw_INV_FLAG ();
 
 	bool src_own = false, dst_own = false;
@@ -716,6 +720,9 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 	try {
 		Region allocated = {0, 0};
 		if (!dst || (flags & Nirvana::Memory::DST_ALLOCATE)) {
+			if (flags & Nirvana::Memory::SIMPLE_COPY)
+				throw_INV_FLAG ();
+
 			if (dst) {
 				if (dst == src) {
 					if ((Nirvana::Memory::EXACTLY & flags) && Nirvana::Memory::SRC_RELEASE != (flags & Nirvana::Memory::SRC_RELEASE))
@@ -766,6 +773,9 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 		if (dst == src) { // Special case - change protection.
 			// We allow to change protection of the not-allocated memory.
 			// This is necessary for core services like module load.
+			if (flags & Nirvana::Memory::SIMPLE_COPY)
+				throw_NO_PERMISSION ();
+
 			if (src_prot_mask & ((flags & Nirvana::Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO)) {
 				if (dst_own)
 					change_protection (src, size, flags);
@@ -843,6 +853,9 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 					// Physical copy.
 					uint32_t dst_prot_mask = commit_no_check (dst, size);
 					if ((dst_prot_mask & PageState::MASK_RO) || (flags & Nirvana::Memory::READ_ONLY)) {
+						if (flags & Nirvana::Memory::SIMPLE_COPY)
+							throw_NO_PERMISSION ();
+
 						if (dst < src) {
 							BYTE* d_p = (BYTE*)dst, *d_end = d_p + size;
 							BYTE* s_p = (BYTE*)src;

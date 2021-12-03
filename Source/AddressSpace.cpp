@@ -194,12 +194,17 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, unsigned
 	HANDLE cur_mapping = mapping ();
 	if (INVALID_HANDLE_VALUE == cur_mapping)
 		remap = true;
-	else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
-		// Change mapping
-		assert (!has_data_outside_of (offset, size));
-		remap = true;
-	} else
-		remap = false;
+	else {
+		if (flags & Memory::SIMPLE_COPY && state().page_state_bits & PageState::MASK_RO)
+			throw_NO_PERMISSION ();
+
+		if (!CompareObjectHandles (cur_mapping, src_mapping)) {
+			// Change mapping
+			assert (!has_data_outside_of (offset, size));
+			remap = true;
+		} else
+			remap = false;
+	}
 
 	bool move = src.can_move (offset, size, flags);
 
