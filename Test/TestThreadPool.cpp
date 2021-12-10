@@ -2,6 +2,7 @@
 #include "../Source/Mailslot.h"
 #include "../Source/MailslotName.h"
 #include "../Source/ThreadPostman.h"
+#include "../Port/SystemInfo.h"
 #include <gtest/gtest.h>
 #include <atomic>
 
@@ -66,6 +67,7 @@ protected:
 	{
 		// Code here will be called immediately after the constructor (right
 		// before each test).
+		Nirvana::Core::Port::SystemInfo::initialize ();
 		Nirvana::Core::Heap::initialize ();
 	}
 

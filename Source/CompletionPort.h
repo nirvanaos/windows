@@ -36,7 +36,7 @@ namespace Core {
 namespace Windows {
 
 /// Windows I/O completion port wrapper.
-class NIRVANA_NOVTABLE CompletionPort
+class CompletionPort
 {
 private:
 	CompletionPort (const CompletionPort&) = delete;
