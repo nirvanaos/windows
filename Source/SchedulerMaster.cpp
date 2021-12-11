@@ -115,7 +115,7 @@ void SchedulerMaster::worker_thread_proc () NIRVANA_NOEXCEPT
 	worker_threads_.thread_proc ();
 }
 
-void SchedulerMaster::WorkerThreads::received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT
+void SchedulerMaster::WorkerThreads::completed (OVERLAPPED* ovl, DWORD size, DWORD error) NIRVANA_NOEXCEPT
 {
 	Executor* executor = reinterpret_cast <Executor*> (ovl);
 	ThreadWorker::execute (*executor, CORBA::Exception::EC_NO_EXCEPTION);

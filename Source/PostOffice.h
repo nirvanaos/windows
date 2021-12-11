@@ -78,18 +78,21 @@ protected:
 	{}
 
 private:
-	virtual void received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT
+	virtual void completed (OVERLAPPED* ovl, DWORD size, DWORD error) NIRVANA_NOEXCEPT
 	{
-		// Copy message to stack
-		LONG_PTR buf [MAX_WORDS];
-		LONG_PTR* msg = (LONG_PTR*)data (ovl);
-		real_copy (msg, msg + (size + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR), buf);
+		assert (!error);
+		if (!error) {
+			// Copy message to stack
+			LONG_PTR buf [MAX_WORDS];
+			LONG_PTR* msg = (LONG_PTR*)data (ovl);
+			real_copy (msg, msg + (size + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR), buf);
 
-		// Enqueue buffer to reading a next message.
-		enqueue_buffer (ovl);
+			// Enqueue buffer to reading a next message.
+			enqueue_buffer (ovl);
 
-		// Process message
-		static_cast <T*> (this)->received (buf, size);
+			// Process message
+			static_cast <T*> (this)->received (buf, size);
+		}
 	}
 };
 

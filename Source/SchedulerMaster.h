@@ -136,7 +136,7 @@ private:
 		}
 
 	private:
-		virtual void received (OVERLAPPED* ovl, DWORD size) NIRVANA_NOEXCEPT;
+		virtual void completed (OVERLAPPED* ovl, DWORD size, DWORD error) NIRVANA_NOEXCEPT;
 
 	}
 	worker_threads_;

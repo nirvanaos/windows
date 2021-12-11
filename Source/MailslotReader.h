@@ -63,7 +63,8 @@ protected:
 	void start (CompletionPort& port);
 
 	/// Stop all work.
-	void terminate () NIRVANA_NOEXCEPT;
+	void terminate () NIRVANA_NOEXCEPT
+	{}
 
 	/// Enqueue read request.
 	void enqueue_buffer (OVERLAPPED* ovl) NIRVANA_NOEXCEPT

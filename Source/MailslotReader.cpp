@@ -38,7 +38,8 @@ MailslotReader::MailslotReader (size_t buffer_count, DWORD max_msg_size) :
 
 MailslotReader::~MailslotReader ()
 {
-	assert (INVALID_HANDLE_VALUE == handle_); // terminate() must be called in all cases
+	if (INVALID_HANDLE_VALUE != handle_)
+		CloseHandle (handle_);
 }
 
 bool MailslotReader::create_mailslot (LPCWSTR mailslot_name)
@@ -61,17 +62,6 @@ void MailslotReader::start (CompletionPort& port)
 
 	for (OVERLAPPED* p = begin (); p != end (); p = next (p)) {
 		enqueue_buffer (p);
-	}
-}
-
-void MailslotReader::terminate () NIRVANA_NOEXCEPT
-{
-	if (INVALID_HANDLE_VALUE != handle_) {
-		for (OVERLAPPED* p = begin (); p != end (); p = next (p)) {
-			cancel_buffer (p);
-		}
-		CloseHandle (handle_);
-		handle_ = INVALID_HANDLE_VALUE;
 	}
 }
 
