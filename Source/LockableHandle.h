@@ -40,7 +40,8 @@ class LockableHandle
 public:
 	void init_invalid ()
 	{
-		assert (!val_);
+		// Must be null and locked exclusively
+		assert (val_ == SPIN_MASK);
 		val_ = INVALID_VAL;
 	}
 

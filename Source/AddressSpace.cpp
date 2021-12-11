@@ -470,8 +470,10 @@ void* AddressSpace::reserve (void* dst, size_t size, unsigned flags)
 		BYTE* pb = p;
 		try {
 			for (BYTE* end = p + size; pb < end; pb += ALLOCATION_GRANULARITY) {
-				assert (!block (pb).mapping);
-				block (pb).mapping.init_invalid ();
+				BlockInfo& bi = block (pb);
+				bi.mapping.exclusive_lock ();
+				assert (!bi.mapping);
+				bi.mapping.init_invalid ();
 			}
 		} catch (...) { // NO_MEMORY for directory allocation
 			while (pb > p) {
