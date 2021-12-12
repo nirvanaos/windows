@@ -35,32 +35,35 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-Module::Module (const char* path)
+using namespace Nirvana::Core::Windows;
+
+Module::Module (const char* path, size_t len)
 {
-	DWORD att = GetFileAttributesA (path);
-	if (att & FILE_ATTRIBUTE_DIRECTORY)
-		throw runtime_error ("File not found");
+	WCHAR temp_path [MAX_PATH + 1];
 
 	{
-		char buf [MAX_PATH + 1];
-		if (!GetTempPath (sizeof (buf), buf))
+		CoreStringW wpath;
+		wpath.resize (len);
+		wpath.resize (utf8_to_ucs16 (path, len, &*wpath.begin ()));
+		DWORD att = GetFileAttributesW (wpath.c_str ());
+		if (att & FILE_ATTRIBUTE_DIRECTORY)
+			throw runtime_error ("File not found");
+		WCHAR temp_dir [MAX_PATH + 1];
+		if (!GetTempPathW ((DWORD)size(temp_dir), temp_dir))
 			throw_UNKNOWN ();
-		{
-			string temp_dir = buf;
-			for (UINT uniq = GetTickCount ();; ++uniq) {
-				if (!GetTempFileNameA (temp_dir.c_str (), "nex", uniq, buf))
+		for (UINT uniq = GetTickCount ();; ++uniq) {
+			if (!GetTempFileNameW (temp_dir, WINWCS("nex"), uniq, temp_path))
+				throw_UNKNOWN ();
+			if (!CopyFileW (wpath.c_str (), temp_path, TRUE)) {
+				DWORD err = GetLastError ();
+				if (ERROR_FILE_EXISTS != err)
 					throw_UNKNOWN ();
-				if (!CopyFileA (path, buf, TRUE)) {
-					DWORD err = GetLastError ();
-					if (ERROR_FILE_EXISTS != err)
-						throw_UNKNOWN ();
-				} else
-					break;
-			}
+			} else
+				break;
 		}
-		temp_path_ = buf;
 	}
-	void* mod = LoadLibraryA (temp_path_.c_str ());
+	temp_path_ = temp_path;
+	void* mod = LoadLibraryW (temp_path_.c_str ());
 	try {
 		if (!mod)
 			throw runtime_error ("Can not load module");
@@ -100,7 +103,7 @@ void Module::unload ()
 	if (module_)
 		FreeLibrary (module_);
 	if (!temp_path_.empty ())
-		DeleteFileA (temp_path_.c_str ());
+		DeleteFileW (temp_path_.c_str ());
 }
 
 void Module::get_data_sections (forward_list <Section, UserAllocator <Section>>& sections)

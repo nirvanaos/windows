@@ -30,9 +30,9 @@
 #include <Nirvana/Nirvana.h>
 #include <Nirvana/ModuleInit.h>
 #include <Section.h>
-#include <Heap.h>
 #include <UserAllocator.h>
 #include <forward_list>
+#include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
 namespace Core {
@@ -52,11 +52,13 @@ public:
 	}
 
 protected:
-	Module (const char* file);
-
 	template <class A>
 	Module (const std::basic_string <char, std::char_traits <char>, A>& file) :
-		Module (file.c_str ())
+		Module (file.c_str (), file.length ())
+	{}
+
+	Module (const char* file) :
+		Module (file, strlen (file))
 	{}
 
 	~Module ()
@@ -82,12 +84,14 @@ protected:
 	void get_data_sections (std::forward_list <Section, UserAllocator <Section>>& sections);
 
 private:
+	Module (const char* file, size_t len);
+
 	void unload ();
 
 private:
 	void* module_;
 	Section metadata_;
-	Nirvana::Core::CoreString temp_path_;
+	Nirvana::Core::Windows::CoreStringW temp_path_;
 };
 
 }

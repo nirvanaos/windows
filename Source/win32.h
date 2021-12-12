@@ -28,6 +28,8 @@
 #ifndef NIRVANA_CORE_WINDOWS_WIN32_H_
 #define NIRVANA_CORE_WINDOWS_WIN32_H_
 
+#include "WinWChar.h"
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #define NO_STRICT
@@ -43,8 +45,8 @@
 #undef interface
 #endif
 
-#define OBJ_NAME_PREFIX L"Nirvana"
-#define MAILSLOT_PREFIX L"\\\\.\\mailslot\\" OBJ_NAME_PREFIX L"\\"
+#define OBJ_NAME_PREFIX WINWCS ("Nirvana")
+#define MAILSLOT_PREFIX WINWCS ("\\\\.\\mailslot\\") OBJ_NAME_PREFIX WINWCS ("\\")
 
 namespace Nirvana {
 namespace Core {

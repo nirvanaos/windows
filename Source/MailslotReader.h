@@ -74,15 +74,6 @@ protected:
 	}
 
 private:
-	void cancel_buffer (OVERLAPPED* ovl)
-	{
-		if (CancelIoEx (handle_, ovl)) {
-			DWORD cb;
-			GetOverlappedResult (handle_, ovl, &cb, TRUE);
-		}
-	}
-
-private:
 	HANDLE handle_;
 	DWORD max_msg_size_;
 };

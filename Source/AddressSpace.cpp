@@ -281,7 +281,7 @@ AddressSpace::AddressSpace (DWORD process_id, HANDLE process_handle) :
 {
 	assert (!mapping_ && !directory_);
 
-	static const WCHAR fmt [] = OBJ_NAME_PREFIX L".mmap.%08X";
+	static const WCHAR fmt [] = OBJ_NAME_PREFIX WINWCS (".mmap.%08X");
 	WCHAR name [_countof (fmt) + 8 - 3];
 	wsprintfW (name, fmt, process_id);
 
