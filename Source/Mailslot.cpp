@@ -24,14 +24,13 @@
 *  popov.nirvana@gmail.com
 */
 #include "Mailslot.h"
-#include <CORBA/Exception.h>
 #include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool Mailslot::open (const wchar_t* name)
+bool Mailslot::open (const WinWChar* name)
 {
 	assert (INVALID_HANDLE_VALUE == mailslot_);
 	mailslot_ = CreateFileW (name, GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);

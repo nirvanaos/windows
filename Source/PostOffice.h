@@ -78,7 +78,7 @@ protected:
 	{}
 
 private:
-	virtual void completed (OVERLAPPED* ovl, DWORD size, DWORD error) NIRVANA_NOEXCEPT
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
 	{
 		assert (!error);
 		if (!error) {

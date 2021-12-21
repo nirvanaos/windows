@@ -80,11 +80,6 @@ public:
 
 	///@}
 
-	static void worker_thread_proc ()
-	{
-		singleton_->worker_thread_proc ();
-	}
-
 protected:
 	static Windows::SchedulerAbstract* singleton_;
 };

@@ -32,7 +32,6 @@
 #include "PostOffice.h"
 #include "WorkerThreads.h"
 #include "SchedulerMessage.h"
-#include "MessageBroker.h"
 
 namespace Nirvana {
 namespace Core {
@@ -82,7 +81,7 @@ private:
 
 /// SchedulerMaster class. 
 class SchedulerMaster :
-	public SchedulerBase <SchedulerMaster>,
+	public SchedulerBase,
 	public PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY>,
 	public SchedulerImpl <SchedulerMaster, SchedulerItem>
 {
@@ -95,6 +94,11 @@ public:
 		terminate ();
 	}
 
+	static SchedulerMaster& singleton ()
+	{
+		return static_cast <SchedulerMaster&> (SchedulerBase::singleton ());
+	}
+
 	/// Main loop.
 	/// \returns `false` if system domain is already running.
 	bool run (Runnable& startup, DeadlineTime startup_deadline);
@@ -105,6 +109,8 @@ public:
 	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
 	virtual void shutdown () NIRVANA_NOEXCEPT;
+
+	// Implementation of SchedulerBase
 	virtual void worker_thread_proc () NIRVANA_NOEXCEPT;
 
 	/// Process mailslot message.
@@ -136,12 +142,11 @@ private:
 		}
 
 	private:
-		virtual void completed (OVERLAPPED* ovl, DWORD size, DWORD error) NIRVANA_NOEXCEPT;
+		virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
 
 	}
 	worker_threads_;
 
-	MessageBroker message_broker_;
 	std::atomic <int> error_;
 };
 

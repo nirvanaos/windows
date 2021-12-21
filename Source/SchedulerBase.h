@@ -28,13 +28,12 @@
 #define NIRVANA_CORE_WINDOWS_SCHEDULERBASE_H_
 
 #include "../Port/Scheduler.h"
-#include "SchedulerAbstract.h"
+#include "MessageBroker.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-template <class Impl>
 class NIRVANA_NOVTABLE SchedulerBase :
 	public SchedulerAbstract,
 	public Port::Scheduler
@@ -50,12 +49,22 @@ public:
 		singleton_ = nullptr;
 	}
 
-	static Impl& singleton ()
+	static SchedulerBase& singleton ()
 	{
 		assert (singleton_);
 		//assert (dynamic_cast <Impl*> (singleton_));
-		return static_cast <Impl&> (*singleton_);
+		return static_cast <SchedulerBase&> (*singleton_);
 	}
+
+	virtual void worker_thread_proc () NIRVANA_NOEXCEPT = 0;
+
+	CompletionPort& completion_port ()
+	{
+		return message_broker_;
+	}
+
+protected:
+	MessageBroker message_broker_;
 };
 
 }

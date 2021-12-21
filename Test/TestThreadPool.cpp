@@ -148,7 +148,7 @@ public:
 	{
 		close ();
 		handle_ = CreateFileW (name, GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
-			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING | FILE_FLAG_OVERLAPPED, nullptr);
+			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED, nullptr);
 		if (INVALID_HANDLE_VALUE == handle_)
 			return GetLastError ();
 		po.add_receiver (handle_, *this);
@@ -188,7 +188,7 @@ public:
 	}
 
 private:
-	virtual void completed (OVERLAPPED* ovl, DWORD size, DWORD error) NIRVANA_NOEXCEPT
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
 	{
 		static_cast <IO_WaitList*> (ovl)->release (error);
 	}
@@ -238,6 +238,13 @@ TEST_F (TestThreadPool, File)
 		static const size_t BLOCK_CNT = 16;
 
 		VMArray <size_t> buf (BLOCK_SIZE / sizeof (size_t));
+		{
+			// Test for write beyond the end
+			IO_WaitList wl;
+			EXPECT_FALSE (f.start_write (BLOCK_SIZE, BLOCK_SIZE, buf, wl));
+			EXPECT_FALSE (wl.wait ());
+		}
+
 		for (size_t ib = 0; ib < BLOCK_CNT; ++ib) {
 			size_t tag = ib * BLOCK_SIZE / sizeof (size_t);
 			for (size_t* p = buf; p != buf + BLOCK_SIZE / sizeof (size_t); ++p) {

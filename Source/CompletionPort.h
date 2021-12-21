@@ -30,6 +30,7 @@
 #include <assert.h>
 #include "CompletionPortReceiver.h"
 #include "../Port/SystemInfo.h"
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {

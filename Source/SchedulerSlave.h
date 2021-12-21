@@ -30,7 +30,6 @@
 #include "SchedulerBase.h"
 #include "WorkerThreads.h"
 #include "WorkerSemaphore.h"
-#include "MessageBroker.h"
 #include "Mailslot.h"
 #include <PriorityQueue.h>
 #include <SkipListWithPool.h>
@@ -41,7 +40,7 @@ namespace Core {
 namespace Windows {
 
 class SchedulerSlave :
-	public SchedulerBase <SchedulerSlave>
+	public SchedulerBase
 {
 public:
 	/// Used when process started by the system domain.
@@ -65,6 +64,8 @@ public:
 	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
 	virtual void shutdown () NIRVANA_NOEXCEPT;
+
+	// Implementation of SchedulerBase
 	virtual void worker_thread_proc () NIRVANA_NOEXCEPT;
 
 	// Called from worker thread.
@@ -81,7 +82,6 @@ private:
 	HANDLE sys_process_;
 	Mailslot scheduler_mailslot_;
 	Mailslot sys_mailslot_;
-	MessageBroker message_broker_;
 	uint32_t executor_id_;
 	std::atomic <int> error_;
 	SkipListWithPool <PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;

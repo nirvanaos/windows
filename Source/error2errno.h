@@ -24,23 +24,19 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_COMPLETIONPORTRECEIVER_H_
-#define NIRVANA_CORE_WINDOWS_COMPLETIONPORTRECEIVER_H_
+#ifndef NIRVANA_CORE_WINDOWS_ERROR2ERRNO_H_
+#define NIRVANA_CORE_WINDOWS_ERROR2ERRNO_H_
 
-#include <Nirvana/NirvanaBase.h>
-
-struct _OVERLAPPED;
+#include <errno.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-/// CompletionPortReceiver abstract class.
-class NIRVANA_NOVTABLE CompletionPortReceiver
-{
-public:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT = 0;
-};
+/// Convert Windows error code to POSIX error code.
+/// \param err Windows error code.
+/// \returns POSIX error code.
+int error2errno (unsigned err, int default_ret = EINVAL);
 
 }
 }

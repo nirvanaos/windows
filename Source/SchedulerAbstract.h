@@ -41,7 +41,6 @@ public:
 	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT = 0;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT = 0;
 	virtual void shutdown () NIRVANA_NOEXCEPT = 0;
-	virtual void worker_thread_proc () NIRVANA_NOEXCEPT = 0;
 };
 
 }

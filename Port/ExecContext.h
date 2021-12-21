@@ -28,7 +28,6 @@
 #define NIRVANA_CORE_PORT_EXECCONTEXT_H_
 
 #include <Nirvana/Nirvana.h>
-#include <basetsd.h>
 
 extern "C" __declspec (dllimport)
 void __stdcall DeleteFiber (void*);
@@ -38,7 +37,6 @@ void __stdcall SwitchToFiber (void* lpFiber);
 
 extern "C" __declspec (dllimport)
 void* __stdcall FlsGetValue (unsigned long dwFlsIndex);
-
 
 namespace Nirvana {
 namespace Core {

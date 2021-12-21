@@ -24,8 +24,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_UTF8_TO_UCS16_H_
-#define NIRVANA_CORE_WINDOWS_UTF8_TO_UCS16_H_
+#ifndef NIRVANA_CORE_WINDOWS_WINWCHAR_H_
+#define NIRVANA_CORE_WINDOWS_WINWCHAR_H_
 
 #include <Nirvana/Nirvana.h>
 #include <Heap.h>
@@ -42,6 +42,8 @@ typedef char16_t WinWChar;
 #define WINWCS(s) u##s
 #endif
 
+size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16);
+
 template <class A1, class A2> inline
 void utf8_to_ucs16 (
 	const std::basic_string <char, std::char_traits <char>, A1>& utf8,
@@ -50,8 +52,6 @@ void utf8_to_ucs16 (
 	ucs16.resize (utf8.size ());
 	ucs16.resize (utf8_to_ucs16 (utf8.data (), utf8.size (), &*ucs16.begin ()));
 }
-
-size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16);
 
 typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, CoreAllocator <WinWChar> > CoreStringW;
 

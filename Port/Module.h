@@ -38,6 +38,7 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
+/// Loadable module
 class Module
 {
 public:

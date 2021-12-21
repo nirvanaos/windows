@@ -27,8 +27,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_MAILSLOT_H_
 #define NIRVANA_CORE_WINDOWS_MAILSLOT_H_
 
-#include <Nirvana/Nirvana.h>
-#include <Nirvana/real_copy.h>
+#include "WinWChar.h"
 #include <stdlib.h>
 
 namespace Nirvana {
@@ -54,7 +53,7 @@ public:
 		close ();
 	}
 
-	bool open (const wchar_t* name);
+	bool open (const WinWChar* name);
 
 	template <typename Msg>
 	void send (const Msg& msg)
