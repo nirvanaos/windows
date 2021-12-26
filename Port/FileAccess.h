@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_PORT_FILEACCESS_H_
 
 #include <Nirvana/Nirvana.h>
-#include <IO_WaitList.h>
+#include <IO_Request.h>
 #include "../Source/CompletionPortReceiver.h"
 
 #define	O_CREAT 0x0200
@@ -40,83 +40,152 @@ namespace Core {
 
 namespace Windows {
 
-class NIRVANA_NOVTABLE FileAccess :
-  protected CompletionPortReceiver
+class FileAccess :
+	protected CompletionPortReceiver
 {
 protected:
-  // The same as Windows OVERLAPPED structure
-  struct Overlapped
-  {
-    uintptr_t Internal;
-    uintptr_t InternalHigh;
-    union
-    {
-      struct
-      {
-        uint32_t Offset;
-        uint32_t OffsetHigh;
-      } DUMMYSTRUCTNAME;
-      void* Pointer;
-    } DUMMYUNIONNAME;
+	// The same as Windows OVERLAPPED structure
+	struct Overlapped
+	{
+		uintptr_t Internal;
+		uintptr_t InternalHigh;
+		union
+		{
+			struct
+			{
+				uint32_t Offset;
+				uint32_t OffsetHigh;
+			} DUMMYSTRUCTNAME;
+			void* Pointer;
+		} DUMMYUNIONNAME;
 
-    void* hEvent;
+		void* hEvent;
 
-    Overlapped ()
-    {
-      memset (this, 0, sizeof (*this));
-    }
-  };
+		Overlapped () NIRVANA_NOEXCEPT
+		{
+			memset (this, 0, sizeof (*this));
+		}
+	};
 
-  class IORBase :
-    public Overlapped
-  {};
+	class Request :
+		protected Overlapped,
+		public IO_Request
+	{
+	public:
+		Request (Operation op, void* buf, uint32_t size) NIRVANA_NOEXCEPT :
+			IO_Request (op)
+		{
+			Internal = (uintptr_t)buf;
+			InternalHigh = size;
+		}
 
-  FileAccess () :
-    handle_ ((void*)-1)
-  {}
+		void* buffer () const NIRVANA_NOEXCEPT
+		{
+			return (void*)Internal;
+		}
 
-  void open (const std::string& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
-  ~FileAccess ();
+		uint32_t size () const NIRVANA_NOEXCEPT
+		{
+			return (uint32_t)InternalHigh;
+		}
+
+		operator _OVERLAPPED* () NIRVANA_NOEXCEPT
+		{
+			return &reinterpret_cast <_OVERLAPPED&> (static_cast <Overlapped&> (*this));
+		}
+
+		static Request& from_overlapped (_OVERLAPPED& ovl) NIRVANA_NOEXCEPT
+		{
+			return static_cast <Request&> (reinterpret_cast <Overlapped&> (ovl));
+		}
+	};
+
+	FileAccess () :
+		handle_ ((void*)-1)
+	{}
+
+	void open (const std::string& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
+	~FileAccess ();
+
+	void issue_request (Request& rq) NIRVANA_NOEXCEPT;
+
+private:
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
 
 protected:
-  void* handle_;
+	void* handle_;
 };
 
 }
 
 namespace Port {
 
-/// Direct file access interface to host (kernel).
+/// Interface to host (kernel) filesystem driver.
 class FileAccessDirect : public Nirvana::Core::Windows::FileAccess
 {
-public:
-  class IO_Request :
-    public IO_WaitList,
-    public Nirvana::Core::Windows::FileAccess::IORBase
-  {};
+	typedef Nirvana::Core::Windows::FileAccess Base;
+	typedef Base::Request RequestBase;
+protected:
+	typedef uint64_t Pos;      ///< File position type.
+	typedef uint32_t Size;     ///< R/W block size type.
+	typedef uint64_t BlockIdx; ///< Block index type. Must fit maximal position / minimal block_size.
 
-  /// Constructor
+	/// I/O request.
+	/// Must derive Core::IO_Request.
+	class Request :
+		public RequestBase
+	{
+		typedef RequestBase Base;
+	public:
+		/// Constructor.
+		/// 
+		/// \param op I/O operation.
+		/// \param offset R/W start offset. Must be aligned on the block boundary.
+		/// \param buf R/W buffer.
+		/// \param size R/W byte count.
+		Request (Operation op, Pos offset, void* buf, Size size) NIRVANA_NOEXCEPT :
+			Base (op, buf, size)
+		{
+			DUMMYUNIONNAME.DUMMYSTRUCTNAME.Offset = (uint32_t)offset;
+			DUMMYUNIONNAME.DUMMYSTRUCTNAME.OffsetHigh = (offset >> 32);
+		}
+	};
+
+	/// Constructor.
+	/// 
 	/// \param path File name, UTF-8 encoded.
 	/// \param flags Creation flags.
-  FileAccessDirect (const std::string& path, int flags);
+	/// \throw RuntimeError.
+	FileAccessDirect (const std::string& path, int flags);
 
-  size_t block_size ()
-  {
-    return 0x10000;
-  }
+	/// Gets block size.
+	/// Called once in the derived constructor.
+	/// 
+	/// \returns Block (cluster) size.
+	/// \throw On some platforms may throw ReutimeError.
+	Size block_size () NIRVANA_NOEXCEPT
+	{
+		return 4096; // TODO: Implement
+	}
 
-  uint64_t file_size ();
+	/// \returns File size.
+	/// \throw `RuntimeError`.
+	Pos file_size ();
 
-	void start_read (uint64_t pos, uint32_t size, void* buf, IO_Request& ior) NIRVANA_NOEXCEPT;
-  void start_write (uint64_t pos, uint32_t size, const void* buf, IO_Request& ior) NIRVANA_NOEXCEPT;
+	/// Sets file size.
+	/// Used for file truncation.
+	/// 
+	/// \param new_size The new file size in bytes.
+	/// \throw RuntimeError.
+	void file_size (Pos new_size);
 
-private:
-  virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
-};
-
-class FileAccessSequential : public Nirvana::Core::Windows::FileAccess
-{
-public:
+	/// Issues the I/O request to the host or kernel.
+	/// 
+	/// \param rq The `Request` object.
+	void issue_request (Request& rq) NIRVANA_NOEXCEPT
+	{
+		Base::issue_request (rq);
+	}
 };
 
 }

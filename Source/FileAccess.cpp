@@ -49,6 +49,34 @@ FileAccess::~FileAccess ()
 		CloseHandle (handle_);
 }
 
+void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
+{
+	IO_Result result{ size, 0 };
+	if (error)
+		result.error = error2errno (error);
+	Request::from_overlapped (*ovl).set (result);
+}
+
+void FileAccess::issue_request (Request& rq) NIRVANA_NOEXCEPT
+{
+	BOOL ret;
+	switch (rq.operation ()) {
+		case Request::OP_READ:
+			ret = ReadFile (handle_, rq.buffer (), rq.size (), nullptr, rq);
+			break;
+		case Request::OP_WRITE:
+			ret = WriteFile (handle_, rq.buffer (), rq.size (), nullptr, rq);
+			break;
+		default:
+			assert (false);
+	}
+	if (!ret) {
+		DWORD err = GetLastError ();
+		if (ERROR_IO_PENDING != err)
+			rq.set ({ 0, error2errno (err) });
+	}
+}
+
 }
 
 using namespace Windows;
@@ -83,33 +111,10 @@ uint64_t FileAccessDirect::file_size ()
 	throw RuntimeError (error2errno (GetLastError ()));
 }
 
-void FileAccessDirect::start_read (uint64_t pos, uint32_t size, void* buf, IO_Request& ior) NIRVANA_NOEXCEPT
+void FileAccessDirect::file_size (uint64_t new_size)
 {
-	OVERLAPPED& ovl = reinterpret_cast <OVERLAPPED&> (static_cast <Overlapped&> (ior));
-	ovl.Offset = (DWORD)pos;
-	ovl.OffsetHigh = (DWORD)(pos >> 32);
-	if (!ReadFile (handle_, buf, size, nullptr, &ovl)) {
-		DWORD err = GetLastError ();
-		if (ERROR_IO_PENDING != err)
-			return ior.release (0, error2errno (err));
-	}
-}
-
-void FileAccessDirect::start_write (uint64_t pos, uint32_t size, const void* buf, IO_Request& ior) NIRVANA_NOEXCEPT
-{
-	OVERLAPPED& ovl = reinterpret_cast <OVERLAPPED&> (static_cast <Overlapped&> (ior));
-	ovl.Offset = (DWORD)pos;
-	ovl.OffsetHigh = (DWORD)(pos >> 32);
-	if (!WriteFile (handle_, buf, size, nullptr, &ovl)) {
-		DWORD err = GetLastError ();
-		if (ERROR_IO_PENDING != err)
-			return ior.release (0, error2errno (err));
-	}
-}
-
-void FileAccessDirect::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
-{
-	static_cast <IO_Request*> ((Overlapped*)ovl)->release (size, error2errno (error));
+	if (!SetFileValidData (handle_, new_size))
+		throw RuntimeError (error2errno (GetLastError ()));
 }
 
 }

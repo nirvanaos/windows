@@ -27,8 +27,6 @@
 #ifndef NIRVANA_CORE_WINDOWS_ERROR2ERRNO_H_
 #define NIRVANA_CORE_WINDOWS_ERROR2ERRNO_H_
 
-#include <errno.h>
-
 namespace Nirvana {
 namespace Core {
 namespace Windows {
@@ -36,7 +34,7 @@ namespace Windows {
 /// Convert Windows error code to POSIX error code.
 /// \param err Windows error code.
 /// \returns POSIX error code.
-int error2errno (unsigned err, int default_ret = EINVAL);
+int error2errno (unsigned err);
 
 }
 }

@@ -53,7 +53,7 @@ public:
 	static void terminate () NIRVANA_NOEXCEPT;
 
 	static const size_t ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
-	static const size_t SHARING_UNIT = ALLOCATION_GRANULARITY;
+	static const size_t SHARING_UNIT = PAGE_SIZE;
 	static const size_t GRANULARITY = ALLOCATION_GRANULARITY;
 	static const size_t SHARING_ASSOCIATIVITY = ALLOCATION_GRANULARITY;
 	static const size_t OPTIMAL_COMMIT_UNIT = ALLOCATION_GRANULARITY;

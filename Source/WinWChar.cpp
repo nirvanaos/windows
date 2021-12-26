@@ -32,7 +32,7 @@ namespace Windows {
 
 size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16)
 {
-	size_t ret = MultiByteToWideChar (CP_UTF8, MB_PRECOMPOSED | MB_ERR_INVALID_CHARS, utf8, len, ucs16, len);
+	size_t ret = MultiByteToWideChar (CP_UTF8, MB_PRECOMPOSED | MB_ERR_INVALID_CHARS, utf8, (int)len, ucs16, (int)len);
 	if (len && !ret)
 		throw_CODESET_INCOMPATIBLE ();
 	return ret;

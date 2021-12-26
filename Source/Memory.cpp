@@ -927,7 +927,6 @@ uintptr_t Memory::query (const void* p, Nirvana::Memory::QueryParam q)
 			return (uintptr_t)space ().end ();
 
 		case Nirvana::Memory::QueryParam::ALLOCATION_UNIT:
-		case Nirvana::Memory::QueryParam::SHARING_UNIT:
 		case Nirvana::Memory::QueryParam::GRANULARITY:
 		case Nirvana::Memory::QueryParam::SHARING_ASSOCIATIVITY:
 		case Nirvana::Memory::QueryParam::OPTIMAL_COMMIT_UNIT:
@@ -935,6 +934,7 @@ uintptr_t Memory::query (const void* p, Nirvana::Memory::QueryParam q)
 
 		case Nirvana::Memory::QueryParam::PROTECTION_UNIT:
 		case Nirvana::Memory::QueryParam::COMMIT_UNIT:
+		case Nirvana::Memory::QueryParam::SHARING_UNIT:
 			return PAGE_SIZE;
 
 		case Nirvana::Memory::QueryParam::FLAGS:

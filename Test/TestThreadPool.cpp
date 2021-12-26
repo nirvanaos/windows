@@ -131,10 +131,15 @@ private:
 	int error_;
 };
 
+//#define USE_SCATTER_GATHER
+
 class File :
 	public CompletionPortReceiver
 {
 public:
+	static const size_t BLOCK_SIZE = 0x10000;
+	static const size_t PAGE_SIZE = 0x1000;
+
 	File () :
 		handle_ (INVALID_HANDLE_VALUE)
 	{}
@@ -163,27 +168,53 @@ public:
 		}
 	}
 
-	int start_read (uint64_t pos, uint32_t size, void* buf, IO_WaitList& wl)
+	int start_read (uint64_t pos, void* buf, IO_WaitList& wl)
 	{
 		wl.Offset = (DWORD)pos;
 		wl.OffsetHigh = (DWORD)(pos >> 32);
-		if (!ReadFile (handle_, buf, size, nullptr, &static_cast <OVERLAPPED&> (wl))) {
+#ifdef USE_SCATTER_GATHER
+		FILE_SEGMENT_ELEMENT* pseg = segment_array_;
+		for (uint8_t* p = (uint8_t*)buf, *end = p + BLOCK_SIZE; p < end; p += PAGE_SIZE, ++pseg) {
+			pseg->Buffer = PtrToPtr64 (p);
+		}
+		pseg->Buffer = 0;
+		if (!ReadFileScatter (handle_, segment_array_, BLOCK_SIZE, nullptr, &static_cast <OVERLAPPED&> (wl))) {
 			DWORD err = GetLastError ();
 			if (ERROR_IO_PENDING != err)
 				return err;
 		}
+#else
+		if (!ReadFile (handle_, buf, BLOCK_SIZE, nullptr, &static_cast <OVERLAPPED&> (wl))) {
+			DWORD err = GetLastError ();
+			if (ERROR_IO_PENDING != err)
+				return err;
+		}
+#endif
 		return 0;
 	}
 
-	int start_write (uint64_t pos, uint32_t size, const void* buf, IO_WaitList& wl)
+	int start_write (uint64_t pos, const void* buf, IO_WaitList& wl)
 	{
 		wl.Offset = (DWORD)pos;
 		wl.OffsetHigh = (DWORD)(pos >> 32);
-		if (!WriteFile (handle_, buf, size, nullptr, &static_cast <OVERLAPPED&> (wl))) {
+#ifdef USE_SCATTER_GATHER
+		FILE_SEGMENT_ELEMENT* pseg = segment_array_;
+		for (uint8_t* p = (uint8_t*)buf, *end = p + BLOCK_SIZE; p < end; p += PAGE_SIZE, ++pseg) {
+			pseg->Buffer = PtrToPtr64 (p);
+		}
+		pseg->Buffer = 0;
+		if (!WriteFileGather (handle_, segment_array_, BLOCK_SIZE, nullptr, &static_cast <OVERLAPPED&> (wl))) {
 			DWORD err = GetLastError ();
 			if (ERROR_IO_PENDING != err)
 				return err;
 		}
+#else
+		if (!WriteFile (handle_, buf, BLOCK_SIZE, nullptr, &static_cast <OVERLAPPED&> (wl))) {
+			DWORD err = GetLastError ();
+			if (ERROR_IO_PENDING != err)
+				return err;
+		}
+#endif
 		return 0;
 	}
 
@@ -195,6 +226,9 @@ private:
 
 private:
 	HANDLE handle_;
+#ifdef USE_SCATTER_GATHER
+	FILE_SEGMENT_ELEMENT segment_array_ [BLOCK_SIZE / PAGE_SIZE + 1];
+#endif
 };
 
 template <typename El>
@@ -234,41 +268,43 @@ TEST_F (TestThreadPool, File)
 		File f;
 		ASSERT_FALSE (f.open (po, path));
 
-		static const size_t BLOCK_SIZE = 0x10000;
 		static const size_t BLOCK_CNT = 16;
 
-		VMArray <size_t> buf (BLOCK_SIZE / sizeof (size_t));
+		VMArray <size_t> buf (File::BLOCK_SIZE / sizeof (size_t));
 		{
 			// Test for write beyond the end
 			IO_WaitList wl;
-			EXPECT_FALSE (f.start_write (BLOCK_SIZE, BLOCK_SIZE, buf, wl));
+			EXPECT_FALSE (f.start_write (File::BLOCK_SIZE, buf, wl));
 			EXPECT_FALSE (wl.wait ());
 		}
 
 		for (size_t ib = 0; ib < BLOCK_CNT; ++ib) {
-			size_t tag = ib * BLOCK_SIZE / sizeof (size_t);
-			for (size_t* p = buf; p != buf + BLOCK_SIZE / sizeof (size_t); ++p) {
+			size_t tag = ib * File::BLOCK_SIZE / sizeof (size_t);
+			for (size_t* p = buf; p != buf + File::BLOCK_SIZE / sizeof (size_t); ++p) {
 				*p = tag++;
 			}
 			IO_WaitList wl;
-			ASSERT_FALSE (f.start_write ((uint64_t)ib * (uint64_t)BLOCK_SIZE, BLOCK_SIZE, buf, wl));
+			ASSERT_FALSE (f.start_write ((uint64_t)ib * (uint64_t)File::BLOCK_SIZE, buf, wl));
 			ASSERT_FALSE (wl.wait ());
 		}
 
 		for (size_t i = 0; i < BLOCK_CNT * 100; ++i) {
 			size_t ib = BLOCK_CNT * rand () / (RAND_MAX + 1);
 			IO_WaitList wl;
-			ASSERT_FALSE (f.start_read ((uint64_t)ib * (uint64_t)BLOCK_SIZE, BLOCK_SIZE, buf, wl));
+			ASSERT_FALSE (f.start_read ((uint64_t)ib * (uint64_t)File::BLOCK_SIZE, buf, wl));
 			ASSERT_FALSE (wl.wait ());
-			size_t tag = ib * BLOCK_SIZE / sizeof (size_t);
-			for (size_t* p = buf; p != buf + BLOCK_SIZE / sizeof (size_t); ++p) {
+			size_t tag = ib * File::BLOCK_SIZE / sizeof (size_t);
+			for (size_t* p = buf; p != buf + File::BLOCK_SIZE / sizeof (size_t); ++p) {
 				EXPECT_EQ (*p, tag++);
 			}
 		}
 
-		IO_WaitList wl;
-		EXPECT_FALSE (f.start_read ((uint64_t)BLOCK_CNT * (uint64_t)BLOCK_SIZE, BLOCK_SIZE, buf, wl));
-		EXPECT_TRUE (wl.wait ());
+		{
+			// Test for read beyond the end
+			IO_WaitList wl;
+			EXPECT_FALSE (f.start_read ((uint64_t)BLOCK_CNT * (uint64_t)File::BLOCK_SIZE, buf, wl));
+			EXPECT_TRUE (wl.wait ());
+		}
 	}
 
 	DeleteFileW (path);
