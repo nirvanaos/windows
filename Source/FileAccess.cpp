@@ -83,7 +83,7 @@ using namespace Windows;
 
 namespace Port {
 
-FileAccessDirect::FileAccessDirect (const std::string& path, int flags)
+FileAccessDirect::FileAccessDirect (const std::string& path, int flags, Pos& size, Size& block_size)
 {
 	uint32_t creation;
 	if (flags & O_CREAT) {
@@ -101,17 +101,16 @@ FileAccessDirect::FileAccessDirect (const std::string& path, int flags)
 
 	open (path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation,
 		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED);
-}
 
-uint64_t FileAccessDirect::file_size ()
-{
 	LARGE_INTEGER li;
 	if (GetFileSizeEx (handle_, &li))
-		return li.QuadPart;
+		size = li.QuadPart;
 	throw RuntimeError (error2errno (GetLastError ()));
+
+	block_size = 4096; // TODO: Implement
 }
 
-void FileAccessDirect::file_size (uint64_t new_size)
+void FileAccessDirect::file_size (Pos new_size)
 {
 	if (!SetFileValidData (handle_, new_size))
 		throw RuntimeError (error2errno (GetLastError ()));

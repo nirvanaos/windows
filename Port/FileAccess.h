@@ -155,22 +155,10 @@ protected:
 	/// 
 	/// \param path File name, UTF-8 encoded.
 	/// \param flags Creation flags.
+	/// \param[out] size File size.
+	/// \param[out] block_size Block (sector) size. 
 	/// \throw RuntimeError.
-	FileAccessDirect (const std::string& path, int flags);
-
-	/// Gets block size.
-	/// Called once in the derived constructor.
-	/// 
-	/// \returns Block (cluster) size.
-	/// \throw On some platforms may throw ReutimeError.
-	Size block_size () NIRVANA_NOEXCEPT
-	{
-		return 4096; // TODO: Implement
-	}
-
-	/// \returns File size.
-	/// \throw `RuntimeError`.
-	Pos file_size ();
+	FileAccessDirect (const std::string& path, int flags, Pos& size, Size& block_size);
 
 	/// Sets file size.
 	/// Used for file truncation.
