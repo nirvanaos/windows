@@ -78,6 +78,8 @@ public:
 
 	bool is_copy (Block& other, size_t offset, size_t size);
 
+	bool is_private (size_t offset, size_t size);
+
 private:
 	struct Regions;
 

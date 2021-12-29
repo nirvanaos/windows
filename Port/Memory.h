@@ -136,6 +136,8 @@ private:
 
 	static Windows::AddressSpace& space ();
 
+	static uint32_t handle_count (HANDLE h);
+
 private:
 	static int space_ [];
 	static void* handler_;

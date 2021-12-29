@@ -25,6 +25,10 @@
 */
 #include "Memory.inl"
 #include <Nirvana/real_copy.h>
+#include <winternl.h>
+
+#pragma comment (lib, "OneCore.lib")
+#pragma comment (lib, "ntdll.lib")
 
 namespace Nirvana {
 namespace Core {
@@ -527,6 +531,22 @@ bool Memory::Block::is_copy (Block& other, size_t offset, size_t size)
 	return true;
 }
 
+inline
+bool Memory::Block::is_private (size_t offset, size_t size)
+{
+	const State& st = state ();
+	if (st.state != State::MAPPED)
+		return true;
+	auto pst = st.mapped.page_state + offset / PAGE_SIZE;
+	auto pst_end = st.mapped.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+	for (; pst != pst_end; ++pst) {
+		DWORD ps = *pst;
+		if (ps & PageState::RW_MAPPED_SHARED)
+			return handle_count (mapping ()) <= 1;
+	}
+	return true;
+}
+
 inline void Memory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi) NIRVANA_NOEXCEPT
 {
 	//space ().query (address, mbi);
@@ -977,11 +997,13 @@ bool Memory::is_readable (const void* p, size_t size)
 bool Memory::is_private (const void* p, size_t size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
-		MEMORY_BASIC_INFORMATION mbi;
-		query (begin, mbi);
-		if (mbi.Protect & (PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY))
+		Block block (const_cast <BYTE*> (begin));
+		const BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		if (block_end > end)
+			block_end = end;
+		if (!block.is_private (begin - block.address (), block_end - begin))
 			return false;
-		begin = (const BYTE*)mbi.BaseAddress + mbi.RegionSize;
+		begin = block_end;
 	}
 	return true;
 }
@@ -1019,6 +1041,15 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		}
 	} else
 		return false;
+}
+
+uint32_t Memory::handle_count (HANDLE h)
+{
+	PUBLIC_OBJECT_BASIC_INFORMATION info;
+	if (!NtQueryObject (h, ObjectBasicInformation, &info, sizeof (info), nullptr))
+		return info.HandleCount;
+	assert (false);
+	return 0;
 }
 
 long CALLBACK Memory::exception_filter (struct _EXCEPTION_POINTERS* pex)
