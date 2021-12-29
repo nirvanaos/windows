@@ -55,9 +55,9 @@ protected:
 			{
 				uint32_t Offset;
 				uint32_t OffsetHigh;
-			} DUMMYSTRUCTNAME;
+			} Offset;
 			void* Pointer;
-		} DUMMYUNIONNAME;
+		};
 
 		void* hEvent;
 
@@ -109,7 +109,7 @@ protected:
 
 	void issue_request (Request& rq) NIRVANA_NOEXCEPT;
 
-private:
+protected:
 	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
 
 protected:
@@ -146,8 +146,18 @@ protected:
 		Request (Operation op, Pos offset, void* buf, Size size) NIRVANA_NOEXCEPT :
 			Base (op, buf, size)
 		{
-			DUMMYUNIONNAME.DUMMYSTRUCTNAME.Offset = (uint32_t)offset;
-			DUMMYUNIONNAME.DUMMYSTRUCTNAME.OffsetHigh = (offset >> 32);
+			Offset.Offset = (uint32_t)offset;
+			Offset.OffsetHigh = (offset >> 32);
+		}
+
+		Pos offset () const
+		{
+			return ((uint64_t)Offset.OffsetHigh << 32) || Offset.Offset;
+		}
+
+		static Request& from_overlapped (_OVERLAPPED& ovl) NIRVANA_NOEXCEPT
+		{
+			return static_cast <Request&> (reinterpret_cast <Overlapped&> (ovl));
 		}
 	};
 
@@ -160,20 +170,14 @@ protected:
 	/// \throw RuntimeError.
 	FileAccessDirect (const std::string& path, int flags, Pos& size, Size& block_size);
 
-	/// Sets file size.
-	/// Used for file truncation.
-	/// 
-	/// \param new_size The new file size in bytes.
-	/// \throw RuntimeError.
-	void file_size (Pos new_size);
-
 	/// Issues the I/O request to the host or kernel.
 	/// 
 	/// \param rq The `Request` object.
-	void issue_request (Request& rq) NIRVANA_NOEXCEPT
-	{
-		Base::issue_request (rq);
-	}
+	void issue_request (Request& rq) NIRVANA_NOEXCEPT;
+
+private:
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
+
 };
 
 }

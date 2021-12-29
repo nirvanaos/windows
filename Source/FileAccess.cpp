@@ -51,7 +51,7 @@ FileAccess::~FileAccess ()
 
 void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
 {
-	IO_Result result{ size, 0 };
+	IO_Result result { size, 0 };
 	if (error)
 		result.error = error2errno (error);
 	Request::from_overlapped (*ovl).set (result);
@@ -68,7 +68,8 @@ void FileAccess::issue_request (Request& rq) NIRVANA_NOEXCEPT
 			ret = WriteFile (handle_, rq.buffer (), rq.size (), nullptr, rq);
 			break;
 		default:
-			assert (false);
+			ret = TRUE;
+			rq.set ({ 0, ENOTSUP });
 	}
 	if (!ret) {
 		DWORD err = GetLastError ();
@@ -110,10 +111,26 @@ FileAccessDirect::FileAccessDirect (const std::string& path, int flags, Pos& siz
 	block_size = 4096; // TODO: Implement
 }
 
-void FileAccessDirect::file_size (Pos new_size)
+void FileAccessDirect::issue_request (Request& rq) NIRVANA_NOEXCEPT
 {
-	if (!SetFileValidData (handle_, new_size))
-		throw RuntimeError (error2errno (GetLastError ()));
+	if (rq.operation () == IO_Request::OP_SET_SIZE)
+		SchedulerBase::singleton ().completion_port ().post (*this, rq, 0);
+	else
+		Base::issue_request (rq);
+}
+
+void FileAccessDirect::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
+{
+	Request& rq = Request::from_overlapped (*ovl);
+	if (rq.operation () == Request::OP_SET_SIZE) {
+		FILE_END_OF_FILE_INFO info;
+		info.EndOfFile.QuadPart = rq.offset ();
+		IO_Result res = { 0 };
+		if (!SetFileInformationByHandle (handle_, FileEndOfFileInfo, &info, sizeof (info)))
+			res.error = error2errno (GetLastError ());
+		rq.set (res);
+	} else
+		Base::completed (ovl, size, error);
 }
 
 }
