@@ -1,10 +1,11 @@
 // Testing Windows API memory management functions
-
+#define PSAPI_VERSION 2
 #include <gtest/gtest.h>
 #include <windows.h>
 #include <Psapi.h>
 #include <string>
 #include <set>
+#include <winternl.h>
 
 #define PAGE_SIZE 4096
 #define ALLOCATION_GRANULARITY (16 * PAGE_SIZE)
@@ -12,11 +13,6 @@
 using namespace std;
 
 namespace TestAPI {
-
-BOOL handles_equal (HANDLE h0, HANDLE h1)
-{
-	return CompareObjectHandles (h0, h1);
-}
 
 class TestAPI :
 	public ::testing::Test
@@ -49,6 +45,19 @@ protected:
 		return CreateFileMappingW (INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE | SEC_RESERVE, 0, ALLOCATION_GRANULARITY, nullptr);
 	}
 
+	// Duplicate mapping
+	static HANDLE dup_mapping (HANDLE mh) {
+		HANDLE process = GetCurrentProcess ();
+		HANDLE mh1 = nullptr;
+		EXPECT_TRUE (DuplicateHandle (process, mh, process, &mh1, 0, FALSE, DUPLICATE_SAME_ACCESS));
+		return mh1;
+	}
+
+	static BOOL handles_equal (HANDLE h0, HANDLE h1)
+	{
+		return CompareObjectHandles (h0, h1);
+	}
+
 	static DWORD protection (const void* p)
 	{
 		MEMORY_BASIC_INFORMATION mbi;
@@ -67,9 +76,7 @@ TEST_F (TestAPI, MappingHandle)
 {
 	HANDLE mh = new_mapping ();
 	ASSERT_TRUE (mh);
-	HANDLE mh1;
-	HANDLE process = GetCurrentProcess ();
-	EXPECT_TRUE (DuplicateHandle (process, mh, process, &mh1, 0, FALSE, DUPLICATE_SAME_ACCESS));
+	HANDLE mh1 = dup_mapping (mh);
 	EXPECT_TRUE (handles_equal (mh, mh1));
 	EXPECT_TRUE (CloseHandle (mh1));
 	EXPECT_TRUE (CloseHandle (mh));
@@ -142,8 +149,6 @@ TEST_F (TestAPI, Sharing)
 
 	strcpy (p, "test");
 
-	HANDLE process = GetCurrentProcess ();
-
 	char* copies [10];
 	HANDLE handles [10];
 
@@ -156,9 +161,8 @@ TEST_F (TestAPI, Sharing)
 	EXPECT_TRUE (VirtualQuery (p, &mbi0, sizeof (mbi0)));
 	EXPECT_TRUE (VirtualQuery (p + PAGE_SIZE, &mbi1, sizeof (mbi1)));
 
-	for (int i = 0; i < _countof (copies); ++i) {
-		HANDLE mh1;
-		ASSERT_TRUE (DuplicateHandle (process, mh, process, &mh1, 0, FALSE, DUPLICATE_SAME_ACCESS));
+	for (size_t i = 0; i < size (copies); ++i) {
+		HANDLE mh1 = dup_mapping (mh);
 		handles [i] = mh1;
 		char* p = (char*)MapViewOfFile (mh1, FILE_MAP_READ, 0, 0, ALLOCATION_GRANULARITY);
 		EXPECT_TRUE (p);
@@ -169,7 +173,7 @@ TEST_F (TestAPI, Sharing)
 		}
 	}
 
-	for (int i = 0; i < _countof (copies); ++i) {
+	for (size_t i = 0; i < size (copies); ++i) {
 		char* p = copies [i];
 		copies [i] = 0;
 		if (p)
@@ -180,15 +184,13 @@ TEST_F (TestAPI, Sharing)
 			EXPECT_TRUE (CloseHandle (h));
 	}
 
-	for (int i = 0; i < _countof (copies); ++i) {
-		HANDLE mh1;
-		ASSERT_TRUE (DuplicateHandle (process, mh, process, &mh1, 0, FALSE, DUPLICATE_SAME_ACCESS));
+	for (size_t i = 0; i < size (copies); ++i) {
+		HANDLE mh1 = dup_mapping (mh);
 		handles [i] = mh1;
 		char* p = (char*)MapViewOfFile (mh1, FILE_MAP_COPY, 0, 0, ALLOCATION_GRANULARITY);
 		EXPECT_TRUE (p);
 		copies [i] = p;
 		if (p) {
-//			EXPECT_TRUE (VirtualProtect (p, PAGE_SIZE, PAGE_WRITECOPY, &old));
 			EXPECT_STREQ (p, "test");
 
 			char buf [16];
@@ -197,14 +199,14 @@ TEST_F (TestAPI, Sharing)
 		}
 	}
 
-	for (int i = 0; i < _countof (copies); ++i) {
+	for (size_t i = 0; i < size (copies); ++i) {
 		char* p = copies [i];
 		char buf [16] = "test";
 		_itoa (i, buf + 4, 10);
 		EXPECT_STREQ (p, buf);
 	}
 
-	for (int i = 0; i < _countof (copies); ++i) {
+	for (size_t i = 0; i < size (copies); ++i) {
 		char* p = copies [i];
 		copies [i] = 0;
 		if (p)
@@ -355,7 +357,7 @@ TEST_F (TestAPI, Protection)
 TEST_F (TestAPI, SparseMapping)
 {
 	WCHAR dir [MAX_PATH + 1];
-	ASSERT_TRUE (GetCurrentDirectoryW (_countof (dir), dir));
+	ASSERT_TRUE (GetCurrentDirectoryW (size (dir), dir));
 
 	HANDLE file = CreateFileW (L"mapping.tmp", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0,
 		CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, 0);
@@ -382,13 +384,12 @@ TEST_F (TestAPI, SparseMapping)
 		EXPECT_TRUE (DeviceIoControl (file, FSCTL_SET_ZERO_DATA, &zdi, sizeof (zdi), 0, 0, &cb, 0));
 		mapping = CreateFileMapping (file, 0, PAGE_READWRITE, zdi.BeyondFinalZero.HighPart, zdi.BeyondFinalZero.LowPart, 0);
 		EXPECT_TRUE (mapping);
-
-		table = (HANDLE*)MapViewOfFile (mapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-		EXPECT_TRUE (table);
 	}
+	table = (HANDLE*)MapViewOfFile (mapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+	EXPECT_TRUE (table);
 
 	HANDLE sfile = CreateFileW (L"mapping.tmp", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0,
-															OPEN_EXISTING, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, 0);
+		OPEN_EXISTING, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, 0);
 	EXPECT_NE (sfile, INVALID_HANDLE_VALUE);
 
 	LARGE_INTEGER fsize;
@@ -715,6 +716,76 @@ TEST_F (TestAPI, ZeroedPage)
 
 	// CONCLUSION: Windows does not use zero page COW unlike Linux.
 	VirtualFree (mem, 0, MEM_RELEASE);
+}
+
+TEST_F (TestAPI, PageState)
+{
+	PSAPI_WORKING_SET_EX_INFORMATION info;
+
+	// Reserve section
+	HANDLE mh = new_mapping ();
+	ASSERT_TRUE (mh);
+	void* mem = MapViewOfFile (mh, FILE_MAP_ALL_ACCESS, 0, 0, ALLOCATION_GRANULARITY);
+	ASSERT_TRUE (mem);
+	info.VirtualAddress = mem;
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
+	EXPECT_FALSE (info.VirtualAttributes.Valid);
+	EXPECT_FALSE (info.VirtualAttributes.Shared);
+
+	// Commit page private
+	EXPECT_TRUE (VirtualAlloc (mem, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
+	EXPECT_FALSE (info.VirtualAttributes.Valid); // If committed page was not accessed, it remains invalid.
+	EXPECT_TRUE (info.VirtualAttributes.Shared);
+
+	// Read from private page
+	EXPECT_EQ (*(int*)mem, 0);
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
+	EXPECT_TRUE (info.VirtualAttributes.Valid);
+	EXPECT_TRUE (info.VirtualAttributes.Shared);
+	EXPECT_EQ (info.VirtualAttributes.Win32Protection, PAGE_READWRITE);
+
+	// Write to private page
+	*(int*)mem = 1;
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
+	EXPECT_TRUE (info.VirtualAttributes.Valid);
+	EXPECT_TRUE (info.VirtualAttributes.Shared);
+	EXPECT_EQ (info.VirtualAttributes.Win32Protection, PAGE_READWRITE);
+
+	// Share page
+	DWORD old;
+	EXPECT_TRUE (VirtualProtect (mem, PAGE_SIZE, PAGE_WRITECOPY, &old));
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
+	EXPECT_TRUE (info.VirtualAttributes.Valid);
+	EXPECT_TRUE (info.VirtualAttributes.Shared);
+	EXPECT_EQ (*(int*)mem, 1);
+	EXPECT_EQ (info.VirtualAttributes.Win32Protection, PAGE_WRITECOPY);
+
+	// Write to shared page
+	*(int*)mem = 1;
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
+	EXPECT_TRUE (info.VirtualAttributes.Valid);
+	EXPECT_FALSE (info.VirtualAttributes.Shared);
+	EXPECT_EQ (info.VirtualAttributes.Win32Protection, PAGE_READWRITE);
+
+	UnmapViewOfFile (mem);
+	CloseHandle (mh);
+}
+
+TEST_F (TestAPI, HandleSharing)
+{
+	HANDLE mh = new_mapping ();
+	PUBLIC_OBJECT_BASIC_INFORMATION info;
+	ASSERT_FALSE (NtQueryObject (mh, ObjectBasicInformation, &info, sizeof (info), nullptr));
+	EXPECT_EQ (info.HandleCount, 1);
+	HANDLE mh1 = dup_mapping (mh);
+	ASSERT_FALSE (NtQueryObject (mh, ObjectBasicInformation, &info, sizeof (info), nullptr));
+	EXPECT_EQ (info.HandleCount, 2);
+	ASSERT_FALSE (NtQueryObject (mh1, ObjectBasicInformation, &info, sizeof (info), nullptr));
+	EXPECT_EQ (info.HandleCount, 2);
+
+	CloseHandle (mh);
+	CloseHandle (mh1);
 }
 
 TEST_F (TestAPI, Mailslot)
