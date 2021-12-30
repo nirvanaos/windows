@@ -34,6 +34,7 @@ namespace Windows {
 /// Convert Windows error code to POSIX error code.
 /// \param err Windows error code.
 /// \returns POSIX error code.
+///          If err == 0, returns EINVAL.
 int error2errno (unsigned err);
 
 }

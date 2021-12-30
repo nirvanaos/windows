@@ -142,7 +142,7 @@ protected:
 		/// \param op I/O operation.
 		/// \param offset R/W start offset. Must be aligned on the block boundary.
 		/// \param buf R/W buffer.
-		/// \param size R/W byte count.
+		/// \param size R/W byte count. Must be aligned on the block boundary.
 		Request (Operation op, Pos offset, void* buf, Size size) NIRVANA_NOEXCEPT :
 			Base (op, buf, size)
 		{

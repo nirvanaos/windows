@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <winerror.h>
 #include <algorithm>
+#include <assert.h>
 
 // Convert Windows error code to POSIX error code.
 
@@ -117,11 +118,12 @@ struct ErrPred
 
 int error2errno (unsigned err) 
 {
-  if (!err)
-    return 0;
-  const ErrMap* p = lower_bound (errmap, end (errmap), err, ErrPred ());
-  if (p != end (errmap) && p->w == err)
-    return p->e;
+  assert (err);
+  if (err) {
+    const ErrMap* p = lower_bound (errmap, end (errmap), err, ErrPred ());
+    if (p != end (errmap) && p->w == err)
+      return p->e;
+  }
   return EINVAL;
 }
 

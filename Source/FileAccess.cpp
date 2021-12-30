@@ -51,7 +51,7 @@ FileAccess::~FileAccess ()
 
 void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
 {
-	IO_Result result { size, 0 };
+	IO_Result result{ size, 0 };
 	if (error)
 		result.error = error2errno (error);
 	Request::from_overlapped (*ovl).signal (result);
@@ -134,6 +134,7 @@ void FileAccessDirect::issue_request (Request& rq) NIRVANA_NOEXCEPT
 				rq.signal ({ 0, EINVAL });
 				return;
 			}
+			break;
 	}
 	Base::issue_request (rq);
 }
@@ -141,15 +142,19 @@ void FileAccessDirect::issue_request (Request& rq) NIRVANA_NOEXCEPT
 void FileAccessDirect::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
 {
 	Request& rq = Request::from_overlapped (*ovl);
-	if (rq.operation () == Request::OP_SET_SIZE) {
-		FILE_END_OF_FILE_INFO info;
-		info.EndOfFile.QuadPart = rq.offset ();
-		IO_Result res = { 0 };
-		if (!SetFileInformationByHandle (handle_, FileEndOfFileInfo, &info, sizeof (info)))
-			res.error = error2errno (GetLastError ());
-		rq.signal (res);
-	} else
-		Base::completed (ovl, size, error);
+	switch (rq.operation ()) {
+		case Request::OP_SET_SIZE: {
+			FILE_END_OF_FILE_INFO info;
+			info.EndOfFile.QuadPart = rq.offset ();
+			IO_Result result = { 0 };
+			if (!SetFileInformationByHandle (handle_, FileEndOfFileInfo, &info, sizeof (info)))
+				result.error = error2errno (GetLastError ());
+			rq.signal (result);
+		} break;
+		
+		default:
+			Base::completed (ovl, size, error);
+	}
 }
 
 }
