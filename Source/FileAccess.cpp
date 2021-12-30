@@ -54,7 +54,7 @@ void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIR
 	IO_Result result { size, 0 };
 	if (error)
 		result.error = error2errno (error);
-	Request::from_overlapped (*ovl).set (result);
+	Request::from_overlapped (*ovl).signal (result);
 }
 
 void FileAccess::issue_request (Request& rq) NIRVANA_NOEXCEPT
@@ -69,12 +69,12 @@ void FileAccess::issue_request (Request& rq) NIRVANA_NOEXCEPT
 			break;
 		default:
 			ret = TRUE;
-			rq.set ({ 0, ENOTSUP });
+			rq.signal ({ 0, ENOTSUP });
 	}
 	if (!ret) {
 		DWORD err = GetLastError ();
 		if (ERROR_IO_PENDING != err)
-			rq.set ({ 0, error2errno (err) });
+			rq.signal ({ 0, error2errno (err) });
 	}
 }
 
@@ -100,23 +100,42 @@ FileAccessDirect::FileAccessDirect (const std::string& path, int flags, Pos& siz
 	} else
 		creation = OPEN_EXISTING;
 
-	open (path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation,
-		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED);
+	open (path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation, FILE_FLAG_OVERLAPPED
+		| FILE_ATTRIBUTE_NORMAL
+		| FILE_FLAG_NO_BUFFERING
+		| FILE_FLAG_WRITE_THROUGH
+	);
 
 	LARGE_INTEGER li;
-	if (GetFileSizeEx (handle_, &li))
-		size = li.QuadPart;
-	throw RuntimeError (error2errno (GetLastError ()));
+	if (!GetFileSizeEx (handle_, &li))
+		throw RuntimeError (error2errno (GetLastError ()));
+	size = li.QuadPart;
 
 	block_size = 4096; // TODO: Implement
 }
 
 void FileAccessDirect::issue_request (Request& rq) NIRVANA_NOEXCEPT
 {
-	if (rq.operation () == IO_Request::OP_SET_SIZE)
-		SchedulerBase::singleton ().completion_port ().post (*this, rq, 0);
-	else
-		Base::issue_request (rq);
+	switch (rq.operation ()) {
+		case IO_Request::OP_SET_SIZE:
+			SchedulerBase::singleton ().completion_port ().post (*this, rq, 0);
+			return;
+		case IO_Request::OP_WRITE:
+			// We have to ensure that copying from this block in read() operation
+			// will not cause the remapping. Otherwise it can unpredictable behavoiur
+			// in kernel mode.
+			// Use SRC_DECOMMIT flag to prevent changing the page states to write-copy.
+			try {
+				Memory::prepare_to_share (rq.buffer (), rq.size (), Nirvana::Memory::SRC_DECOMMIT);
+			} catch (const CORBA::NO_MEMORY&) {
+				rq.signal ({ 0, ENOMEM });
+				return;
+			} catch (...) {
+				rq.signal ({ 0, EINVAL });
+				return;
+			}
+	}
+	Base::issue_request (rq);
 }
 
 void FileAccessDirect::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
@@ -128,7 +147,7 @@ void FileAccessDirect::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t erro
 		IO_Result res = { 0 };
 		if (!SetFileInformationByHandle (handle_, FileEndOfFileInfo, &info, sizeof (info)))
 			res.error = error2errno (GetLastError ());
-		rq.set (res);
+		rq.signal (res);
 	} else
 		Base::completed (ovl, size, error);
 }

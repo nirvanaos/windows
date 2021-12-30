@@ -88,7 +88,7 @@ public:
 
 	static uintptr_t query (const void* p, Nirvana::Memory::QueryParam q);
 
-	//! For usage in proxies.
+	/// For usage in proxies.
 	static void prepare_to_share (void* src, size_t size, unsigned flags);
 
 private:
