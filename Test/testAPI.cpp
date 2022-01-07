@@ -194,7 +194,7 @@ TEST_F (TestAPI, Sharing)
 			EXPECT_STREQ (p, "test");
 
 			char buf [16];
-			_itoa (i, buf, 10);
+			_itoa ((int)i, buf, 10);
 			EXPECT_NO_THROW (strcpy (p + 4, buf));
 		}
 	}
@@ -202,7 +202,7 @@ TEST_F (TestAPI, Sharing)
 	for (size_t i = 0; i < size (copies); ++i) {
 		char* p = copies [i];
 		char buf [16] = "test";
-		_itoa (i, buf + 4, 10);
+		_itoa ((int)i, buf + 4, 10);
 		EXPECT_STREQ (p, buf);
 	}
 
@@ -357,7 +357,7 @@ TEST_F (TestAPI, Protection)
 TEST_F (TestAPI, SparseMapping)
 {
 	WCHAR dir [MAX_PATH + 1];
-	ASSERT_TRUE (GetCurrentDirectoryW (size (dir), dir));
+	ASSERT_TRUE (GetCurrentDirectoryW ((DWORD)size (dir), dir));
 
 	HANDLE file = CreateFileW (L"mapping.tmp", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0,
 		CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, 0);
