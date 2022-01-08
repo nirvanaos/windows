@@ -42,7 +42,7 @@ public:
 	/// \throws CORBA::NO_MEMORY
 	static void create_item ()
 	{
-		return singleton_->create_item ();
+		singleton_->create_item ();
 	}
 
 	/// Release active item space.

@@ -26,7 +26,7 @@
 #ifndef NIRVANA_CORE_WINDOWS_INITIALIZE_H_
 #define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
 
-#include <Heap.h>
+#include <initterm.h>
 #include "Thread.inl"
 #include "Console.h"
 #include "../Port/SystemInfo.h"
@@ -43,7 +43,7 @@ bool initialize (void)
   try {
     Port::SystemInfo::initialize ();
     Port::Chrono::initialize ();
-    Heap::initialize ();
+    initialize0 ();
     Port::Thread::initialize ();
   } catch (const std::exception& ex) {
     Console () << ex.what () << '\n';

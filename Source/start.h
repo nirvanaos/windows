@@ -43,6 +43,11 @@ int start ()
   // handling can be called in the current image until after this call:
   __security_init_cookie ();
 
+#ifdef _M_IX86
+  // Clear the x87 exception flags.
+  _asm { fnclex }
+#endif
+
   if (!initialize ())
     return -1;
 
@@ -51,12 +56,6 @@ int start ()
 
   if (!__scrt_initialize_onexit_tables (__scrt_module_type::exe))
     __scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
-
-#ifdef _M_IX86
-  // Clear the x87 exception flags.  Any other floating point initialization
-  // should already have taken place before this function is called.
-  _asm { fnclex }
-#endif
 
   // Initialize C
   if (_initterm_e (__xi_a, __xi_z) != 0)
@@ -90,10 +89,13 @@ int start ()
   }
   */
   assert (!*__scrt_get_dyn_tls_dtor_callback ());
-
-  CmdLineParser cmdline;
-  int ret = mainfn (cmdline.argc (), cmdline.argv (), cmdline.envp ());
+  int ret;
+  {
+    CmdLineParser cmdline;
+    ret = mainfn (cmdline.argc (), cmdline.argv (), cmdline.envp ());
+  }
   _cexit ();
+  terminate0 ();
   return ret;
 }
 
