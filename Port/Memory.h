@@ -30,6 +30,7 @@
 
 #include <CORBA/CORBA.h>
 #include <Nirvana/Memory.h>
+#include <StaticallyAllocated.h>
 
 struct _EXCEPTION_POINTERS;
 typedef void *HANDLE;
@@ -139,7 +140,7 @@ private:
 	static uint32_t handle_count (HANDLE h);
 
 private:
-	static int space_ [];
+	static StaticallyAllocated <Windows::AddressSpace> space_;
 	static void* handler_;
 };
 

@@ -45,7 +45,7 @@ void Memory::protect (void* address, size_t size, uint32_t protection)
 inline
 Windows::AddressSpace& Memory::space ()
 {
-	return *(Windows::AddressSpace*)space_;
+	return space_;
 }
 
 class Memory::Block :

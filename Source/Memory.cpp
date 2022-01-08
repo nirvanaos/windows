@@ -37,7 +37,7 @@ namespace Port {
 using namespace ::Nirvana::Core::Windows;
 using namespace std;
 
-int Memory::space_ [(sizeof (Windows::AddressSpace) + sizeof (int) - 1) / sizeof (int)];
+StaticallyAllocated <Windows::AddressSpace> Memory::space_;
 void* Memory::handler_;
 
 DWORD Memory::Block::commit (size_t offset, size_t size)
@@ -1125,13 +1125,13 @@ void Memory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex)
 
 void Memory::initialize ()
 {
-	new (space_) AddressSpace (GetCurrentProcessId (), GetCurrentProcess ());
+	space_.construct (GetCurrentProcessId (), GetCurrentProcess ());
 	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
-	space ().~AddressSpace ();
+	space_.destruct ();
 	RemoveVectoredExceptionHandler (handler_);
 }
 
