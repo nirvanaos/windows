@@ -28,6 +28,7 @@
 #define NIRVANA_CORE_PORT_EXECCONTEXT_H_
 
 #include <Nirvana/Nirvana.h>
+#include <atomic>
 
 extern "C" __declspec (dllimport)
 void __stdcall DeleteFiber (void*);
@@ -42,6 +43,7 @@ namespace Nirvana {
 namespace Core {
 
 class ExecContext;
+class ExecDomain;
 
 namespace Port {
 
@@ -51,7 +53,8 @@ class ExecContext
 	///@{
 	/// Members called from Core.
 public:
-	static Core::ExecContext* current ()
+	/// \returns Current execution context.
+	static Core::ExecContext* current () NIRVANA_NOEXCEPT
 	{
 		return (Core::ExecContext*)FlsGetValue (current_);
 	}
@@ -59,14 +62,10 @@ public:
 	/// Constructor.
 	/// 
 	/// \param neutral `true` if neutral context is created.
-	ExecContext (bool neutral = false);
+	ExecContext (bool neutral);
 
 	/// Destructor.
-	~ExecContext ()
-	{
-		if (fiber_)
-			DeleteFiber (fiber_);
-	}
+	~ExecContext ();
 
 	/// Aborts execution of the context.
 	/// Dangerous method used for POSIX compatibility.
@@ -83,10 +82,6 @@ protected:
 	///@}
 
 public:
-	ExecContext (void* fiber) :
-		fiber_ (fiber)
-	{}
-
 	void convert_to_fiber ();
 	void convert_to_thread () NIRVANA_NOEXCEPT;
 
@@ -104,14 +99,31 @@ public:
 	}
 
 	static void initialize ();
-	static void terminate ();
+	static void terminate () NIRVANA_NOEXCEPT;
 
-	static void current (Core::ExecContext* context);
+	static void current (Core::ExecContext* context) NIRVANA_NOEXCEPT;
 
-	static void __stdcall fiber_proc (Core::ExecContext* context);
+	static void main_fiber_proc () NIRVANA_NOEXCEPT;
+
+	static void* main_fiber () NIRVANA_NOEXCEPT
+	{
+		return main_fiber_;
+	}
+
+private:
+	static void __stdcall fiber_proc (Core::ExecContext* context) NIRVANA_NOEXCEPT;
+
+	static void run (ExecDomain& ed) NIRVANA_NOEXCEPT;
 
 private:
 	static unsigned long current_;
+	static void* main_fiber_;
+	static std::atomic_flag main_fiber_allocated_;
+	static Core::ExecContext* main_fiber_context_;
+#ifdef _DEBUG
+	static unsigned long dbg_main_thread_id_;
+#endif
+
 	static const unsigned long STATUS_ABORT = 0xE0000001;
 
 	void* fiber_;

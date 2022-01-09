@@ -29,38 +29,81 @@
 #include "../Port/Memory.h"
 #include "win32.h"
 
+using namespace std;
+
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
 unsigned long ExecContext::current_;
+void* ExecContext::main_fiber_;
+atomic_flag ExecContext::main_fiber_allocated_ = ATOMIC_FLAG_INIT;
+Core::ExecContext* ExecContext::main_fiber_context_;
+
+#ifdef _DEBUG
+unsigned long ExecContext::dbg_main_thread_id_;
+#endif
 
 ExecContext::ExecContext (bool neutral) :
 	fiber_ (nullptr)
 {
 	if (!neutral) {
-		fiber_ = CreateFiber (0, (LPFIBER_START_ROUTINE)fiber_proc, static_cast <Core::ExecContext*> (this));
-		if (!fiber_)
-			throw CORBA::NO_MEMORY ();
+		Core::ExecContext* core_context = static_cast <Core::ExecContext*> (this);
+		if (!main_fiber_allocated_.test_and_set ()) {
+			main_fiber_context_ = core_context;
+			fiber_ = main_fiber_;
+		} else {
+			fiber_ = CreateFiber (0, (LPFIBER_START_ROUTINE)fiber_proc, core_context);
+			if (!fiber_)
+				throw CORBA::NO_MEMORY ();
+		}
 	}
 }
 
-void __stdcall ExecContext::fiber_proc (Core::ExecContext* context)
+ExecContext::~ExecContext ()
 {
-	if (context)
-		current (context);
-	assert (current ()); // current () can be called in the special constructor for the main fiber.
+	if (fiber_) {
+		assert (fiber_ != GetCurrentFiber ());
+		if (fiber_ == main_fiber_)
+			main_fiber_allocated_.clear ();
+		else
+			DeleteFiber (fiber_);
+	}
+}
+
+inline
+void ExecContext::run (ExecDomain& ed) NIRVANA_NOEXCEPT
+{
+	DWORD exc;
+	__try {
+		ed.run ();
+	} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
+		ed.on_exec_domain_crash (CORBA::SystemException::EC_UNKNOWN);
+	}
+}
+
+void __stdcall ExecContext::fiber_proc (Core::ExecContext* context) NIRVANA_NOEXCEPT
+{
+	assert (context);
+	current (context);
 	for (;;) {
-		Core::Thread& thread = Core::Thread::current ();
-		ExecDomain* ed = thread.exec_domain ();
-		if (!ed)
-			break; // This is for main thread only. The fiber procedure never completes.
-		DWORD exc;
-		__try {
-			ed->execute_loop ();
-		} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
-			ed->on_exec_domain_crash (CORBA::SystemException::EC_UNKNOWN);
+		ExecDomain* ed = Core::Thread::current ().exec_domain ();
+		assert (ed);
+		run (*ed);
+	}
+	// Fiber procedures never complete.
+}
+
+void ExecContext::main_fiber_proc () NIRVANA_NOEXCEPT
+{
+	for (;;) {
+		ExecDomain* ed = Core::Thread::current ().exec_domain ();
+		if (!ed) {
+			assert (dbg_main_thread_id_ == GetCurrentThreadId ());
+			break;
 		}
+		current (main_fiber_context_);
+		run (*ed);
 	}
 }
 

@@ -48,9 +48,6 @@ public:
 	static bool get_OLF_section (Section& section) NIRVANA_NOEXCEPT;
 
 private:
-	SystemInfo ();
-
-private:
 	static unsigned int hardware_concurrency_;
 };
 

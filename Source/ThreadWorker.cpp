@@ -59,7 +59,7 @@ void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* para
 	// Do worker thread proc.
 	SchedulerBase::singleton ().worker_thread_proc ();
 	// Switch back to main fiber.
-	main_domain->switch_to ();
+	SwitchToFiber (Port::ExecContext::main_fiber ());
 }
 
 void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
@@ -67,19 +67,11 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
 	Port::Thread::current (&thread);
 
-	// Convert main thread to fiber
-	void* main_fiber = ConvertThreadToFiber (nullptr);
-	if (!main_fiber)
-		throw_NO_MEMORY ();
-
 	MainNeutralFiberParam param;
 
 	// Convert main thread context into execution domain
-	param.main_domain = ExecDomain::create_main (deadline, startup, main_fiber);
-
-	// Save for detach
-	ExecDomain& main_domain = *param.main_domain;
-	Port::ExecContext::current (&main_domain);
+	param.main_domain = ExecDomain::create (deadline, startup);
+	Port::ExecContext::current (param.main_domain);
 
 	// Create fiber for neutral context
 	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_neutral_fiber_proc, &param);
@@ -100,19 +92,16 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	thread.neutral_context ().switch_to ();
 
 	// Do fiber_proc for this worker thread
-	Port::ExecContext::fiber_proc (nullptr);
+	Port::ExecContext::main_fiber_proc ();
 
 	assert (dbg_main_thread == GetCurrentThreadId ());
 	assert (!handle_); // Prevent join to self.
-	
+
 	Port::Thread::current (nullptr);
 	Port::ExecContext::current (nullptr);
 
 	// Restore priority and release resources
 	SetThreadPriority (GetCurrentThread (), prio);
-	ConvertFiberToThread ();
-
-	main_domain.port ().detach ();	// Prevent DeleteFiber()
 }
 
 }

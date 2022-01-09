@@ -95,7 +95,7 @@ int start ()
     ret = mainfn (cmdline.argc (), cmdline.argv (), cmdline.envp ());
   }
   _cexit ();
-  terminate0 ();
+  terminate ();
   return ret;
 }
 

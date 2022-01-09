@@ -52,6 +52,13 @@ bool initialize (void)
   return true;
 }
 
+inline
+void terminate (void) NIRVANA_NOEXCEPT
+{
+  Port::Thread::terminate ();
+  terminate0 ();
+}
+
 }
 }
 }

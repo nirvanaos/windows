@@ -37,17 +37,25 @@ namespace Port {
 inline
 void ExecContext::initialize ()
 {
+#ifdef _DEBUG
+	dbg_main_thread_id_ = GetCurrentThreadId ();
+#endif
 	current_ = FlsAlloc (nullptr);
+	main_fiber_ = ConvertThreadToFiber (nullptr);
+	if (!main_fiber_)
+		throw_NO_MEMORY ();
 }
 
 inline
-void ExecContext::terminate ()
+void ExecContext::terminate () NIRVANA_NOEXCEPT
 {
+	assert (dbg_main_thread_id_ == GetCurrentThreadId ());
+	ConvertFiberToThread ();
 	FlsFree (current_);
 }
 
 inline
-void ExecContext::current (Core::ExecContext* context)
+void ExecContext::current (Core::ExecContext* context) NIRVANA_NOEXCEPT
 {
 	FlsSetValue (current_, context);
 }
