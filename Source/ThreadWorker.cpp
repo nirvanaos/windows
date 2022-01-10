@@ -45,17 +45,15 @@ unsigned long __stdcall ThreadWorker::thread_proc (ThreadWorker* _this)
 
 struct ThreadWorker::MainNeutralFiberParam
 {
-	CoreRef <ExecDomain> main_domain;
+	Runnable& startup;
+	DeadlineTime deadline;
 };
 
 void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* param)
 {
 	Port::ExecContext::current (&Core::Thread::current ().neutral_context ());
-	ExecDomain* main_domain = param->main_domain;
 	// Schedule startup runnable
-	main_domain->spawn (g_core_free_sync_context);
-	// Release main fiber to pool for reuse.
-	param->main_domain.reset ();
+	ExecDomain::async_call (param->deadline, param->startup, g_core_free_sync_context);
 	// Do worker thread proc.
 	SchedulerBase::singleton ().worker_thread_proc ();
 	// Switch back to main fiber.
@@ -67,17 +65,11 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
 	Port::Thread::current (&thread);
 
-	MainNeutralFiberParam param;
-
-	// Convert main thread context into execution domain
-	param.main_domain = ExecDomain::create (deadline, startup);
-	Port::ExecContext::current (param.main_domain);
-
 	// Create fiber for neutral context
+	MainNeutralFiberParam param{ startup, deadline };
 	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_neutral_fiber_proc, &param);
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
-
 	thread.neutral_context ().port ().attach (worker_fiber);
 
 #ifdef _DEBUG
@@ -89,7 +81,7 @@ void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
 	SetThreadPriority (GetCurrentThread (), Windows::WORKER_THREAD_PRIORITY);
 
 	// Switch to neutral context and run main_fiber_proc
-	thread.neutral_context ().switch_to ();
+	SwitchToFiber (worker_fiber);
 
 	// Do fiber_proc for this worker thread
 	Port::ExecContext::main_fiber_proc ();
