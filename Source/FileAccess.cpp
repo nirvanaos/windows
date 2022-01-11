@@ -27,6 +27,7 @@
 #include "SchedulerBase.h"
 #include "error2errno.h"
 #include <Nirvana/RuntimeError.h>
+#include <Nirvana/fnctl.h>
 
 namespace Nirvana {
 namespace Core {

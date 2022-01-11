@@ -31,10 +31,6 @@
 #include <IO_Request.h>
 #include "../Source/CompletionPortReceiver.h"
 
-#define	O_CREAT 0x0200
-#define	O_TRUNC 0x0400
-#define	O_EXCL  0x0800
-
 namespace Nirvana {
 namespace Core {
 
@@ -121,7 +117,8 @@ protected:
 namespace Port {
 
 /// Interface to host (kernel) filesystem driver.
-class FileAccessDirect : public Nirvana::Core::Windows::FileAccess
+class FileAccessDirect : 
+	private Nirvana::Core::Windows::FileAccess
 {
 	typedef Nirvana::Core::Windows::FileAccess Base;
 	typedef Base::Request RequestBase;
