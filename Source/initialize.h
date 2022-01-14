@@ -25,6 +25,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_INITIALIZE_H_
 #define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
+#pragma once
 
 #include <initterm.h>
 #include "Thread.inl"

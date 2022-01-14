@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_MAILSLOTNAME_H_
 #define NIRVANA_CORE_WINDOWS_MAILSLOTNAME_H_
+#pragma once
 
 #include "win32.h"
 

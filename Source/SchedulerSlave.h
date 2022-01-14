@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERSLAVE_H_
+#pragma once
 
 #include "SchedulerBase.h"
 #include "WorkerThreads.h"
@@ -37,6 +38,9 @@
 
 namespace Nirvana {
 namespace Core {
+
+class StartupProt;
+
 namespace Windows {
 
 class SchedulerSlave :
@@ -55,8 +59,11 @@ public:
 	}
 
 	/// Main loop.
+	/// 
+	/// \param startup Protection domain startup runnable.
+	/// \param startup_deadline Protection domain startup deadline.
 	/// \returns `false` if system domain is not running.
-	bool run (Runnable& startup, DeadlineTime startup_deadline);
+	bool run (StartupProt& startup, DeadlineTime startup_deadline);
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();

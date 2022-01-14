@@ -27,6 +27,7 @@
 #include "WorkerSemaphore.h"
 #include "CompletionPort.h"
 #include <ExecDomain.h>
+#include <Startup.h>
 #include "SchedulerBase.h"
 
 namespace Nirvana {
@@ -45,7 +46,7 @@ unsigned long __stdcall ThreadWorker::thread_proc (ThreadWorker* _this)
 
 struct ThreadWorker::MainNeutralFiberParam
 {
-	Runnable& startup;
+	Startup& startup;
 	DeadlineTime deadline;
 };
 
@@ -53,14 +54,14 @@ void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* para
 {
 	Port::ExecContext::current (&Core::Thread::current ().neutral_context ());
 	// Schedule startup runnable
-	ExecDomain::async_call (param->deadline, param->startup, g_core_free_sync_context);
+	param->startup.launch (param->deadline);
 	// Do worker thread proc.
 	SchedulerBase::singleton ().worker_thread_proc ();
 	// Switch back to main fiber.
 	SwitchToFiber (Port::ExecContext::main_fiber ());
 }
 
-void ThreadWorker::run_main (Runnable& startup, DeadlineTime deadline)
+void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline)
 {
 	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
 	Port::Thread::current (&thread);

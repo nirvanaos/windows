@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_MAILSLOTREADER_H_
 #define NIRVANA_CORE_WINDOWS_MAILSLOTREADER_H_
+#pragma once
 
 #include <assert.h>
 #include "BufferPool.h"

@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERABSTRACT_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERABSTRACT_H_
+#pragma once
 
 #include <Executor.h>
 

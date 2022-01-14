@@ -27,6 +27,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_PROTDOMAIN_H_
 #define NIRVANA_CORE_PORT_PROTDOMAIN_H_
+#pragma once
 
 namespace Nirvana {
 namespace Core {

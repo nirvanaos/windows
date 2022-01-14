@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_EXECCONTEXT_INL_
 #define NIRVANA_CORE_WINDOWS_EXECCONTEXT_INL_
+#pragma once
 
 #include "../Port/ExecContext.h"
 #include "win32.h"

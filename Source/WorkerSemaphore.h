@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_WORKER_SEMAPHORE_H_
 #define NIRVANA_CORE_PORT_WORKER_SEMAPHORE_H_
+#pragma once
 
 #include "../Port/SystemInfo.h"
 #include "win32.h"

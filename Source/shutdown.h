@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_SHUTDOWN_H_
 #define NIRVANA_CORE_WINDOWS_SHUTDOWN_H_
+#pragma once
 
 namespace Nirvana {
 namespace Core {

@@ -26,12 +26,16 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_WORKERTHREADS_H_
 #define NIRVANA_CORE_WINDOWS_WORKERTHREADS_H_
+#pragma once
 
 #include "ThreadWorker.h"
 #include "ThreadPool.h"
 
 namespace Nirvana {
 namespace Core {
+
+class Startup;
+
 namespace Windows {
 
 template <class Master>
@@ -40,7 +44,7 @@ class WorkerThreads :
 {
 	typedef ThreadPool <Master, ThreadWorker> Pool;
 public:
-	void run (Runnable& startup, DeadlineTime deadline)
+	void run (Startup& startup, DeadlineTime deadline)
 	{
 		Master::start ();
 

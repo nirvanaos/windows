@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_THREADWORKER_H_
 #define NIRVANA_CORE_WINDOWS_THREADWORKER_H_
+#pragma once
 
 #include <ThreadWorker.h>
 #include "Thread.inl"
@@ -34,7 +35,7 @@
 namespace Nirvana {
 namespace Core {
 
-class Runnable;
+class Startup;
 
 namespace Windows {
 
@@ -51,7 +52,7 @@ public:
 		port ().create (this, WORKER_THREAD_PRIORITY);
 	}
 
-	void run_main (Runnable& startup, DeadlineTime deadline);
+	void run_main (Startup& startup, DeadlineTime deadline);
 
 	ThreadWorker (Windows::WorkerSemaphore& master)
 	{}

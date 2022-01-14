@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_MODULE_H_
 #define NIRVANA_CORE_PORT_MODULE_H_
+#pragma once
 
 #include <Nirvana/Nirvana.h>
 #include <Nirvana/ModuleInit.h>

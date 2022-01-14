@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_EXECCONTEXT_H_
 #define NIRVANA_CORE_PORT_EXECCONTEXT_H_
+#pragma once
 
 #include <Nirvana/Nirvana.h>
 #include <atomic>

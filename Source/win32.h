@@ -27,6 +27,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_WIN32_H_
 #define NIRVANA_CORE_WINDOWS_WIN32_H_
+#pragma once
 
 #include "WinWChar.h"
 

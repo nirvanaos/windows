@@ -25,6 +25,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_START_H_
 #define NIRVANA_CORE_WINDOWS_START_H_
+#pragma once
 
 #include "initialize.h"
 #include "CmdLineParser.h"

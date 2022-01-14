@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_MEMORY_INL_
 #define NIRVANA_CORE_WINDOWS_MEMORY_INL_
+#pragma once
 
 #include "../Port/Memory.h"
 #include "AddressSpace.h"

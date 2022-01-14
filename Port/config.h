@@ -28,6 +28,7 @@
 */
 #ifndef NIRVANA_CORE_CONFIG_H_
 #define NIRVANA_CORE_CONFIG_H_
+#pragma once
 
 #include <stdint.h>
 

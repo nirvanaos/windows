@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_SCHEDULER_H_
 #define NIRVANA_CORE_PORT_SCHEDULER_H_
+#pragma once
 
 #include "../Source/SchedulerAbstract.h"
 

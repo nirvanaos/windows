@@ -48,7 +48,7 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 						std::copy (argv + 2, argv + argc, argv + 1);
 						--argc;
 						StartupSys startup (argc, argv, envp);
-						if (!SchedulerMaster ().run (startup, startup.default_deadline ())) {
+						if (!SchedulerMaster ().run (startup)) {
 							Console () << "System is already running.\n";
 							return -1;
 						} else {

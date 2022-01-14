@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_MAILSLOT_H_
 #define NIRVANA_CORE_WINDOWS_MAILSLOT_H_
+#pragma once
 
 #include "WinWChar.h"
 #include <stdlib.h>

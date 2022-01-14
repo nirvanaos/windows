@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_THREADPOSTMAN_H_
 #define NIRVANA_CORE_THREADPOSTMAN_H_
+#pragma once
 
 #include "Thread.inl"
 

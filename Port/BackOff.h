@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_BACKOFF_H_
 #define NIRVANA_CORE_PORT_BACKOFF_H_
+#pragma once
 
 extern "C" __declspec (dllimport)
 void __stdcall Sleep (unsigned long dwMilliseconds);

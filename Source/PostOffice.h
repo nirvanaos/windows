@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_POSTOFFICE_H_
 #define NIRVANA_CORE_WINDOWS_POSTOFFICE_H_
+#pragma once
 
 #include "MailslotReader.h"
 #include "ThreadPostman.h"

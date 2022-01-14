@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_ROUNDBUFFERS_H_
 #define NIRVANA_CORE_WINDOWS_ROUNDBUFFERS_H_
+#pragma once
 
 #include <Heap.h>
 #include <AtomicCounter.h>

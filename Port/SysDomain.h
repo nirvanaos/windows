@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_SYSDOMAIN_H_
 #define NIRVANA_CORE_PORT_SYSDOMAIN_H_
+#pragma once
 
 #include "../Source/Mailslot.h"
 

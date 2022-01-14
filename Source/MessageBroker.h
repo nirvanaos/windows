@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_MESSAGEBROKER_H_
 #define NIRVANA_CORE_WINDOWS_MESSAGEBROKER_H_
+#pragma once
 
 #include "PostOffice.h"
 #include "Message.h"

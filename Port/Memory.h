@@ -27,6 +27,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_MEMORY_H_
 #define NIRVANA_CORE_PORT_MEMORY_H_
+#pragma once
 
 #include <CORBA/CORBA.h>
 #include <Nirvana/Memory.h>

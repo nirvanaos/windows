@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_SCHEDULERMASTER_H_
 #define NIRVANA_CORE_WINDOWS_SCHEDULERMASTER_H_
+#pragma once
 
 #include "SchedulerBase.h"
 #include <SchedulerImpl.h>
@@ -35,6 +36,9 @@
 
 namespace Nirvana {
 namespace Core {
+
+class StartupSys;
+
 namespace Windows {
 
 class SchedulerItem
@@ -100,8 +104,9 @@ public:
 	}
 
 	/// Main loop.
+	/// \param startup System domain startup runnable.
 	/// \returns `false` if system domain is already running.
-	bool run (Runnable& startup, DeadlineTime startup_deadline);
+	bool run (StartupSys& startup);
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();

@@ -37,7 +37,7 @@ int gtest_sys (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 {
 	try {
 		Test::GTestSys startup (argc, argv, envp);
-		if (!SchedulerMaster ().run (startup, startup.default_deadline ())) {
+		if (!SchedulerMaster ().run (startup)) {
 			std::cout << "System is already running." << std::endl;
 			return -1;
 		} else {

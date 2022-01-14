@@ -26,6 +26,7 @@
 */
 #include "SchedulerSlave.h"
 #include <Scheduler.h>
+#include <StartupProt.h>
 #include "MailslotName.h"
 #include "SchedulerMessage.h"
 
@@ -131,7 +132,7 @@ void SchedulerSlave::terminate ()
 		CloseHandle (sys_process_);
 }
 
-bool SchedulerSlave::run (Runnable& startup, DeadlineTime startup_deadline)
+bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 {
 	if (!initialize ())
 		return false;

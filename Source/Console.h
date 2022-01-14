@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_CONSOLE_H_
 #define NIRVANA_CORE_WINDOWS_CONSOLE_H_
+#pragma once
 
 #include <Nirvana/NirvanaBase.h>
 

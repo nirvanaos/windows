@@ -26,6 +26,7 @@
 */
 #ifndef NIRVANA_CORE_PORT_THREADBACKGROUND_H_
 #define NIRVANA_CORE_PORT_THREADBACKGROUND_H_
+#pragma once
 
 #include <Thread.h>
 

@@ -27,6 +27,7 @@
 */
 #ifndef NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
 #define NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
+#pragma once
 
 #include "LockableHandle.h"
 #include "win32.h"
