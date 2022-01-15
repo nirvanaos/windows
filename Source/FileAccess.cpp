@@ -34,7 +34,7 @@ namespace Core {
 
 namespace Windows {
 
-void FileAccess::open (const std::string& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes)
+void FileAccess::open (const StringView& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes)
 {
 	std::basic_string <WinWChar> wpath;
 	utf8_to_ucs16 (path, wpath);
@@ -85,7 +85,7 @@ using namespace Windows;
 
 namespace Port {
 
-FileAccessDirect::FileAccessDirect (const std::string& path, int flags, Pos& size, Size& block_size)
+FileAccessDirect::FileAccessDirect (const StringView& path, int flags, Pos& size, Size& block_size)
 {
 	uint32_t creation;
 	if (flags & O_CREAT) {

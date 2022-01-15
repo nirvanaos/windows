@@ -32,6 +32,7 @@
 #include <Nirvana/ModuleInit.h>
 #include <Section.h>
 #include <UserAllocator.h>
+#include <StringView.h>
 #include <forward_list>
 #include "../Windows/Source/WinWChar.h"
 
@@ -54,14 +55,11 @@ public:
 	}
 
 protected:
-	template <class A>
-	Module (const std::basic_string <char, std::char_traits <char>, A>& file) :
-		Module (file.c_str (), file.length ())
-	{}
-
-	Module (const char* file) :
-		Module (file, strlen (file))
-	{}
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="file"></param>
+	Module (const StringView& file);
 
 	~Module ()
 	{
@@ -86,8 +84,6 @@ protected:
 	void get_data_sections (std::forward_list <Section, UserAllocator <Section>>& sections);
 
 private:
-	Module (const char* file, size_t len);
-
 	void unload ();
 
 private:

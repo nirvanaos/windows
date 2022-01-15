@@ -30,6 +30,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include <IO_Request.h>
+#include <StringView.h>
 #include "../Source/CompletionPortReceiver.h"
 
 namespace Nirvana {
@@ -101,7 +102,7 @@ protected:
 		handle_ ((void*)-1)
 	{}
 
-	void open (const std::string& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
+	void open (const StringView& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
 	~FileAccess ();
 
 	void issue_request (Request& rq) NIRVANA_NOEXCEPT;
@@ -166,7 +167,7 @@ protected:
 	/// \param[out] size File size.
 	/// \param[out] block_size Block (sector) size. 
 	/// \throw RuntimeError.
-	FileAccessDirect (const std::string& path, int flags, Pos& size, Size& block_size);
+	FileAccessDirect (const StringView& path, int flags, Pos& size, Size& block_size);
 
 	/// Issues the I/O request to the host or kernel.
 	/// 

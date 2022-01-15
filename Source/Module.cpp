@@ -1,4 +1,3 @@
-/// Protection domain (process) address space.
 /*
 * Nirvana Core. Windows port library.
 *
@@ -37,14 +36,13 @@ namespace Port {
 
 using namespace Nirvana::Core::Windows;
 
-Module::Module (const char* path, size_t len)
+Module::Module (const StringView& file)
 {
 	WCHAR temp_path [MAX_PATH + 1];
 
 	{
 		CoreStringW wpath;
-		wpath.resize (len);
-		wpath.resize (utf8_to_ucs16 (path, len, &*wpath.begin ()));
+		utf8_to_ucs16 (file, wpath);
 		DWORD att = GetFileAttributesW (wpath.c_str ());
 		if (att & FILE_ATTRIBUTE_DIRECTORY)
 			throw runtime_error ("File not found");

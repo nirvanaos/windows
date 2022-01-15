@@ -30,6 +30,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include <Heap.h>
+#include <StringView.h>
 
 namespace Nirvana {
 namespace Core {
@@ -45,15 +46,16 @@ typedef char16_t WinWChar;
 
 size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16);
 
-template <class A1, class A2> inline
+template <class S, class Al> inline
 void utf8_to_ucs16 (
-	const std::basic_string <char, std::char_traits <char>, A1>& utf8,
-	std::basic_string <WinWChar, std::char_traits <WinWChar>, A2>& ucs16)
+	const S& utf8,
+	std::basic_string <WinWChar, std::char_traits <WinWChar>, Al>& ucs16)
 {
 	ucs16.resize (utf8.size ());
 	ucs16.resize (utf8_to_ucs16 (utf8.data (), utf8.size (), &*ucs16.begin ()));
 }
 
+/// Windows wide string
 typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, CoreAllocator <WinWChar> > CoreStringW;
 
 }
