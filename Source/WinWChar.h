@@ -51,8 +51,9 @@ void utf8_to_ucs16 (
 	const S& utf8,
 	std::basic_string <WinWChar, std::char_traits <WinWChar>, Al>& ucs16)
 {
-	ucs16.resize (utf8.size ());
-	ucs16.resize (utf8_to_ucs16 (utf8.data (), utf8.size (), &*ucs16.begin ()));
+	size_t size = utf8.size ();
+	ucs16.resize (size);
+	ucs16.resize (utf8_to_ucs16 (utf8.data (), size, &*ucs16.begin ()));
 }
 
 /// Windows wide string

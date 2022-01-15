@@ -28,7 +28,6 @@
 #define NIRVANA_CORE_WINDOWS_BUFFERPOOL_H_
 #pragma once
 
-#include <Nirvana/NirvanaBase.h>
 #include "win32.h"
 
 namespace Nirvana {
