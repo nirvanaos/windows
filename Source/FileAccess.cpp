@@ -36,7 +36,7 @@ namespace Windows {
 
 void FileAccess::open (const StringView& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes)
 {
-	std::basic_string <WinWChar> wpath;
+	StringW wpath;
 	utf8_to_ucs16 (path, wpath);
 	handle_ = CreateFileW (wpath.c_str (), access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
 	if (INVALID_HANDLE_VALUE == handle_)

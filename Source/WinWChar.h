@@ -44,6 +44,10 @@ typedef char16_t WinWChar;
 #define WINWCS(s) u##s
 #endif
 
+/// Windows wide string
+typedef std::basic_string <WinWChar> StringW;
+typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, CoreAllocator <WinWChar> > CoreStringW;
+
 size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16);
 
 template <class S, class Al> inline
@@ -55,9 +59,6 @@ void utf8_to_ucs16 (
 	ucs16.resize (size);
 	ucs16.resize (utf8_to_ucs16 (utf8.data (), size, &*ucs16.begin ()));
 }
-
-/// Windows wide string
-typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, CoreAllocator <WinWChar> > CoreStringW;
 
 }
 }
