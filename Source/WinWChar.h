@@ -50,10 +50,10 @@ typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, CoreAllocator 
 
 size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16);
 
-template <class S, class Al> inline
+template <class S, class Tr, class Al> inline
 void utf8_to_ucs16 (
 	const S& utf8,
-	std::basic_string <WinWChar, std::char_traits <WinWChar>, Al>& ucs16)
+	std::basic_string <WinWChar, Tr, Al>& ucs16)
 {
 	size_t size = utf8.size ();
 	ucs16.resize (size);
