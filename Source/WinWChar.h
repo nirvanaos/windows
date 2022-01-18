@@ -29,7 +29,7 @@
 #pragma once
 
 #include <Nirvana/Nirvana.h>
-#include <Heap.h>
+#include <UserAllocator.h>
 #include <StringView.h>
 
 namespace Nirvana {
@@ -45,7 +45,7 @@ typedef char16_t WinWChar;
 #endif
 
 /// Windows wide string
-typedef std::basic_string <WinWChar> StringW;
+typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, UserAllocator <WinWChar> > StringW;
 typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, CoreAllocator <WinWChar> > CoreStringW;
 
 size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16);

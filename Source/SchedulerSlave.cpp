@@ -27,6 +27,7 @@
 #include "SchedulerSlave.h"
 #include <Scheduler.h>
 #include <StartupProt.h>
+#include <Executor.h>
 #include "MailslotName.h"
 #include "SchedulerMessage.h"
 
