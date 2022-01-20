@@ -1,6 +1,5 @@
 ﻿/// \file
-/// Compile configuration parameters
-
+/// Core compile parameters
 /*
 * Nirvana Core. Windows port library.
 *
@@ -102,6 +101,14 @@ const uint64_t MODULE_UNLOAD_TIMEOUT = 30000000000; // 30 sec
 
 /// ORB proxy garbage collection deadline. May be INFINITE_DEADLINE
 const uint64_t PROXY_GC_DEADLINE = 10000000000; // 10 sec
+
+/// Disable iterator debugging.
+/// May be used in production systems to eliminate unused runtime support code from core.
+const bool RUNTIME_SUPPORT_DISABLE = false;
+
+/// Execution domain creation may be heavy.
+/// So we can enable pooling.
+const bool EXEC_DOMAIN_POOLING = false;
 
 }
 }
