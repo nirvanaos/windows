@@ -35,7 +35,7 @@ namespace Core {
 namespace Port {
 
 /// Platform-specific background thread implementation.
-class ThreadBackground :
+class NIRVANA_NOVTABLE ThreadBackground :
 	public Core::Thread
 {
 	///@{
