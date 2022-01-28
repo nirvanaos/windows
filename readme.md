@@ -25,7 +25,6 @@ Nirvana core without the MSVC STL library.
 * ../../../Library.VC/Nirvana/ORB/Include
 * $(VCToolsInstallDir)crt/src/vcruntime
 
-
 ##### C++/Advanced/Forced Include File
 * Nirvana\basic_string.h
 * Nirvana\vector.h
@@ -38,4 +37,8 @@ For compilation with CLang, add proprocessor definition `_ThrowInfo=ThrowInfo`.
 ### ./Test
 
 Sources for various tests.
+
+## How to build Nirvana core for Windows host
+
+https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features
 
