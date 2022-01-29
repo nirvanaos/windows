@@ -1,4 +1,3 @@
-/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -24,52 +23,49 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_THREADBACKGROUND_H_
-#define NIRVANA_CORE_PORT_THREADBACKGROUND_H_
-#pragma once
-
-#include <Thread.h>
+#include "ErrConsole.h"
+#include "win32.h"
+#include <string.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
 
-/// Platform-specific background thread implementation.
-class NIRVANA_NOVTABLE ThreadBackground :
-	public Core::Thread
+ErrConsole::ErrConsole () :
+	handle_ (nullptr)
 {
-	///@{
-	/// Members called from Core.
-protected:
-	ThreadBackground ();
-	~ThreadBackground ();
+	AllocConsole ();
+	handle_ = GetStdHandle (STD_ERROR_HANDLE);
+}
 
-	/// Create thread
-	void create ();
+ErrConsole::~ErrConsole ()
+{
+	if (handle_) {
+		operator << ("Press any key to close this window...\n");
+		HANDLE h = GetStdHandle (STD_INPUT_HANDLE);
+		INPUT_RECORD input;
+		DWORD cnt;
+		while (ReadConsoleInput (h, &input, 1, &cnt)) {
+			if (KEY_EVENT == input.EventType && input.Event.KeyEvent.uChar.UnicodeChar)
+				break;
+		}
+	}
+}
 
-	/// Suspend execution and wait for resume ().
-	void suspend ();
+const ErrConsole& ErrConsole::operator << (const char* text) const NIRVANA_NOEXCEPT
+{
+	write (text, strlen (text));
+	return *this;
+}
 
-	/// Continue execution.
-	void resume ();
-
-	/// Temparary boost thread priority above the worker threads priority.
-	void priority_boost ();
-
-	/// Restore priority after the priority_boost () call.
-	void priority_restore ();
-	///@}
-
-private:
-	friend class Nirvana::Core::Port::Thread;
-	static unsigned long __stdcall thread_proc (ThreadBackground* _this);
-
-private:
-	void* event_;
-};
+void ErrConsole::write (const char* text, size_t len) const NIRVANA_NOEXCEPT
+{
+	if (handle_) {
+		DWORD cb;
+		WriteFile (handle_, text, (DWORD)len, &cb, nullptr);
+	}
+}
 
 }
 }
 }
-
-#endif

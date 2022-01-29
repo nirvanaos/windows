@@ -29,7 +29,7 @@
 
 #include <initterm.h>
 #include "Thread.inl"
-#include "Console.h"
+#include "ErrConsole.h"
 #include "../Port/SystemInfo.h"
 #include "../Port/Chrono.h"
 #include <exception>
@@ -47,7 +47,7 @@ bool initialize (void)
     initialize0 ();
     Port::Thread::initialize ();
   } catch (const std::exception& ex) {
-    Console () << ex.what () << '\n';
+    ErrConsole () << ex.what () << '\n';
     return false;
   }
   return true;

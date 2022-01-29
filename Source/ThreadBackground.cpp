@@ -49,12 +49,10 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	return 0;
 }
 
-ThreadBackground::ThreadBackground (bool process)
+ThreadBackground::ThreadBackground ()
 {
 	if (!(event_ = CreateEventW (nullptr, 0, 0, nullptr)))
 		throw_NO_MEMORY ();
-	if (process)
-		AllocConsole ();
 }
 
 ThreadBackground::~ThreadBackground ()

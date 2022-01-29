@@ -26,7 +26,7 @@
 #include "SchedulerMaster.h"
 #include "SchedulerSlave.h"
 #include "shutdown.h"
-#include "Console.h"
+#include "ErrConsole.h"
 #include <StartupProt.h>
 #include <StartupSys.h>
 #include "start.h"
@@ -49,7 +49,7 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 						--argc;
 						StartupSys startup (argc, argv, envp);
 						if (!SchedulerMaster ().run (startup)) {
-							Console () << "System is already running.\n";
+							ErrConsole () << "System is already running.\n";
 							return -1;
 						} else {
 							startup.check ();
@@ -77,12 +77,12 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 						}
 
 						if (!semaphore) {
-							Console () << "Invalid command line.\n";
+							ErrConsole () << "Invalid command line.\n";
 							return -1;
 						} else {
 							StartupProt startup (1, argv, envp);
 							if (!SchedulerSlave (sys_process_id, semaphore).run (startup, startup_deadline)) {
-								Console () << "System is not running.\n";
+								ErrConsole () << "System is not running.\n";
 								return -1;
 							} else {
 								startup.check ();
@@ -96,7 +96,7 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 						if (shutdown ())
 							return 0;
 						else {
-							Console () << "System is not running.\n";
+							ErrConsole () << "System is not running.\n";
 							return -1;
 						}
 				}
@@ -105,14 +105,14 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 
 		StartupProt startup (argc, argv, envp);
 		if (!SchedulerSlave ().run (startup, StartupProt::default_deadline ())) {
-			Console () << "System is not running.\n";
+			ErrConsole () << "System is not running.\n";
 			return -1;
 		} else {
 			startup.check ();
 			return startup.ret ();
 		}
 	} catch (const std::exception& ex) {
-		Console () << ex.what () << '\n';
+		ErrConsole () << ex.what () << '\n';
 		return -1;
 	}
 }

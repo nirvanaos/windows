@@ -24,8 +24,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_CONSOLE_H_
-#define NIRVANA_CORE_WINDOWS_CONSOLE_H_
+#ifndef NIRVANA_CORE_WINDOWS_ERRCONSOLE_H_
+#define NIRVANA_CORE_WINDOWS_ERRCONSOLE_H_
 #pragma once
 
 #include <Nirvana/NirvanaBase.h>
@@ -34,15 +34,15 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class Console
+class ErrConsole
 {
 public:
-	Console ();
-	~Console ();
+	ErrConsole ();
+	~ErrConsole ();
 
-	const Console& operator << (const char* text) const NIRVANA_NOEXCEPT;
+	const ErrConsole& operator << (const char* text) const NIRVANA_NOEXCEPT;
 	
-	const Console& operator << (char c) const NIRVANA_NOEXCEPT
+	const ErrConsole& operator << (char c) const NIRVANA_NOEXCEPT
 	{
 		write (&c, 1);
 		return *this;
