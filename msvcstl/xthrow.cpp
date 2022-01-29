@@ -3,6 +3,7 @@
 
 // exception handling support functions
 
+#include <Nirvana/Nirvana.h>
 #include <functional>
 #include <new>
 #include <regex>

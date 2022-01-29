@@ -1,5 +1,4 @@
-#ifdef _MSC_BUILD
-
+#include <Nirvana/Nirvana.h>
 #include <yvals.h>
 
 std::_Lockit::_Lockit () noexcept :
@@ -12,6 +11,4 @@ std::_Lockit::_Lockit (int type) noexcept :
 
 std::_Lockit::~_Lockit () noexcept
 {}
-
-#endif
 
