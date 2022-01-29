@@ -38,7 +38,7 @@ extern "C" int __cdecl _CrtDbgReport (
 
 	va_list arglist;
 	va_start (arglist, format);
-	Formatter ().vformat (false, in, arglist, out);
+	Formatter::vformat (false, in, arglist, out);
 	va_end (arglist);
 
 	s += '\n';
@@ -80,7 +80,7 @@ extern "C" int __cdecl _CrtDbgReportW (
 
 	va_list arglist;
 	va_start (arglist, format);
-	Formatter ().vformat (true, in, arglist, out);
+	Formatter::vformat (true, in, arglist, out);
 	va_end (arglist);
 
 	s += '\n';

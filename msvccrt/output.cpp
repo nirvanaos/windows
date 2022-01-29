@@ -14,5 +14,5 @@ extern "C" int __cdecl __stdio_common_vsprintf_s (
   CIn <char> in (format);
   COutBufSize <char> out (buffer, buffer_count);
 
-  return Formatter ().vformat (false, in, arglist, out);
+  return Formatter::vformat (false, in, arglist, out);
 }
