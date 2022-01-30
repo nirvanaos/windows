@@ -24,15 +24,18 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/Debugger.h"
+#include "WinWChar.h"
 #include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-void Debugger::output_debug_string (const std::string& msg)
+void Debugger::output_debug_string (const char* msg)
 {
-	OutputDebugString (msg.c_str ());
+	Windows::StringW ws;
+	Windows::utf8_to_ucs16 (msg, ws);
+	OutputDebugStringW (ws.c_str ());
 }
 
 }

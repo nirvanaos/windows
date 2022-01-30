@@ -23,7 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include <Legacy/ThreadBackground.h>
+#include <ThreadBackground.inl>
 #include <ExecDomain.h>
 #include "Thread.inl"
 
@@ -33,7 +33,7 @@ namespace Port {
 
 DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 {
-	Legacy::Core::ThreadBackground& thread = static_cast <Legacy::Core::ThreadBackground&> (*_this);
+	Core::ThreadBackground& thread = static_cast <Core::ThreadBackground&> (*_this);
 	Port::Thread::current (&thread);
 	try {
 		thread.neutral_context().port ().convert_to_fiber ();
@@ -42,8 +42,8 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 		thread.on_thread_proc_end ();
 		return 0;
 	}
-	thread.exec_domain ()->switch_to ();
-	Core::ExecContext::neutral_context_loop ();
+	WaitForSingleObject (_this->event_, INFINITE);
+	thread.execute ();
 	thread.neutral_context ().port ().convert_to_thread ();
 	thread.on_thread_proc_end ();
 	return 0;
@@ -51,7 +51,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 
 ThreadBackground::ThreadBackground ()
 {
-	if (!(event_ = CreateEventW (nullptr, 0, 0, nullptr)))
+	if (!(event_ = CreateEventW (nullptr, false, false, nullptr)))
 		throw_NO_MEMORY ();
 }
 
@@ -60,30 +60,19 @@ ThreadBackground::~ThreadBackground ()
 	CloseHandle (event_);
 }
 
-void ThreadBackground::create ()
+void ThreadBackground::start ()
 {
 	Thread::create (this, Windows::BACKGROUND_THREAD_PRIORITY);
 }
 
-void ThreadBackground::suspend ()
+void ThreadBackground::yield () NIRVANA_NOEXCEPT
 {
 	WaitForSingleObject (event_, INFINITE);
 }
 
-void ThreadBackground::resume ()
+void ThreadBackground::resume () NIRVANA_NOEXCEPT
 {
 	verify (SetEvent (event_));
-}
-
-/// Temparary boost thread priority above the worker threads priority.
-void ThreadBackground::priority_boost ()
-{
-	SetThreadPriority (handle_, Windows::BACKGROUND_THREAD_PRIORITY_BOOSTED);
-}
-
-void ThreadBackground::priority_restore ()
-{
-	SetThreadPriority (handle_, Windows::BACKGROUND_THREAD_PRIORITY);
 }
 
 }

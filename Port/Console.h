@@ -28,6 +28,8 @@
 #define NIRVANA_CORE_PORT_CONSOLE_H_
 #pragma once
 
+#include <Nirvana/Nirvana.h>
+
 namespace Nirvana {
 namespace Core {
 namespace Port {
@@ -36,6 +38,11 @@ class Console
 {
 protected:
 	Console ();
+
+	void write (const char* text, size_t len) const NIRVANA_NOEXCEPT;
+
+private:
+	void* handle_;
 };
 
 }

@@ -18,7 +18,9 @@ extern "C" void __cdecl _invalid_parameter (
   if (file_name) {
     s += file_name;
     s += L'(';
-    s += std::to_wstring (line_number);
+    wchar_t buf [16];
+    _itow_s (line_number, buf, 10);
+    s += buf;
     s += L"): ";
   }
   s += L"Invalid parameter";

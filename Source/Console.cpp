@@ -34,6 +34,15 @@ Console::Console ()
 {
 	// Temporary solution
 	AllocConsole ();
+	handle_ = GetStdHandle (STD_OUTPUT_HANDLE);
+}
+
+void Console::write (const char* text, size_t len) const NIRVANA_NOEXCEPT
+{
+	if (handle_) {
+		DWORD cb;
+		WriteFile (handle_, text, (DWORD)len, &cb, nullptr);
+	}
 }
 
 }

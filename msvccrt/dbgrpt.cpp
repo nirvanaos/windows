@@ -22,7 +22,9 @@ extern "C" int __cdecl _CrtDbgReport (
 	if (file_name) {
 		s += file_name;
 		s += '(';
-		s += to_string (line_number);
+		char buf [16];
+		_itoa_s (line_number, buf, 10);
+		s += buf;
 		s += "): ";
 	}
 
@@ -64,7 +66,9 @@ extern "C" int __cdecl _CrtDbgReportW (
 	if (file_name) {
 		s += file_name;
 		s += '(';
-		s += to_wstring (line_number);
+		wchar_t buf [16];
+		_itow_s (line_number, buf, 10);
+		s += buf;
 		s += L"): ";
 	}
 

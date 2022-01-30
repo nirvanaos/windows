@@ -41,7 +41,7 @@ public:
 	~ErrConsole ();
 
 	const ErrConsole& operator << (const char* text) const NIRVANA_NOEXCEPT;
-	
+
 	const ErrConsole& operator << (char c) const NIRVANA_NOEXCEPT
 	{
 		write (&c, 1);

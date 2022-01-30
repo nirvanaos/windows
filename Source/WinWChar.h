@@ -60,6 +60,16 @@ void utf8_to_ucs16 (
 	ucs16.resize (utf8_to_ucs16 (utf8.data (), size, &*ucs16.begin ()));
 }
 
+template <class Tr, class Al> inline
+void utf8_to_ucs16 (
+	const char* utf8,
+	std::basic_string <WinWChar, Tr, Al>& ucs16)
+{
+	size_t size = strlen (utf8);
+	ucs16.resize (size);
+	ucs16.resize (utf8_to_ucs16 (utf8, size, &*ucs16.begin ()));
+}
+
 }
 }
 }

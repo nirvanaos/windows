@@ -37,7 +37,7 @@ namespace Port {
 class Debugger
 {
 public:
-	static void output_debug_string (const std::string& msg);
+	static void output_debug_string (const char* msg);
 
 	static void debug_break ()
 	{

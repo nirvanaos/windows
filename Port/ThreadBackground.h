@@ -40,24 +40,21 @@ class NIRVANA_NOVTABLE ThreadBackground :
 {
 	///@{
 	/// Members called from Core.
+public:
+
+	/// Suspend execution and wait for resume ().
+	virtual void yield () NIRVANA_NOEXCEPT;
+
+	/// Continue execution.
+	void resume () NIRVANA_NOEXCEPT;
+
 protected:
 	ThreadBackground ();
 	~ThreadBackground ();
 
 	/// Create thread
-	void create ();
+	void start ();
 
-	/// Suspend execution and wait for resume ().
-	void suspend ();
-
-	/// Continue execution.
-	void resume ();
-
-	/// Temparary boost thread priority above the worker threads priority.
-	void priority_boost ();
-
-	/// Restore priority after the priority_boost () call.
-	void priority_restore ();
 	///@}
 
 private:
