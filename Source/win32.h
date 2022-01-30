@@ -46,6 +46,10 @@
 #undef interface
 #endif
 
+#ifdef Yield
+#undef Yield
+#endif
+
 #define OBJ_NAME_PREFIX WINWCS ("Nirvana")
 #define MAILSLOT_PREFIX WINWCS ("\\\\.\\mailslot\\") OBJ_NAME_PREFIX WINWCS ("\\")
 
