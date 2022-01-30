@@ -6,6 +6,8 @@
 //
 // As a result, normal EH runtime services (such as noexcept functions) are safe to use in this file.
 
+#include <Nirvana/Nirvana.h>
+
 #ifndef _VCRT_ALLOW_INTERNALS
 #define _VCRT_ALLOW_INTERNALS
 #endif // _VCRT_ALLOW_INTERNALS
