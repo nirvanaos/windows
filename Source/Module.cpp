@@ -41,7 +41,7 @@ Module::Module (const StringView& file)
 	WCHAR temp_path [MAX_PATH + 1];
 
 	{
-		CoreStringW wpath;
+		SharedStringW wpath;
 		utf8_to_ucs16 (file, wpath);
 		DWORD att = GetFileAttributesW (wpath.c_str ());
 		if (att & FILE_ATTRIBUTE_DIRECTORY)

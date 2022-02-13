@@ -30,6 +30,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include <UserAllocator.h>
+#include <SharedAllocator.h>
 #include <StringView.h>
 
 namespace Nirvana {
@@ -46,7 +47,7 @@ typedef char16_t WinWChar;
 
 /// Windows wide string
 typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, UserAllocator <WinWChar> > StringW;
-typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, CoreAllocator <WinWChar> > CoreStringW;
+typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, SharedAllocator <WinWChar> > SharedStringW;
 
 size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16);
 

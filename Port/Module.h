@@ -89,7 +89,7 @@ private:
 private:
 	void* module_;
 	Section metadata_;
-	Nirvana::Core::Windows::CoreStringW temp_path_;
+	Nirvana::Core::Windows::SharedStringW temp_path_;
 };
 
 }
