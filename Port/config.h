@@ -30,6 +30,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <HeapDirectoryImpl.h>
 
 namespace Nirvana {
 namespace Core {
@@ -76,9 +77,9 @@ PLAIN_MEMORY provides the best performance but wastes a lot of physical memory.
 */
 
 #if !defined (__clang__)
-#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS
+const HeapDirectoryImpl HEAP_DIRECTORY_IMPLEMENTATION = HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS;
 #else
-#define HEAP_DIRECTORY_IMPLEMENTATION HeapDirectoryImpl::COMMITTED_BITMAP
+const HeapDirectoryImpl HEAP_DIRECTORY_IMPLEMENTATION = HeapDirectoryImpl::COMMITTED_BITMAP;
 #endif
 
 /** Maximum count of levels in PriorityQueue.
