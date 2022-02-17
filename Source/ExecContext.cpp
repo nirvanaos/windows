@@ -78,7 +78,7 @@ void ExecContext::run (ExecDomain& ed) NIRVANA_NOEXCEPT
 	__try {
 		ed.run ();
 	} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
-		ed.on_exec_domain_crash (CORBA::SystemException::EC_UNKNOWN);
+		ed.on_crash (CORBA::SystemException::EC_UNKNOWN);
 	}
 }
 
