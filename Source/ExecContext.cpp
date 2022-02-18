@@ -28,6 +28,7 @@
 #include "ExecContext.inl"
 #include "../Port/Memory.h"
 #include "win32.h"
+#include <signal.h>
 
 using namespace std;
 
@@ -78,7 +79,36 @@ void ExecContext::run (ExecDomain& ed) NIRVANA_NOEXCEPT
 	__try {
 		ed.run ();
 	} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
-		ed.on_crash (CORBA::SystemException::EC_UNKNOWN);
+		int sig = 0;
+		switch (exc) {
+			case EXCEPTION_ACCESS_VIOLATION:
+			case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+			case EXCEPTION_DATATYPE_MISALIGNMENT:
+			case EXCEPTION_GUARD_PAGE:
+			case EXCEPTION_IN_PAGE_ERROR:
+			case EXCEPTION_STACK_OVERFLOW:
+				sig = SIGSEGV;
+				break;
+			case EXCEPTION_FLT_DENORMAL_OPERAND:
+			case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+			case EXCEPTION_FLT_INEXACT_RESULT:
+			case EXCEPTION_FLT_INVALID_OPERATION:
+			case EXCEPTION_FLT_OVERFLOW:
+			case EXCEPTION_FLT_STACK_CHECK:
+			case EXCEPTION_FLT_UNDERFLOW:
+			case EXCEPTION_INT_DIVIDE_BY_ZERO:
+			case EXCEPTION_INT_OVERFLOW:
+				sig = SIGFPE;
+				break;
+			case EXCEPTION_ILLEGAL_INSTRUCTION:
+			case EXCEPTION_PRIV_INSTRUCTION:
+				sig = SIGILL;
+				break;
+			default:
+				if (STATUS_SIGNAL_BEGIN <= exc && exc < STATUS_SIGNAL_BEGIN + NSIG)
+					sig = exc - STATUS_SIGNAL_BEGIN;
+		}
+		ed.on_crash (sig);
 	}
 }
 
@@ -119,9 +149,9 @@ void ExecContext::convert_to_fiber ()
 	current (static_cast <Core::ExecContext*> (this));
 }
 
-NIRVANA_NORETURN void ExecContext::abort ()
+NIRVANA_NORETURN void ExecContext::raise (int signal)
 {
-	RaiseException (STATUS_ABORT, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+	RaiseException (STATUS_SIGNAL_BEGIN + signal, EXCEPTION_NONCONTINUABLE, 0, nullptr);
 }
 
 }

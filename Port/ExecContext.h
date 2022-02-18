@@ -68,9 +68,9 @@ public:
 	/// Destructor.
 	~ExecContext ();
 
-	/// Aborts execution of the context.
+	/// Raise signal. raise(SIGABRT) to abort process.
 	/// Dangerous method used for POSIX compatibility.
-	NIRVANA_NORETURN void abort ();
+	NIRVANA_NORETURN void raise (int signal);
 
 protected:
 	/// Switch to this context.
@@ -125,7 +125,7 @@ private:
 	static unsigned long dbg_main_thread_id_;
 #endif
 
-	static const unsigned long STATUS_ABORT = 0xE0000001;
+	static const unsigned long STATUS_SIGNAL_BEGIN = 0xE0000000;
 
 	void* fiber_;
 };

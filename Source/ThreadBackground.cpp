@@ -26,6 +26,7 @@
 #include <ThreadBackground.inl>
 #include <ExecDomain.h>
 #include "Thread.inl"
+#include <signal.h>
 
 namespace Nirvana {
 namespace Core {
@@ -38,7 +39,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	try {
 		thread.neutral_context().port ().convert_to_fiber ();
 	} catch (...) {
-		thread.exec_domain ()->on_crash (CORBA::SystemException::EC_NO_MEMORY);
+		thread.exec_domain ()->on_crash (SIGSEGV);
 		thread.on_thread_proc_end ();
 		return 0;
 	}
