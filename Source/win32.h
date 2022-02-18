@@ -86,6 +86,9 @@ const size_t PAGE_SIZE = 4096;
 const size_t PAGES_PER_BLOCK = 16; // Windows allocate memory by 64K blocks
 const size_t ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
 
+/// Signal exception numbers
+const unsigned long STATUS_SIGNAL_BEGIN = 0xE0000000;
+
 }
 }
 }

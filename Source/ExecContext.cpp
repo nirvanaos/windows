@@ -26,9 +26,7 @@
 #include <ExecDomain.h>
 #include <Thread.h>
 #include "ExecContext.inl"
-#include "../Port/Memory.h"
-#include "win32.h"
-#include <signal.h>
+#include "Memory.inl"
 
 using namespace std;
 
@@ -72,54 +70,12 @@ ExecContext::~ExecContext ()
 	}
 }
 
-inline
-void ExecContext::run (ExecDomain& ed) NIRVANA_NOEXCEPT
-{
-	DWORD exc;
-	__try {
-		ed.run ();
-	} __except (exc = GetExceptionCode (), EXCEPTION_EXECUTE_HANDLER) {
-		int sig = 0;
-		switch (exc) {
-			case EXCEPTION_ACCESS_VIOLATION:
-			case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-			case EXCEPTION_DATATYPE_MISALIGNMENT:
-			case EXCEPTION_GUARD_PAGE:
-			case EXCEPTION_IN_PAGE_ERROR:
-			case EXCEPTION_STACK_OVERFLOW:
-				sig = SIGSEGV;
-				break;
-			case EXCEPTION_FLT_DENORMAL_OPERAND:
-			case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-			case EXCEPTION_FLT_INEXACT_RESULT:
-			case EXCEPTION_FLT_INVALID_OPERATION:
-			case EXCEPTION_FLT_OVERFLOW:
-			case EXCEPTION_FLT_STACK_CHECK:
-			case EXCEPTION_FLT_UNDERFLOW:
-			case EXCEPTION_INT_DIVIDE_BY_ZERO:
-			case EXCEPTION_INT_OVERFLOW:
-				sig = SIGFPE;
-				break;
-			case EXCEPTION_ILLEGAL_INSTRUCTION:
-			case EXCEPTION_PRIV_INSTRUCTION:
-				sig = SIGILL;
-				break;
-			default:
-				if (STATUS_SIGNAL_BEGIN <= exc && exc < STATUS_SIGNAL_BEGIN + NSIG)
-					sig = exc - STATUS_SIGNAL_BEGIN;
-		}
-		ed.on_crash (sig);
-	}
-}
-
 void __stdcall ExecContext::fiber_proc (Core::ExecContext* context) NIRVANA_NOEXCEPT
 {
 	assert (context);
 	current (context);
 	for (;;) {
-		ExecDomain* ed = Core::Thread::current ().exec_domain ();
-		assert (ed);
-		run (*ed);
+		ExecDomain::current ().run ();
 	}
 	// Fiber procedures never complete.
 }
@@ -133,7 +89,7 @@ void ExecContext::main_fiber_proc () NIRVANA_NOEXCEPT
 			break;
 		}
 		current (main_fiber_context_);
-		run (*ed);
+		ed->run ();
 	}
 }
 
@@ -151,7 +107,7 @@ void ExecContext::convert_to_fiber ()
 
 NIRVANA_NORETURN void ExecContext::raise (int signal)
 {
-	RaiseException (STATUS_SIGNAL_BEGIN + signal, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+	RaiseException (Windows::STATUS_SIGNAL_BEGIN + signal, EXCEPTION_NONCONTINUABLE, 0, nullptr);
 }
 
 }

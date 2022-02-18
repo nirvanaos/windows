@@ -26,6 +26,9 @@
 #include "Memory.inl"
 #include <Nirvana/real_copy.h>
 #include <winternl.h>
+#include <ehdata_values.h>
+#include <ExecDomain.h>
+#include <signal.h>
 
 #pragma comment (lib, "OneCore.lib")
 #pragma comment (lib, "ntdll.lib")
@@ -1052,81 +1055,72 @@ uint32_t Memory::handle_count (HANDLE h)
 	return 0;
 }
 
-long CALLBACK Memory::exception_filter (struct _EXCEPTION_POINTERS* pex)
+long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 {
-	if (
-		pex->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION
-		&&
-		pex->ExceptionRecord->NumberParameters >= 2
-		&&
-		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
-		) {
-		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
-		AddressSpace::BlockInfo* block = space ().allocated_block (address);
-		if (block) {
-			HANDLE mapping = block->mapping.lock ();
-			if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
-				block->mapping.unlock ();
-				return EXCEPTION_EXECUTE_HANDLER;
+	int sig = 0;
+	DWORD exc = pex->ExceptionRecord->ExceptionCode;
+	switch (exc) {
+		case EH_EXCEPTION_NUMBER:
+			return EXCEPTION_CONTINUE_SEARCH; // C++ exception
+
+		case EXCEPTION_ACCESS_VIOLATION:
+			if (pex->ExceptionRecord->NumberParameters >= 2
+				&&
+				!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
+				) {
+
+				void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
+				AddressSpace::BlockInfo* block = space ().allocated_block (address);
+				if (block) {
+					HANDLE mapping = block->mapping.lock ();
+					if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
+						block->mapping.unlock ();
+						return false;
+					}
+					MEMORY_BASIC_INFORMATION mbi;
+					verify (VirtualQuery (address, &mbi, sizeof (mbi)));
+					block->mapping.unlock ();
+					if (pex->ExceptionRecord->ExceptionInformation [0]) { // Write access
+						if (mbi.Protect & PageState::MASK_RW)
+							return EXCEPTION_CONTINUE_EXECUTION;
+					} else if (mbi.Protect & PageState::MASK_ACCESS)
+						return EXCEPTION_CONTINUE_EXECUTION;
+				}
 			}
-			MEMORY_BASIC_INFORMATION mbi;
-			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
-			block->mapping.unlock ();
-			if (
-				!(mbi.Protect & PageState::MASK_ACCESS)
-				||
-				(pex->ExceptionRecord->ExceptionInformation [0] && !(mbi.Protect & PageState::MASK_RW))
-			)
-				return EXCEPTION_EXECUTE_HANDLER;
-			else
-				return EXCEPTION_CONTINUE_EXECUTION;
-		} else
-			return EXCEPTION_EXECUTE_HANDLER;
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+		case EXCEPTION_DATATYPE_MISALIGNMENT:
+		case EXCEPTION_GUARD_PAGE:
+		case EXCEPTION_IN_PAGE_ERROR:
+		case EXCEPTION_STACK_OVERFLOW:
+			sig = SIGSEGV;
+			break;
+		case EXCEPTION_FLT_DENORMAL_OPERAND:
+		case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+		case EXCEPTION_FLT_INEXACT_RESULT:
+		case EXCEPTION_FLT_INVALID_OPERATION:
+		case EXCEPTION_FLT_OVERFLOW:
+		case EXCEPTION_FLT_STACK_CHECK:
+		case EXCEPTION_FLT_UNDERFLOW:
+		case EXCEPTION_INT_DIVIDE_BY_ZERO:
+		case EXCEPTION_INT_OVERFLOW:
+			sig = SIGFPE;
+			break;
+		case EXCEPTION_ILLEGAL_INSTRUCTION:
+		case EXCEPTION_PRIV_INSTRUCTION:
+			sig = SIGILL;
+			break;
+		default:
+			if (STATUS_SIGNAL_BEGIN <= exc && exc < STATUS_SIGNAL_BEGIN + NSIG)
+				sig = exc - STATUS_SIGNAL_BEGIN;
 	}
-
-	return EXCEPTION_CONTINUE_SEARCH;
-}
-
-// Currently unused
-void Memory::se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex)
-{
-	if (
-		pex->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION
-		&&
-		pex->ExceptionRecord->NumberParameters >= 2
-		&&
-		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
-		) {
-		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
-		AddressSpace::BlockInfo* block = space ().allocated_block (address);
-		if (block) {
-			HANDLE mapping = block->mapping.lock ();
-			if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
-				block->mapping.unlock ();
-				throw_NO_PERMISSION ();
-			}
-			MEMORY_BASIC_INFORMATION mbi;
-			verify (VirtualQuery (address, &mbi, sizeof (mbi)));
-			block->mapping.unlock ();
-			if (
-				!(mbi.Protect & PageState::MASK_ACCESS)
-				||
-				(pex->ExceptionRecord->ExceptionInformation [0] && !(mbi.Protect & PageState::MASK_RW))
-			)
-				throw_NO_PERMISSION ();
-			else
-				return;
-		} else
-			throw_NO_PERMISSION ();
-	}
-
-	throw_UNKNOWN ();
+	ExecDomain::current ().on_crash (sig);
+	return EXCEPTION_CONTINUE_EXECUTION;
 }
 
 void Memory::initialize ()
 {
-	space_.construct (GetCurrentProcessId (), GetCurrentProcess ());
 	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
+	space_.construct (GetCurrentProcessId (), GetCurrentProcess ());
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT

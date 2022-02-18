@@ -94,9 +94,6 @@ public:
 	static void prepare_to_share (void* src, size_t size, unsigned flags);
 
 private:
-	static long __stdcall exception_filter (struct _EXCEPTION_POINTERS* pex);
-	static void se_translator (unsigned int, struct _EXCEPTION_POINTERS* pex);
-
 	struct Region
 	{
 		void* ptr;
@@ -139,6 +136,8 @@ private:
 	static Windows::AddressSpace& space ();
 
 	static uint32_t handle_count (HANDLE h);
+
+	static long __stdcall exception_filter (_EXCEPTION_POINTERS* pex);
 
 private:
 	static StaticallyAllocated <Windows::AddressSpace> space_;

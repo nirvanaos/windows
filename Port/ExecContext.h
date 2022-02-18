@@ -114,8 +114,6 @@ public:
 private:
 	static void __stdcall fiber_proc (Core::ExecContext* context) NIRVANA_NOEXCEPT;
 
-	static void run (ExecDomain& ed) NIRVANA_NOEXCEPT;
-
 private:
 	static unsigned long current_;
 	static void* main_fiber_;
@@ -124,8 +122,6 @@ private:
 #ifdef _DEBUG
 	static unsigned long dbg_main_thread_id_;
 #endif
-
-	static const unsigned long STATUS_SIGNAL_BEGIN = 0xE0000000;
 
 	void* fiber_;
 };

@@ -838,4 +838,34 @@ TEST_F (TestAPI, Semaphore)
 	CloseHandle (hsem);
 }
 
+const NT_TIB* get_TIB ()
+{
+	return (const NT_TIB*)NtCurrentTeb ();
+}
+
+long CALLBACK exception_filter (struct _EXCEPTION_POINTERS* pex)
+{
+	if (EXCEPTION_ACCESS_VIOLATION == pex->ExceptionRecord->ExceptionCode)
+		throw runtime_error ("Test");
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
+void test_exception (int* p)
+{
+	cout << *p;
+}
+
+TEST_F (TestAPI, Exception)
+{
+	void* h = AddVectoredExceptionHandler (TRUE, &exception_filter);
+	bool ok = false;
+	try {
+		test_exception (nullptr);
+	} catch (...) {
+		ok = true;
+	}
+	RemoveVectoredExceptionHandler (h);
+	EXPECT_TRUE (ok);
+}
+
 }
