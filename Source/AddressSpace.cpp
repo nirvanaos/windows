@@ -149,16 +149,17 @@ void AddressSpace::Block::map (HANDLE hm, MappingType protection)
 
 void AddressSpace::Block::unmap ()
 {
+	if (!exclusive_) {
+		if (INVALID_HANDLE_VALUE == mapping ())
+			return;
+		exclusive_lock ();
+	}
 	HANDLE hm = mapping ();
 	assert (hm);
 	if (INVALID_HANDLE_VALUE != hm) {
-		exclusive_lock ();
-		hm = mapping ();
-		if (INVALID_HANDLE_VALUE != hm) {
-			verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
-			verify (CloseHandle (hm));
-			mapping (INVALID_HANDLE_VALUE);
-		}
+		verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
+		verify (CloseHandle (hm));
+		mapping (INVALID_HANDLE_VALUE);
 	}
 }
 
