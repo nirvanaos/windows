@@ -147,16 +147,19 @@ void AddressSpace::Block::map (HANDLE hm, MappingType protection)
 	verify (MapViewOfFile3 (hm, space_.process (), address_, 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
 }
 
-void AddressSpace::Block::unmap (HANDLE reserve)
+void AddressSpace::Block::unmap ()
 {
-	exclusive_lock ();
 	HANDLE hm = mapping ();
 	assert (hm);
 	if (INVALID_HANDLE_VALUE != hm) {
-		verify (UnmapViewOfFile2 (space_.process (), address_, reserve ? MEM_PRESERVE_PLACEHOLDER : 0));
-		verify (CloseHandle (hm));
+		exclusive_lock ();
+		hm = mapping ();
+		if (INVALID_HANDLE_VALUE != hm) {
+			verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
+			verify (CloseHandle (hm));
+			mapping (INVALID_HANDLE_VALUE);
+		}
 	}
-	mapping (reserve);
 }
 
 bool AddressSpace::Block::has_data_outside_of (size_t offset, size_t size, DWORD mask)

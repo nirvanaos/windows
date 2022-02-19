@@ -187,7 +187,7 @@ public:
 		}
 
 		void copy (Block& src, size_t offset, size_t size, unsigned flags);
-		void unmap (HANDLE reserve = INVALID_HANDLE_VALUE);
+		void unmap ();
 
 		struct State
 		{
