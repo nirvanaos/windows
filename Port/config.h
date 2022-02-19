@@ -30,7 +30,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <HeapDirectoryImpl.h>
 
 namespace Nirvana {
 namespace Core {
@@ -67,20 +66,6 @@ const size_t HEAP_UNIT_MAX = 4096;
 */
 const size_t HEAP_DIRECTORY_SIZE = 0x10000;
 const size_t HEAP_DIRECTORY_LEVELS = 11;
-
-/** Heap directory implementation.
-COMMITTED_BITMAP commits all bitmap memory on heap initialization.
-RESERVED_BITMAP_WITH_EXCEPTIONS conserves the physical memory usage but slightly reduces
-the performance. RESERVED_BITMAP_WITH_EXCEPTIONS is not supported by Clang.
-RESERVED_BITMAP is extremely slow and unusable.
-PLAIN_MEMORY provides the best performance but wastes a lot of physical memory.
-*/
-
-#if !defined (__clang__)
-const HeapDirectoryImpl HEAP_DIRECTORY_IMPLEMENTATION = HeapDirectoryImpl::RESERVED_BITMAP_WITH_EXCEPTIONS;
-#else
-const HeapDirectoryImpl HEAP_DIRECTORY_IMPLEMENTATION = HeapDirectoryImpl::COMMITTED_BITMAP;
-#endif
 
 /** Maximum count of levels in PriorityQueue.
 To provide best performance with a probabilistic time complexity of
