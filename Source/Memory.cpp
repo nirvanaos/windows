@@ -1156,8 +1156,15 @@ long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 			if (STATUS_SIGNAL_BEGIN <= exc && exc < STATUS_SIGNAL_BEGIN + NSIG)
 				sig = exc - STATUS_SIGNAL_BEGIN;
 	}
-	ExecDomain::current ().on_signal (sig, minor);
-	return EXCEPTION_CONTINUE_EXECUTION;
+	Core::Thread* th = Core::Thread::current_ptr ();
+	if (th) {
+		ExecDomain* ed = th->exec_domain ();
+		if (ed) {
+			ed->on_signal (sig, minor);
+			return EXCEPTION_CONTINUE_EXECUTION;
+		}
+	}
+	return EXCEPTION_CONTINUE_SEARCH;
 }
 
 void Memory::initialize ()

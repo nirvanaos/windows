@@ -66,18 +66,6 @@ protected:
 		unload ();
 	}
 
-	/// \brief Call mi->initialize ();
-	///
-	/// Implementation must catch all possible failures including the access violation, abort() call etc.
-	/// In case of such failures the exception must be thrown.
-	static void call_initialize (ModuleInit::_ptr_type mi);
-
-	/// \brief Call mi->terminate ();
-	///
-	/// Implementation must catch all possible failures including the access violation, abort() call etc.
-	/// In case of such failures the exception must be thrown.
-	static void call_terminate (ModuleInit::_ptr_type mi);
-
 	/// \brief Return all read/write data sections
 	/// 
 	/// \param sections List of r/w data sections
