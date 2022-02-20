@@ -26,7 +26,7 @@
 #include <ExecDomain.h>
 #include <Thread.h>
 #include "ExecContext.inl"
-#include "Memory.inl"
+#include "ex2signal.h"
 
 using namespace std;
 
@@ -67,6 +67,16 @@ ExecContext::~ExecContext ()
 			main_fiber_allocated_.clear ();
 		else
 			DeleteFiber (fiber_);
+	}
+}
+
+void ExecContext::run (ExecDomain& ed) NIRVANA_NOEXCEPT
+{
+	siginfo_t siginfo;
+	__try {
+		ed.run ();
+	} __except (Windows::ex2signal (GetExceptionInformation (), siginfo), EXCEPTION_EXECUTE_HANDLER) {
+		ed.on_crash (siginfo);
 	}
 }
 

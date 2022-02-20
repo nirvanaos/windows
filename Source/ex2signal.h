@@ -1,4 +1,5 @@
 /// \file
+/// Base definitions for Win32 API.
 /*
 * Nirvana Core. Windows port library.
 *
@@ -24,21 +25,23 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_ERROR2ERRNO_H_
-#define NIRVANA_CORE_WINDOWS_ERROR2ERRNO_H_
+#ifndef NIRVANA_CORE_WINDOWS_EX2SIGNAL_H_
+#define NIRVANA_CORE_WINDOWS_EX2SIGNAL_H_
 #pragma once
 
-#include <errno.h>
+#include "win32.h"
+#include <siginfo.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-/// Convert Windows error code to POSIX error code.
-/// \param err           Windows error code.
-/// \param default_errno Default error code for return.
-/// \returns             POSIX error code.
-int error2errno (unsigned err, int default_errno = EINVAL);
+/// Converts Windows exception information to siginfo_t.
+/// 
+/// \param pex           Exception pointers
+/// \param [out] siginfo siginfo_t structure
+/// \returns `true` if siginfo was filled, `false` if not.
+bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo);
 
 }
 }

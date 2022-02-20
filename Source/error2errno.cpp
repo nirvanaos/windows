@@ -24,7 +24,6 @@
 *  popov.nirvana@gmail.com
 */
 #include "error2errno.h"
-#include <errno.h>
 #include <winerror.h>
 #include <algorithm>
 #include <assert.h>
@@ -116,7 +115,7 @@ struct ErrPred
   }
 };
 
-int error2errno (unsigned err) 
+int error2errno (unsigned err, int default_errno)
 {
   assert (err);
   if (err) {
@@ -124,7 +123,7 @@ int error2errno (unsigned err)
     if (p != end (errmap) && p->w == err)
       return p->e;
   }
-  return EINVAL;
+  return default_errno;
 }
 
 }

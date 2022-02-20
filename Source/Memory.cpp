@@ -26,10 +26,9 @@
 #include "Memory.inl"
 #include <Nirvana/real_copy.h>
 #include <winternl.h>
-#include <ehdata_values.h>
 #include <ExecDomain.h>
 #include <signal.h>
-#include <siginfo.h>
+#include "ex2signal.h"
 
 #pragma comment (lib, "OneCore.lib")
 #pragma comment (lib, "ntdll.lib")
@@ -1061,107 +1060,40 @@ uint32_t Memory::handle_count (HANDLE h)
 
 long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 {
-	int sig = 0;
-	unsigned minor = 0;
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
-	switch (exc) {
-		case EH_EXCEPTION_NUMBER:
-			return EXCEPTION_CONTINUE_SEARCH; // C++ exception
-
-		case EXCEPTION_ACCESS_VIOLATION:
-			if (pex->ExceptionRecord->NumberParameters >= 2
-				&&
-				!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
-				) {
-
-				void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
-				AddressSpace::BlockInfo* block = space ().allocated_block (address);
-				if (block) {
-					HANDLE mapping = block->mapping.lock ();
-					if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
-						block->mapping.unlock ();
-						return false;
-					}
-					MEMORY_BASIC_INFORMATION mbi;
-					verify (VirtualQuery (address, &mbi, sizeof (mbi)));
-					block->mapping.unlock ();
-					if (pex->ExceptionRecord->ExceptionInformation [0]) { // Write access
-						if (mbi.Protect & PageState::MASK_RW)
-							return EXCEPTION_CONTINUE_EXECUTION;
-					} else if (mbi.Protect & PageState::MASK_ACCESS)
+	if (
+		EXCEPTION_ACCESS_VIOLATION == exc
+		&&
+		pex->ExceptionRecord->NumberParameters >= 2
+		&&
+		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
+		) {
+		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
+		AddressSpace::BlockInfo* block = space ().allocated_block (address);
+		if (block) {
+			HANDLE mapping = block->mapping.lock ();
+			if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
+				block->mapping.unlock ();
+			} else {
+				MEMORY_BASIC_INFORMATION mbi;
+				verify (VirtualQuery (address, &mbi, sizeof (mbi)));
+				block->mapping.unlock ();
+				if (pex->ExceptionRecord->ExceptionInformation [0]) { // Write access
+					if (mbi.Protect & PageState::MASK_RW)
 						return EXCEPTION_CONTINUE_EXECUTION;
-				}
+				} else if (mbi.Protect & PageState::MASK_ACCESS)
+					return EXCEPTION_CONTINUE_EXECUTION;
 			}
-		case EXCEPTION_GUARD_PAGE:
-		case EXCEPTION_IN_PAGE_ERROR:
-			sig = SIGSEGV;
-			break;
-		case EXCEPTION_DATATYPE_MISALIGNMENT:
-			sig = SIGILL;
-			minor = ILL_ILLADR;
-			break;
-		case EXCEPTION_STACK_OVERFLOW:
-			sig = SIGILL;
-			minor = ILL_BADSTK;
-			break;
-		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-			sig = SIGFPE;
-			minor = FPE_FLTSUB;
-			break;
-		case EXCEPTION_FLT_DENORMAL_OPERAND:
-			sig = SIGFPE;
-			minor = FPE_FLTUND;
-			break;
-		case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-			sig = SIGFPE;
-			minor = FPE_FLTDIV;
-			break;
-		case EXCEPTION_FLT_INEXACT_RESULT:
-			sig = SIGFPE;
-			minor = FPE_FLTRES;
-			break;
-		case EXCEPTION_FLT_INVALID_OPERATION:
-			sig = SIGFPE;
-			minor = FPE_FLTINV;
-			break;
-		case EXCEPTION_FLT_OVERFLOW:
-			sig = SIGFPE;
-			minor = FPE_FLTOVF;
-			break;
-		case EXCEPTION_FLT_STACK_CHECK:
-			sig = SIGFPE;
-			minor = FPE_FLTSUB;
-			break;
-		case EXCEPTION_FLT_UNDERFLOW:
-			sig = SIGFPE;
-			minor = FPE_FLTUND;
-			break;
-		case EXCEPTION_INT_DIVIDE_BY_ZERO:
-			sig = SIGFPE;
-			minor = FPE_INTDIV;
-			break;
-		case EXCEPTION_INT_OVERFLOW:
-			sig = SIGFPE;
-			minor = FPE_INTOVF;
-			break;
-		case EXCEPTION_ILLEGAL_INSTRUCTION:
-			sig = SIGILL;
-			minor = ILL_ILLOPC;
-			break;
-		case EXCEPTION_PRIV_INSTRUCTION:
-			sig = SIGILL;
-			minor = ILL_PRVOPC;
-			break;
-		default:
-			if (STATUS_SIGNAL_BEGIN <= exc && exc < STATUS_SIGNAL_BEGIN + NSIG)
-				sig = exc - STATUS_SIGNAL_BEGIN;
+		}
 	}
-	Core::Thread* th = Core::Thread::current_ptr ();
-	if (th) {
-		ExecDomain* ed = th->exec_domain ();
-		if (ed) {
-			ed->on_signal (sig, minor);
-			return EXCEPTION_CONTINUE_EXECUTION;
+
+	siginfo_t siginfo;
+	if (ex2signal (pex, siginfo)) {
+		Core::Thread* th = Core::Thread::current_ptr ();
+		if (th) {
+			ExecDomain* ed = th->exec_domain ();
+			if (ed && ed->on_signal (siginfo))
+				return EXCEPTION_CONTINUE_EXECUTION;
 		}
 	}
 	return EXCEPTION_CONTINUE_SEARCH;

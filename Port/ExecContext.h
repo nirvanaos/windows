@@ -112,6 +112,7 @@ public:
 	}
 
 private:
+	static void run (ExecDomain& ed) NIRVANA_NOEXCEPT;
 	static void __stdcall fiber_proc (Core::ExecContext* context) NIRVANA_NOEXCEPT;
 
 private:

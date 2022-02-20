@@ -27,6 +27,7 @@
 #include <ExecDomain.h>
 #include "Thread.inl"
 #include <signal.h>
+#include <siginfo.h>
 
 namespace Nirvana {
 namespace Core {
@@ -39,7 +40,10 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	try {
 		thread.neutral_context().port ().convert_to_fiber ();
 	} catch (...) {
-		thread.exec_domain ()->on_crash (SIGSEGV);
+		siginfo_t si;
+		memset (&si, 0, sizeof (si));
+		si.si_signo = SIGSEGV;
+		thread.exec_domain ()->on_crash (si);
 		thread.on_thread_proc_end ();
 		return 0;
 	}
