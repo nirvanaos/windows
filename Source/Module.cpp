@@ -86,7 +86,7 @@ void Module::unload ()
 		DeleteFileW (temp_path_.c_str ());
 }
 
-void Module::get_data_sections (forward_list <Section, UserAllocator <Section>>& sections)
+void Module::get_data_sections (DataSections& sections)
 {
 	Nirvana::Core::PortableExecutable pe (module_);
 	for (const COFF::Section* s = pe.sections (), *end = s + pe.section_count (); s != end; ++s) {

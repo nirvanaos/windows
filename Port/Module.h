@@ -33,7 +33,6 @@
 #include <Section.h>
 #include <UserAllocator.h>
 #include <StringView.h>
-#include <forward_list>
 #include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
@@ -69,7 +68,7 @@ protected:
 	/// \brief Return all read/write data sections
 	/// 
 	/// \param sections List of r/w data sections
-	void get_data_sections (std::forward_list <Section, UserAllocator <Section>>& sections);
+	void get_data_sections (DataSections& sections);
 
 private:
 	void unload ();
