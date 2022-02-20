@@ -42,7 +42,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	} catch (...) {
 		siginfo_t si;
 		memset (&si, 0, sizeof (si));
-		si.si_signo = SIGSEGV;
+		si.si_excode = CORBA::SystemException::EC_NO_MEMORY;
 		thread.exec_domain ()->on_crash (si);
 		thread.on_thread_proc_end ();
 		return 0;

@@ -85,7 +85,7 @@ void __stdcall ExecContext::fiber_proc (Core::ExecContext* context) NIRVANA_NOEX
 	assert (context);
 	current (context);
 	for (;;) {
-		ExecDomain::current ().run ();
+		run (ExecDomain::current ());
 	}
 	// Fiber procedures never complete.
 }
@@ -99,7 +99,7 @@ void ExecContext::main_fiber_proc () NIRVANA_NOEXCEPT
 			break;
 		}
 		current (main_fiber_context_);
-		ed->run ();
+		run (*ed);
 	}
 }
 

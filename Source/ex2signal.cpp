@@ -25,8 +25,7 @@
 */
 
 #include "ex2signal.h"
-#include "error2errno.h"
-#include <signal.h>
+#include <Signals.h>
 
 namespace Nirvana {
 namespace Core {
@@ -35,6 +34,7 @@ namespace Windows {
 bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo)
 {
 	memset (&siginfo, 0, sizeof (siginfo_t));
+
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 	switch (exc) {
 		case EXCEPTION_ACCESS_VIOLATION:
@@ -117,10 +117,10 @@ bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo)
 				siginfo.si_signo = exc - STATUS_SIGNAL_BEGIN;
 	}
 	if (siginfo.si_signo) {
-		if ((exc & 0xFFFF0000) == 0xC0000000)
-			siginfo.si_errno = error2errno (exc & 0xFFFF, 0);
+		siginfo.si_excode = Signals::signal2ex (siginfo.si_signo);
 		return true;
 	}
+
 	return false;
 }
 
