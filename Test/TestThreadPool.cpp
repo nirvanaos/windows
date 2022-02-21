@@ -291,7 +291,7 @@ TEST_F (TestThreadPool, File)
 		for (size_t i = 0; i < BLOCK_CNT * 100; ++i) {
 			size_t ib = BLOCK_CNT * rand () / (RAND_MAX + 1);
 			IO_WaitList wl;
-			ASSERT_FALSE (f.start_read ((uint64_t)ib * (uint64_t)File::BLOCK_SIZE, buf, wl));
+			ASSERT_EQ (0, f.start_read ((uint64_t)ib * (uint64_t)File::BLOCK_SIZE, buf, wl));
 			ASSERT_FALSE (wl.wait ());
 			size_t tag = ib * File::BLOCK_SIZE / sizeof (size_t);
 			for (size_t* p = buf; p != buf + File::BLOCK_SIZE / sizeof (size_t); ++p) {
@@ -302,7 +302,7 @@ TEST_F (TestThreadPool, File)
 		{
 			// Test for read beyond the end
 			IO_WaitList wl;
-			EXPECT_FALSE (f.start_read ((uint64_t)BLOCK_CNT * (uint64_t)File::BLOCK_SIZE, buf, wl));
+			EXPECT_EQ (0, f.start_read ((uint64_t)BLOCK_CNT * (uint64_t)File::BLOCK_SIZE, buf, wl));
 			EXPECT_TRUE (wl.wait ());
 		}
 	}
