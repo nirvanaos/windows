@@ -65,7 +65,7 @@ Thread::~Thread ()
 inline
 void Thread::join () const
 {
-	if (handle_)
+	if (handle_ && (GetThreadId (handle_) != GetCurrentThreadId ()))
 		WaitForSingleObject (handle_, INFINITE);
 }
 

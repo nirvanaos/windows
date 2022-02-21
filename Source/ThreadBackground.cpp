@@ -36,8 +36,9 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 {
 	Core::ThreadBackground& thread = static_cast <Core::ThreadBackground&> (*_this);
 	Port::Thread::current (&thread);
+	ExecContext& context = thread.neutral_context ().port ();
 	try {
-		thread.neutral_context().port ().convert_to_fiber ();
+		context.convert_to_fiber ();
 	} catch (...) {
 		siginfo_t si;
 		memset (&si, 0, sizeof (si));
@@ -48,7 +49,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	}
 	WaitForSingleObject (_this->event_, INFINITE);
 	thread.execute ();
-	thread.neutral_context ().port ().convert_to_thread ();
+	context.convert_to_thread ();
 	thread.on_thread_proc_end ();
 	return 0;
 }
