@@ -302,8 +302,11 @@ TEST_F (TestThreadPool, File)
 		{
 			// Test for read beyond the end
 			IO_WaitList wl;
-			ASSERT_EQ (0, f.start_read ((uint64_t)BLOCK_CNT * (uint64_t)File::BLOCK_SIZE, buf, wl));
-			EXPECT_TRUE (wl.wait ());
+			int err = f.start_read ((uint64_t)BLOCK_CNT * (uint64_t)File::BLOCK_SIZE, buf, wl);
+			ASSERT_TRUE (!err || ERROR_HANDLE_EOF == err);
+			if (!err)
+				err = wl.wait ();
+			ASSERT_EQ (ERROR_HANDLE_EOF, err);
 		}
 	}
 
