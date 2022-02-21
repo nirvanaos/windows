@@ -30,7 +30,7 @@
 #pragma once
 
 #include "win32.h"
-#include <siginfo.h>
+#include <signal.h>
 
 namespace Nirvana {
 namespace Core {

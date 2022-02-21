@@ -27,7 +27,6 @@
 #include <ExecDomain.h>
 #include "Thread.inl"
 #include <signal.h>
-#include <siginfo.h>
 
 namespace Nirvana {
 namespace Core {
