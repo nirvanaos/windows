@@ -27,6 +27,9 @@
 #include "AddressSpace.h"
 #include <algorithm>
 
+// wsprintfW
+#pragma comment (lib, "User32.lib")
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {
