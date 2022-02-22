@@ -35,8 +35,21 @@ void Debugger::output_debug_string (const char* msg)
 {
 	Windows::StringW ws;
 	Windows::utf8_to_ucs16 (msg, ws);
-	OutputDebugStringW (ws.c_str ());
+	if (IsDebuggerPresent ())
+		OutputDebugStringW (ws.c_str ());
+	else {
+		AllocConsole ();
+		DWORD written;
+		WriteConsoleW (GetStdHandle (STD_ERROR_HANDLE), ws.data (), (DWORD)ws.size (), &written, nullptr);
+	}
 }
+
+void Debugger::debug_break ()
+{
+	if (IsDebuggerPresent ())
+		__debugbreak ();
+}
+
 
 }
 }

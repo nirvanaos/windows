@@ -38,11 +38,7 @@ class Debugger
 {
 public:
 	static void output_debug_string (const char* msg);
-
-	static void debug_break ()
-	{
-		__debugbreak ();
-	}
+	static void debug_break ();
 };
 
 }
