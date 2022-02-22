@@ -38,7 +38,8 @@ void Debugger::output_debug_string (const char* msg)
 	if (IsDebuggerPresent ())
 		OutputDebugStringW (ws.c_str ());
 	else {
-		AllocConsole ();
+		if (!AttachConsole (ATTACH_PARENT_PROCESS))
+			AllocConsole ();
 		DWORD written;
 		WriteConsoleW (GetStdHandle (STD_ERROR_HANDLE), ws.data (), (DWORD)ws.size (), &written, nullptr);
 	}

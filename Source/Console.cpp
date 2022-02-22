@@ -33,7 +33,11 @@ namespace Port {
 Console::Console ()
 {
 	// Temporary solution
-	AllocConsole ();
+	if (!IsDebuggerPresent ()) {
+		if (!AttachConsole (ATTACH_PARENT_PROCESS))
+			AllocConsole ();
+	} else
+		AllocConsole ();
 	handle_ = GetStdHandle (STD_OUTPUT_HANDLE);
 }
 
