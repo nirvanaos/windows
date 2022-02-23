@@ -67,6 +67,9 @@ const size_t HEAP_UNIT_MAX = 4096;
 const size_t HEAP_DIRECTORY_SIZE = 0x10000;
 const size_t HEAP_DIRECTORY_LEVELS = 11;
 
+// Skip list level count for heap skip list.
+static const unsigned HEAP_SKIP_LIST_LEVELS = 10;
+
 /** Maximum count of levels in PriorityQueue.
 To provide best performance with a probabilistic time complexity of
 O(logN) where N is the maximum number of elements, the queue should
