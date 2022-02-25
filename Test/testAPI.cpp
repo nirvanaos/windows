@@ -850,10 +850,7 @@ long CALLBACK exception_filter (struct _EXCEPTION_POINTERS* pex)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-void test_exception (int* p)
-{
-	cout << *p;
-}
+extern void test_exception (int* p);
 
 TEST_F (TestAPI, Exception)
 {
