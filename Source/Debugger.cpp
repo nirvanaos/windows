@@ -51,7 +51,6 @@ void Debugger::debug_break ()
 		__debugbreak ();
 }
 
-
 }
 }
 }
