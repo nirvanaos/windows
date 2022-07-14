@@ -34,11 +34,19 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
+/// Debugging support
 class Debugger
 {
 public:
+	/// Prints message to debug output.
+	/// \param msg The message.
 	static void output_debug_string (const char* msg);
-	static void debug_break ();
+
+	/// Debug break.
+	/// 
+	/// \returns If debugger is available, performs debug break and returns `true`.
+	/// Otherwise returns `false`;
+	static bool debug_break ();
 };
 
 }
