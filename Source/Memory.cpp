@@ -1101,6 +1101,7 @@ long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 
 void Memory::initialize ()
 {
+	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
 	space_.construct (GetCurrentProcessId (), GetCurrentProcess ());
 }
