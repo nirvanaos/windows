@@ -275,7 +275,7 @@ public:
 		bool exclusive_;
 	};
 
-	void* reserve (void* dst, size_t size, unsigned flags);
+	void* reserve (void* dst, size_t& size, unsigned flags);
 	void release (void* ptr, size_t size);
 
 	void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) const

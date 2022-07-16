@@ -70,7 +70,7 @@ public:
 		Nirvana::Memory::SPACE_RESERVATION;
 
 	// Memory::
-	static void* allocate (void* dst, size_t size, unsigned flags);
+	static void* allocate (void* dst, size_t& size, unsigned flags);
 
 	static void release (void* dst, size_t size);
 
@@ -78,14 +78,16 @@ public:
 
 	static void decommit (void* ptr, size_t size);
 
-	static void* copy (void* dst, void* src, size_t size, unsigned flags);
+	static void* copy (void* dst, void* src, size_t& size, unsigned flags);
 
 	static bool is_readable (const void* p, size_t size);
 
+	/// Check for memory is writable.
 	static bool is_writable (const void* p, size_t size);
 
 	static bool is_private (const void* p, size_t size);
 
+	/// Used in test only
 	static bool is_copy (const void* p1, const void* p2, size_t size);
 
 	static uintptr_t query (const void* p, Nirvana::Memory::QueryParam q);

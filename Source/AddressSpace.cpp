@@ -448,7 +448,7 @@ AddressSpace::BlockInfo* AddressSpace::allocated_block (const void* address)
 	return p;
 }
 
-void* AddressSpace::reserve (void* dst, size_t size, unsigned flags)
+void* AddressSpace::reserve (void* dst, size_t& size, unsigned flags)
 {
 	if (!size)
 		throw_BAD_PARAM ();
@@ -465,7 +465,7 @@ void* AddressSpace::reserve (void* dst, size_t size, unsigned flags)
 		tgt = nullptr;
 		size = round_up (size, ALLOCATION_GRANULARITY);
 	}
-	p = (BYTE*)VirtualAlloc2 (process_, dst, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+	p = (BYTE*)VirtualAlloc2 (process_, tgt, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
 	if (!p) {
 		if (flags & Memory::EXACTLY)
 			return nullptr;
@@ -494,10 +494,7 @@ void* AddressSpace::reserve (void* dst, size_t size, unsigned flags)
 		}
 	}
 
-	if (dst && (flags & Memory::EXACTLY))
-		return dst;
-	else
-		return p;
+	return p;
 }
 
 void AddressSpace::release (void* dst, size_t size)

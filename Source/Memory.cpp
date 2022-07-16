@@ -617,7 +617,7 @@ void Memory::change_protection (void* ptr, size_t size, unsigned flags)
 	}
 }
 
-void* Memory::allocate (void* dst, size_t size, unsigned flags)
+void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 {
 	if (!size)
 		throw_BAD_PARAM ();
@@ -705,7 +705,7 @@ uint32_t Memory::check_committed (void* ptr, size_t size, uint32_t& type)
 	return state_bits;
 }
 
-void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
+void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 {
 	if (!size)
 		return dst;
@@ -928,6 +928,10 @@ void* Memory::copy (void* dst, void* src, size_t size, unsigned flags)
 			release (allocated.ptr, allocated.size);
 			throw;
 		}
+
+		if (allocated.size)
+			size = allocated.size;
+
 	} catch (const CORBA::NO_MEMORY&) {
 		if (Nirvana::Memory::EXACTLY & flags)
 			dst = nullptr;
