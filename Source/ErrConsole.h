@@ -53,6 +53,7 @@ private:
 
 private:
 	void* handle_;
+	bool allocated_;
 };
 
 }

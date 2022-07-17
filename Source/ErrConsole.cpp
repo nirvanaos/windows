@@ -32,15 +32,24 @@ namespace Core {
 namespace Windows {
 
 ErrConsole::ErrConsole () :
-	handle_ (nullptr)
+	handle_ (nullptr),
+	allocated_ (false)
 {
-	AllocConsole ();
+	if (!IsDebuggerPresent ()) {
+		if (!AttachConsole (ATTACH_PARENT_PROCESS)) {
+			AllocConsole ();
+			allocated_ = true;
+		}
+	} else {
+		AllocConsole ();
+		allocated_ = true;
+	}
 	handle_ = GetStdHandle (STD_ERROR_HANDLE);
 }
 
 ErrConsole::~ErrConsole ()
 {
-	if (handle_) {
+	if (handle_ && allocated_) {
 		operator << ("Press any key to close this window...\n");
 		HANDLE h = GetStdHandle (STD_INPUT_HANDLE);
 		INPUT_RECORD input;
