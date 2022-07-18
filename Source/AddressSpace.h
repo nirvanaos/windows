@@ -41,55 +41,30 @@ class Memory;
 
 namespace Windows {
 
-///	<summary>
-///	Page states for mapped block.
-///	</summary>
-///	<remarks>
-///	<para>
+/// Page state for mapped block
+/// 
 ///	We use "execute" protection to distinct private pages from shared pages.
-///	Page states:
-///	<list>
-///		<item><term><c>0</c></term><description>Page not committed (entire block never was shared).</description></item>
-///		<item><term><c>PAGE_NOACCESS</c></term><description>Decommitted.</description></item>
-///		<item><term><c>PAGE_READWRITE</c></term><description>The page is mapped and never was shared.</description></item>
-///		<item><term><c>PAGE_EXECUTE_WRITECOPY</c></term><description>The page is mapped and was shared.</description></item>
-///		<item><term><c>PAGE_EXECUTE_READWRITE</c></term><description>The page is write-copyed (private, disconnected from mapping).</description></item>
-///		<item><term><c>PAGE_READONLY</c></term><description>The read-only mapped page never was shared.</description></item>
-///		<item><term><c>PAGE_EXECUTE</c></term><description>The read-only mapped page was shared.</description></item>
-///		<item><term><c>PAGE_EXECUTE_READ</c></term><description>The page is not mapped. Page was write-copyed, than access was changed from PAGE_READWRITE to PAGE_READONLY.</description></item>
-///	</list>
 ///	Note: "Page was shared" means that page has been shared at least once. Currently, page may be still shared or already not.
-///	</para><para>
 ///	Page state changes.
-///	<list>
-///		<item>
+/// 
 ///		Prepare to share:
-///		<list>
-///			<item><term><c>RW_MAPPED_PRIVATE</c>-><c>RW_MAPPED_SHARED</c></term></item>
-///			<item><term><c>RO_MAPPED_PRIVATE</c>, <c>RW_MAPPED_SHARED</c>, <c>RO_MAPPED_SHARED</c>, <c>NOT_COMMITTED</c>, <c>DECOMMITTED</c></term><description>Unchanged.</description></item>
-///			<item><term><c>RW_UNMAPPED</c>, <c>RO_UNMAPPED</c></term><description>We need to remap the block.</description></item>
-///		</list>
-///		</item><item>
+///			- #RW_MAPPED_PRIVATE -> #RW_MAPPED_SHARED
+///			- #RO_MAPPED_PRIVATE, #RW_MAPPED_SHARED, #RO_MAPPED_SHARED, #NOT_COMMITTED, #DECOMMITTED: The page was not changed
+///			- #RW_UNMAPPED, #RO_UNMAPPED: We need to remap the block.
+/// 
 ///		Remap:
-///		<list>
-///			<item><term><c>RW_MAPPED_SHARED</c>, <c>RW_UNMAPPED</c>-><c>RW_MAPPED_PRIVATE</c></term>
-///			<item><term><c>RO_MAPPED_SHARED</c>, <c>RO_UNMAPPED</c>-><c>RO_MAPPED_PRIVATE</c></term>
-///		</list>
-///		</item><item>
+///			- #RW_MAPPED_SHARED, #RW_UNMAPPED -> #RW_MAPPED_PRIVAT
+///			- #RO_MAPPED_SHARED, #RO_UNMAPPED -> #RO_MAPPED_PRIVATE
+/// 
 ///		Write-protection:
-///		<list>
-///			<item><term><c>RW_MAPPED_PRIVATE</c><-><c>RO_MAPPED_PRIVATE</c></term>
-///			<item><term><c>RW_MAPPED_SHARED</c><-><c>RO_MAPPED_SHARED</c></term>
-///			<item><term><c>RW_UNMAPPED</c><-><c>RO_UNMAPPED</c></term>
-///		</list>
-///		</item>
-///	</list>
-///	</para>
-///	</remarks>
+///			#RW_MAPPED_PRIVATE <-> #RO_MAPPED_PRIVATE
+///			#RW_MAPPED_SHARED <-> #RO_MAPPED_SHARED
+///			#RW_UNMAPPED <-> #RO_UNMAPPED
+/// 
 class PageState
 {
 public:
-	enum
+	enum : DWORD
 	{
 		/// Page not committed (entire block never was shared).
 		NOT_COMMITTED = 0,
