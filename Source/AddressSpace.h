@@ -180,27 +180,14 @@ public:
 			/// </summary>
 			DWORD page_state_bits;
 
-			union
+			/// <summary>
+			/// Valid if block is mapped.
+			/// </summary>
+			struct PageState
 			{
-				/// <summary>
-				/// Valid if block is mapped.
-				/// </summary>
-				struct PageState
-				{
-					DWORD page_state [PAGES_PER_BLOCK];
-				}
-				mapped;
-
-				/// <summary>
-				/// Valid if block is reserved.
-				/// </summary>
-				struct
-				{
-					BYTE* begin;
-					BYTE* end;
-				}
-				reserved;
-			};
+				DWORD page_state [PAGES_PER_BLOCK];
+			}
+			mapped;
 
 			State () :
 				state (INVALID)

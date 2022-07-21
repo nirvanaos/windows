@@ -102,9 +102,6 @@ const AddressSpace::Block::State& AddressSpace::Block::state ()
 			assert (mapping () == INVALID_HANDLE_VALUE);
 			assert ((BYTE*)mbi.BaseAddress + mbi.RegionSize >= (address_ + ALLOCATION_GRANULARITY));
 			state_.state = mbi.Type;
-
-			state_.reserved.begin = (BYTE*)mbi.AllocationBase;
-			state_.reserved.end = (BYTE*)mbi.BaseAddress + mbi.RegionSize;
 		}
 		state_.page_state_bits = page_state_bits;
 	}
