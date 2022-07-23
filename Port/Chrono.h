@@ -45,7 +45,7 @@ public:
 	static uint64_t steady_clock () NIRVANA_NOEXCEPT;
 
 	/// Returns steady clock resolution in ns
-	static uint32_t steady_clock_resoluion () NIRVANA_NOEXCEPT
+	static uint32_t steady_clock_resolution () NIRVANA_NOEXCEPT
 	{
 		return time_increment_;
 	}
