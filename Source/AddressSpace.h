@@ -42,6 +42,7 @@ class Memory;
 
 namespace Windows {
 
+/// TODO: Fix documentation
 /// Page state for mapped block
 /// 
 ///	We use "execute" protection to distinct private pages from shared pages.
@@ -67,14 +68,20 @@ struct PageState : public PSAPI_WORKING_SET_EX_INFORMATION
 public:
 	enum : DWORD
 	{
+		// Page protection
+		DECOMMITTED = PAGE_NOACCESS,
 		READ_WRITE_SHARED = PAGE_WRITECOPY,
 		READ_WRITE_PRIVATE = PAGE_READWRITE,
 		READ_ONLY = PAGE_EXECUTE_READ,
 
 		// Page state masks.
-		MASK_RW = PAGE_READWRITE | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY,
+		MASK_MAPPED = 1 << 11,
+		MASK_UNMAPPED = 1 << 12,
+		MASK_NOT_COMMITTED = 1 << 13,
+		MASK_RW = PAGE_READWRITE | PAGE_EXECUTE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY,
 		MASK_RO = PAGE_READONLY | PAGE_EXECUTE | PAGE_EXECUTE_READ,
-		MASK_ACCESS = MASK_RW | MASK_RO
+		MASK_ACCESS = MASK_RW | MASK_RO,
+		MASK_NO_WRITE = MASK_RO | MASK_NOT_COMMITTED | DECOMMITTED
 	};
 
 	ULONG_PTR is_mapped () const
@@ -84,12 +91,44 @@ public:
 
 	DWORD protection () const
 	{
-		assert (VirtualAttributes.Valid);
 		return VirtualAttributes.Win32Protection;
+	}
+
+	// Returns protection and flags
+	DWORD state () const
+	{
+		if (!VirtualAttributes.Valid && !VirtualAttributes.Shared)
+			return MASK_NOT_COMMITTED;
+		return (DWORD)VirtualAttributes.Win32Protection | (VirtualAttributes.Shared ? MASK_MAPPED : MASK_UNMAPPED);
 	}
 };
 
-/// \brief Logical address space of some Windows process.
+// 64K block state
+struct BlockState
+{
+	struct PageState page_state [PAGES_PER_BLOCK];
+
+	BlockState (void* address)
+	{
+		BYTE* p = (BYTE*)address;
+		PageState* ps = page_state;
+		do {
+			ps->VirtualAddress = p;
+			p += PAGE_SIZE;
+		} while (std::end (page_state) != ++ps);
+	}
+
+	void query (HANDLE process);
+
+	BYTE* address () const
+	{
+		return (BYTE*)page_state [0].VirtualAddress;
+	}
+};
+
+ULONG handle_count (HANDLE h);
+
+/// Logical address space of some Windows process.
 class AddressSpace
 {
 	AddressSpace (const AddressSpace&) = delete;
@@ -130,10 +169,10 @@ public:
 
 		BYTE* address () const
 		{
-			return address_;
+			return block_state_.address ();
 		}
 
-		HANDLE mapping ()
+		HANDLE mapping () const
 		{
 			return mapping_;
 		}
@@ -144,6 +183,13 @@ public:
 			mapping_ = hm;
 		}
 
+		bool reserved () const
+		{
+			return INVALID_HANDLE_VALUE == mapping_;
+		}
+
+		/// Lock the block exclusive
+		/// \returns `true` if the block was not exclusive locked before
 		bool exclusive_lock ();
 
 		bool exclusive_locked () const
@@ -151,51 +197,32 @@ public:
 			return exclusive_;
 		}
 
+		// Copy from other block
+		// Source block must be prepared for share
 		void copy (Block& src, size_t offset, size_t size, unsigned flags);
 		void unmap ();
 
-		struct State
-		{
-			// Walid if block is mapped
-			struct PageState page_state [PAGES_PER_BLOCK];
-
-			State (void* address) :
-				state (INVALID)
-			{
-				BYTE* p = (BYTE*)address;
-				PageState* ps = page_state;
-				do {
-					ps->VirtualAddress = p;
-					p += PAGE_SIZE;
-				} while (std::end (page_state) != ++ps);
-			}
-
-			enum BlockState
-			{
-				INVALID = 0,
-				RESERVED = MEM_RESERVE,
-				MAPPED = MEM_MAPPED
-			}
-			state;
-
-			void* address ()
-			{
-				return page_state [0].VirtualAddress;
-			}
-		};
-
-		const State& state ();
+		const BlockState& state ();
 
 	protected:
 		friend class Port::Memory;
 
 		void invalidate_state ()
 		{
-			state_.state = State::INVALID;
+			state_ = State::PAGE_STATE_UNKNOWN;
 		}
+
+		/*
+		enum MappingType
+		{
+			MAP_PRIVATE = PageState::READ_WRITE_PRIVATE,
+			MAP_SHARED = PageState::READ_WRITE_SHARED,
+			MAP_READ_ONLY = PageState::READ_ONLY
+		};*/
 
 		void map (HANDLE mapping, DWORD protection);
 
+		bool has_data (size_t offset, size_t size, DWORD mask = PageState::MASK_ACCESS);
 		bool has_data_outside_of (size_t offset, size_t size, DWORD mask = PageState::MASK_ACCESS);
 
 	private:
@@ -220,9 +247,18 @@ public:
 
 	private:
 		AddressSpace& space_;
-		State state_;
 		BlockInfo& info_;
+		BlockState block_state_;
 		HANDLE mapping_;
+
+		enum class State
+		{
+			RESERVED, ///< Entire block is reserved
+			MAPPED,   ///< Block is mapped, block_state_ is valid
+			PAGE_STATE_UNKNOWN ///< Block is mapped, block_state_ is invalid
+		}
+		state_;
+
 		bool exclusive_;
 	};
 
