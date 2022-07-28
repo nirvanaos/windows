@@ -31,6 +31,7 @@
 
 #include "LockableHandle.h"
 #include "win32.h"
+#include <Psapi.h>
 
 namespace Nirvana {
 namespace Core {
@@ -61,36 +62,31 @@ namespace Windows {
 ///			#RW_MAPPED_SHARED <-> #RO_MAPPED_SHARED
 ///			#RW_UNMAPPED <-> #RO_UNMAPPED
 /// 
-class PageState
+struct PageState : public PSAPI_WORKING_SET_EX_INFORMATION
 {
 public:
 	enum : DWORD
 	{
-		/// Page not committed (entire block never was shared).
-		NOT_COMMITTED = 0,
-		/// Decommitted.
-		DECOMMITTED = PAGE_NOACCESS,
-		/// The page is mapped and never was shared.
-		RW_MAPPED_PRIVATE = PAGE_READWRITE,
-		/// The page is mapped and was shared.
-		RW_MAPPED_SHARED = PAGE_EXECUTE_WRITECOPY,
-		/// The page is write-copyed (private, disconnected from mapping).
-		RW_UNMAPPED = PAGE_EXECUTE_READWRITE,
-		/// The read-only mapped page never was shared.
-		RO_MAPPED_PRIVATE = PAGE_READONLY,
-		/// The read-only mapped page was shared.
-		RO_MAPPED_SHARED = PAGE_EXECUTE,
-		/// The page is not mapped. Page was write-copyed, than access was changed from <c>PAGE_READWRITE</c> to <c>PAGE_READONLY</c>.
-		RO_UNMAPPED = PAGE_EXECUTE_READ,
+		READ_WRITE_SHARED = PAGE_WRITECOPY,
+		READ_WRITE_PRIVATE = PAGE_READWRITE,
+		READ_ONLY = PAGE_EXECUTE_READ,
 
 		// Page state masks.
-		MASK_RW = RW_MAPPED_PRIVATE | RW_MAPPED_SHARED | RW_UNMAPPED | PAGE_WRITECOPY,
-		MASK_RO = RO_MAPPED_PRIVATE | RO_MAPPED_SHARED | RO_UNMAPPED,
-		MASK_ACCESS = MASK_RW | MASK_RO,
-		MASK_UNMAPPED = RW_UNMAPPED | RO_UNMAPPED,
-		MASK_MAPPED = RW_MAPPED_PRIVATE | RW_MAPPED_SHARED | RO_MAPPED_PRIVATE | RO_MAPPED_SHARED,
-		MASK_MAY_BE_SHARED = RW_MAPPED_SHARED | RO_MAPPED_SHARED | MASK_UNMAPPED | DECOMMITTED
+		MASK_RW = PAGE_READWRITE | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY,
+		MASK_RO = PAGE_READONLY | PAGE_EXECUTE | PAGE_EXECUTE_READ,
+		MASK_ACCESS = MASK_RW | MASK_RO
 	};
+
+	ULONG_PTR is_mapped () const
+	{
+		return VirtualAttributes.Shared;
+	}
+
+	DWORD protection () const
+	{
+		assert (VirtualAttributes.Valid);
+		return VirtualAttributes.Win32Protection;
+	}
 };
 
 /// \brief Logical address space of some Windows process.
@@ -126,12 +122,6 @@ public:
 	BlockInfo& block (const void* address);
 	BlockInfo* allocated_block (const void* address);
 
-	enum MappingType
-	{
-		MAP_PRIVATE = PAGE_EXECUTE_READWRITE,
-		MAP_SHARED = PAGE_EXECUTE_WRITECOPY
-	};
-
 	class Block
 	{
 	public:
@@ -166,32 +156,32 @@ public:
 
 		struct State
 		{
-			enum
+			// Walid if block is mapped
+			struct PageState page_state [PAGES_PER_BLOCK];
+
+			State (void* address) :
+				state (INVALID)
+			{
+				BYTE* p = (BYTE*)address;
+				PageState* ps = page_state;
+				do {
+					ps->VirtualAddress = p;
+					p += PAGE_SIZE;
+				} while (std::end (page_state) != ++ps);
+			}
+
+			enum BlockState
 			{
 				INVALID = 0,
 				RESERVED = MEM_RESERVE,
 				MAPPED = MEM_MAPPED
-			};
-
-			DWORD state;
-
-			/// <summary>
-			/// The OR of all page_state.
-			/// </summary>
-			DWORD page_state_bits;
-
-			/// <summary>
-			/// Valid if block is mapped.
-			/// </summary>
-			struct PageState
-			{
-				DWORD page_state [PAGES_PER_BLOCK];
 			}
-			mapped;
+			state;
 
-			State () :
-				state (INVALID)
-			{}
+			void* address ()
+			{
+				return page_state [0].VirtualAddress;
+			}
 		};
 
 		const State& state ();
@@ -204,7 +194,7 @@ public:
 			state_.state = State::INVALID;
 		}
 
-		void map (HANDLE mapping, MappingType protection);
+		void map (HANDLE mapping, DWORD protection);
 
 		bool has_data_outside_of (size_t offset, size_t size, DWORD mask = PageState::MASK_ACCESS);
 
@@ -229,11 +219,10 @@ public:
 		}
 
 	private:
-		AddressSpace & space_;
-		BYTE* address_;
+		AddressSpace& space_;
+		State state_;
 		BlockInfo& info_;
 		HANDLE mapping_;
-		State state_;
 		bool exclusive_;
 	};
 

@@ -36,7 +36,7 @@ namespace Windows {
 
 AddressSpace::Block::Block (AddressSpace& space, void* address, bool exclusive) :
 	space_ (space),
-	address_ (round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
+	state_ (round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
 	info_ (check_block (space.allocated_block (address))),
 	exclusive_ (exclusive)
 {
@@ -75,40 +75,13 @@ bool AddressSpace::Block::exclusive_lock ()
 const AddressSpace::Block::State& AddressSpace::Block::state ()
 {
 	if (State::INVALID == state_.state) {
-		MEMORY_BASIC_INFORMATION mbi;
-		space_.query (address_, mbi);
-
-		DWORD page_state_bits = mbi.Protect;
-		if (mbi.Type == MEM_MAPPED) {
-			assert (mapping () != INVALID_HANDLE_VALUE);
-			assert (mbi.AllocationBase == address_);
-			state_.state = State::MAPPED;
-			BYTE* page = address_;
-			BYTE* block_end = page + ALLOCATION_GRANULARITY;
-			auto* ps = state_.mapped.page_state;
-			for (;;) {
-				BYTE* end = page + mbi.RegionSize;
-				assert (end <= block_end);
-				page_state_bits |= mbi.Protect;
-				for (; page < end; page += PAGE_SIZE) {
-					*(ps++) = mbi.Protect;
-				}
-				if (end < block_end)
-					space_.query (end, mbi);
-				else
-					break;
-			}
-		} else {
-			assert (mapping () == INVALID_HANDLE_VALUE);
-			assert ((BYTE*)mbi.BaseAddress + mbi.RegionSize >= (address_ + ALLOCATION_GRANULARITY));
-			state_.state = mbi.Type;
-		}
-		state_.page_state_bits = page_state_bits;
+		verify (QueryWorkingSetEx (space_.process (), state_.page_state, sizeof (state_.page_state)));
+		state_.state = State::MAPPED;
 	}
 	return state_;
 }
 
-void AddressSpace::Block::map (HANDLE hm, MappingType protection)
+void AddressSpace::Block::map (HANDLE hm, DWORD protection)
 {
 	assert (hm);
 	assert (exclusive_);
@@ -123,12 +96,12 @@ void AddressSpace::Block::map (HANDLE hm, MappingType protection)
 #ifdef _DEBUG
 		{
 			MEMORY_BASIC_INFORMATION mbi;
-			space_.query (address_, mbi);
+			space_.query (address (), mbi);
 			assert (MEM_RESERVE == mbi.State);
 		}
 #endif
 		// If the reserved placeholder size is more than block, we must split it.
-		VirtualFreeEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
+		VirtualFreeEx (space_.process (), address (), ALLOCATION_GRANULARITY, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
 		// VirtualFreeEx will return TRUE if placeholder was splitted or FALSE if the placeholder is one block.
 		// Both results are normal.
 	} else {
@@ -136,15 +109,15 @@ void AddressSpace::Block::map (HANDLE hm, MappingType protection)
 #ifdef _DEBUG
 		{
 			MEMORY_BASIC_INFORMATION mbi;
-			space_.query (address_, mbi);
+			space_.query (address (), mbi);
 			assert (MEM_COMMIT == mbi.State);
 		}
 #endif
-		verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
+		verify (UnmapViewOfFile2 (space_.process (), address (), MEM_PRESERVE_PLACEHOLDER));
 		verify (CloseHandle (old));
 	}
 
-	verify (MapViewOfFile3 (hm, space_.process (), address_, 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
+	verify (MapViewOfFile3 (hm, space_.process (), address (), 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
 }
 
 void AddressSpace::Block::unmap ()
@@ -157,7 +130,7 @@ void AddressSpace::Block::unmap ()
 	HANDLE hm = mapping ();
 	assert (hm);
 	if (INVALID_HANDLE_VALUE != hm) {
-		verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
+		verify (UnmapViewOfFile2 (space_.process (), address (), MEM_PRESERVE_PLACEHOLDER));
 		verify (CloseHandle (hm));
 		mapping (INVALID_HANDLE_VALUE);
 	}
@@ -168,16 +141,16 @@ bool AddressSpace::Block::has_data_outside_of (size_t offset, size_t size, DWORD
 	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	if (offset || size < ALLOCATION_GRANULARITY) {
-		auto page_state = state ().mapped.page_state;
+		auto page_state = state ().page_state;
 		if (offset) {
 			for (auto ps = page_state, end = page_state + (offset + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps) {
-				if (mask & *ps)
+				if (mask & ps->protection ())
 					return true;
 			}
 		}
 		if (offset_end < ALLOCATION_GRANULARITY) {
 			for (auto ps = page_state + (offset_end) / PAGE_SIZE, end = page_state + PAGES_PER_BLOCK; ps < end; ++ps) {
-				if (mask & *ps)
+				if (mask & ps->protection ())
 					return true;
 			}
 		}
