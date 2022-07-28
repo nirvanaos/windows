@@ -731,6 +731,8 @@ TEST_F (TestAPI, PageState)
 	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
 	EXPECT_FALSE (info.VirtualAttributes.Valid);
 	EXPECT_FALSE (info.VirtualAttributes.Shared);
+	// Win32Protection is invalid but always zero
+	EXPECT_EQ (info.VirtualAttributes.Win32Protection, 0);
 
 	// Commit page private
 	EXPECT_TRUE (VirtualAlloc (mem, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
