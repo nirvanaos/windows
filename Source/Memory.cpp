@@ -424,8 +424,8 @@ void Memory::Block::change_protection (size_t offset, size_t size, unsigned flag
 	if (flags & Nirvana::Memory::READ_ONLY) {
 		offset = round_up (offset, PAGE_SIZE);
 		offset_end = round_down (offset_end, PAGE_SIZE);
-		size_t cb = offset_end - offset;
-		if (cb)
+		ptrdiff_t cb = offset_end - offset;
+		if (cb > 0)
 			protect (address () + offset, cb, PageState::READ_ONLY);
 		return;
 	}
