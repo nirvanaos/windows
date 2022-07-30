@@ -81,7 +81,10 @@ public:
 		MASK_RW = PAGE_READWRITE | PAGE_EXECUTE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY,
 		MASK_RO = PAGE_READONLY | PAGE_EXECUTE | PAGE_EXECUTE_READ,
 		MASK_ACCESS = MASK_RW | MASK_RO,
-		MASK_NO_WRITE = MASK_RO | MASK_NOT_COMMITTED | DECOMMITTED
+		MASK_NO_WRITE = MASK_RO | MASK_NOT_COMMITTED | DECOMMITTED,
+
+		// Possible bits for VirtualProtect. Used in assertions.
+		MASK_PROTECTION = MASK_ACCESS | DECOMMITTED | PAGE_REVERT_TO_FILE_MAP
 	};
 
 	ULONG_PTR is_mapped () const
@@ -277,8 +280,8 @@ private:
 
 	void protect (void* address, size_t size, DWORD protection)
 	{
-		static const DWORD MASK_PROTECTION = PageState::MASK_ACCESS | PAGE_NOACCESS | PAGE_REVERT_TO_FILE_MAP;
-		assert (!(protection & ~MASK_PROTECTION));
+		assert (!(protection & ~PageState::MASK_PROTECTION));
+		assert (size && 0 == size % PAGE_SIZE);
 		DWORD old;
 		verify (VirtualProtectEx (process_, address, size, protection, &old));
 	}
