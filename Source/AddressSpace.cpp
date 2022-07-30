@@ -26,6 +26,7 @@
 #include "../Port/Memory.h"
 #include "AddressSpace.h"
 #include <algorithm>
+#include <winternl.h>
 
 // wsprintfW
 #pragma comment (lib, "User32.lib")
@@ -34,10 +35,40 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+ULONG handle_count (HANDLE h)
+{
+	PUBLIC_OBJECT_BASIC_INFORMATION info;
+	if (!NtQueryObject (h, ObjectBasicInformation, &info, sizeof (info), nullptr))
+		return info.HandleCount;
+	assert (false);
+	return 0;
+}
+
+void BlockState::query (HANDLE process)
+{
+	verify (QueryWorkingSetEx (process, page_state, sizeof (page_state)));
+	PageState* ps = page_state;
+	do {
+		assert (ps->VirtualAttributes.Valid || 0 == ps->VirtualAttributes.Win32Protection);
+		// If committed page was not accessed, it's state remains invalid.
+		// For such pages we call VirtualQuery to obtain memory protection.
+		if (!ps->VirtualAttributes.Valid && ps->VirtualAttributes.Shared) {
+			MEMORY_BASIC_INFORMATION mbi;
+			VirtualQueryEx (process, ps->VirtualAddress, &mbi, sizeof (mbi));
+			BYTE* end = (BYTE*)mbi.BaseAddress + mbi.RegionSize;
+			do {
+				ps->VirtualAttributes.Win32Protection = mbi.Protect;
+				++ps;
+			} while (ps < std::end (page_state) && ps->VirtualAddress < end);
+		} else
+			++ps;
+	} while (ps < std::end (page_state));
+}
+
 AddressSpace::Block::Block (AddressSpace& space, void* address, bool exclusive) :
 	space_ (space),
-	address_ (round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
 	info_ (check_block (space.allocated_block (address))),
+	block_state_ (round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
 	exclusive_ (exclusive)
 {
 	mapping_ = exclusive ? info_.mapping.exclusive_lock () : info_.mapping.lock ();
@@ -48,6 +79,10 @@ AddressSpace::Block::Block (AddressSpace& space, void* address, bool exclusive) 
 			info_.mapping.unlock ();
 		throw_BAD_PARAM ();
 	}
+	if (INVALID_HANDLE_VALUE == mapping_)
+		state_ = State::RESERVED;
+	else
+		state_ = State::PAGE_STATE_UNKNOWN;
 }
 
 AddressSpace::Block::~Block ()
@@ -72,43 +107,16 @@ bool AddressSpace::Block::exclusive_lock ()
 	return false;
 }
 
-const AddressSpace::Block::State& AddressSpace::Block::state ()
+const BlockState& AddressSpace::Block::state ()
 {
-	if (State::INVALID == state_.state) {
-		MEMORY_BASIC_INFORMATION mbi;
-		space_.query (address_, mbi);
-
-		DWORD page_state_bits = mbi.Protect;
-		if (mbi.Type == MEM_MAPPED) {
-			assert (mapping () != INVALID_HANDLE_VALUE);
-			assert (mbi.AllocationBase == address_);
-			state_.state = State::MAPPED;
-			BYTE* page = address_;
-			BYTE* block_end = page + ALLOCATION_GRANULARITY;
-			auto* ps = state_.mapped.page_state;
-			for (;;) {
-				BYTE* end = page + mbi.RegionSize;
-				assert (end <= block_end);
-				page_state_bits |= mbi.Protect;
-				for (; page < end; page += PAGE_SIZE) {
-					*(ps++) = mbi.Protect;
-				}
-				if (end < block_end)
-					space_.query (end, mbi);
-				else
-					break;
-			}
-		} else {
-			assert (mapping () == INVALID_HANDLE_VALUE);
-			assert ((BYTE*)mbi.BaseAddress + mbi.RegionSize >= (address_ + ALLOCATION_GRANULARITY));
-			state_.state = mbi.Type;
-		}
-		state_.page_state_bits = page_state_bits;
+	if (State::PAGE_STATE_UNKNOWN == state_) {
+		block_state_.query (space_.process ());
+		state_ = State::MAPPED;
 	}
-	return state_;
+	return block_state_;
 }
 
-void AddressSpace::Block::map (HANDLE hm, MappingType protection)
+void AddressSpace::Block::map (HANDLE hm, DWORD protection)
 {
 	assert (hm);
 	assert (exclusive_);
@@ -123,12 +131,12 @@ void AddressSpace::Block::map (HANDLE hm, MappingType protection)
 #ifdef _DEBUG
 		{
 			MEMORY_BASIC_INFORMATION mbi;
-			space_.query (address_, mbi);
+			space_.query (address (), mbi);
 			assert (MEM_RESERVE == mbi.State);
 		}
 #endif
 		// If the reserved placeholder size is more than block, we must split it.
-		VirtualFreeEx (space_.process (), address_, ALLOCATION_GRANULARITY, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
+		VirtualFreeEx (space_.process (), address (), ALLOCATION_GRANULARITY, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
 		// VirtualFreeEx will return TRUE if placeholder was splitted or FALSE if the placeholder is one block.
 		// Both results are normal.
 	} else {
@@ -136,15 +144,15 @@ void AddressSpace::Block::map (HANDLE hm, MappingType protection)
 #ifdef _DEBUG
 		{
 			MEMORY_BASIC_INFORMATION mbi;
-			space_.query (address_, mbi);
+			space_.query (address (), mbi);
 			assert (MEM_COMMIT == mbi.State);
 		}
 #endif
-		verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
+		verify (UnmapViewOfFile2 (space_.process (), address (), MEM_PRESERVE_PLACEHOLDER));
 		verify (CloseHandle (old));
 	}
 
-	verify (MapViewOfFile3 (hm, space_.process (), address_, 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
+	verify (MapViewOfFile3 (hm, space_.process (), address (), 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
 }
 
 void AddressSpace::Block::unmap ()
@@ -157,10 +165,22 @@ void AddressSpace::Block::unmap ()
 	HANDLE hm = mapping ();
 	assert (hm);
 	if (INVALID_HANDLE_VALUE != hm) {
-		verify (UnmapViewOfFile2 (space_.process (), address_, MEM_PRESERVE_PLACEHOLDER));
+		verify (UnmapViewOfFile2 (space_.process (), address (), MEM_PRESERVE_PLACEHOLDER));
 		verify (CloseHandle (hm));
 		mapping (INVALID_HANDLE_VALUE);
 	}
+}
+
+bool AddressSpace::Block::has_data (size_t offset, size_t size, DWORD mask)
+{
+	size_t offset_end = offset + size;
+	assert (offset_end <= ALLOCATION_GRANULARITY);
+	auto page_state = state ().page_state;
+	for (auto ps = page_state + (offset + PAGE_SIZE - 1) / PAGE_SIZE, end = page_state + offset_end / PAGE_SIZE; ps < end; ++ps) {
+		if (mask & ps->state ())
+			return true;
+	}
+	return false;
 }
 
 bool AddressSpace::Block::has_data_outside_of (size_t offset, size_t size, DWORD mask)
@@ -168,16 +188,16 @@ bool AddressSpace::Block::has_data_outside_of (size_t offset, size_t size, DWORD
 	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	if (offset || size < ALLOCATION_GRANULARITY) {
-		auto page_state = state ().mapped.page_state;
+		auto page_state = state ().page_state;
 		if (offset) {
 			for (auto ps = page_state, end = page_state + (offset + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps) {
-				if (mask & *ps)
+				if (mask & ps->state ())
 					return true;
 			}
 		}
 		if (offset_end < ALLOCATION_GRANULARITY) {
-			for (auto ps = page_state + (offset_end) / PAGE_SIZE, end = page_state + PAGES_PER_BLOCK; ps < end; ++ps) {
-				if (mask & *ps)
+			for (auto ps = page_state + offset_end / PAGE_SIZE, end = page_state + PAGES_PER_BLOCK; ps < end; ++ps) {
+				if (mask & ps->state ())
 					return true;
 			}
 		}
@@ -190,6 +210,8 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, unsigned
 	exclusive_lock ();
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
+
+restart:
 	HANDLE src_mapping = src.mapping ();
 	assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
 	assert (address () != src.address ());
@@ -199,9 +221,6 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, unsigned
 	if (INVALID_HANDLE_VALUE == cur_mapping)
 		remap = true;
 	else {
-		if (flags & Memory::SIMPLE_COPY && state().page_state_bits & PageState::MASK_RO)
-			throw_NO_PERMISSION ();
-
 		if (!CompareObjectHandles (cur_mapping, src_mapping)) {
 			// Change mapping
 			assert (!has_data_outside_of (offset, size));
@@ -212,41 +231,30 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, unsigned
 
 	bool move = src.can_move (offset, size, flags);
 
+	if (move && src.exclusive_lock ())
+		goto restart;
+
 	DWORD dst_page_state [PAGES_PER_BLOCK];
 	DWORD* dst_ps_begin = dst_page_state + offset / PAGE_SIZE;
 	DWORD* dst_ps_end = dst_page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
 	std::fill (dst_page_state, dst_ps_begin, PageState::DECOMMITTED);
 	std::fill (dst_ps_end, dst_page_state + PAGES_PER_BLOCK, PageState::DECOMMITTED);
 
-	if (move) {
-		// Decide target page states based on source page states.
-		auto src_page_state = src.state ().mapped.page_state;
-		const DWORD* src_ps = src_page_state + offset / PAGE_SIZE;
-		DWORD* dst_ps = dst_ps_begin;
-		do {
-			DWORD src_state = *src_ps;
-			if (flags & Memory::READ_ONLY)
-				if (src_state & PageState::MASK_MAY_BE_SHARED)
-					*dst_ps = PageState::RO_MAPPED_SHARED;
-				else
-					*dst_ps = PageState::RO_MAPPED_PRIVATE;
-			else
-				if (src_state & PageState::MASK_MAY_BE_SHARED)
-					*dst_ps = PageState::RW_MAPPED_SHARED;
-				else
-					*dst_ps = PageState::RW_MAPPED_PRIVATE;
-			++src_ps;
-
-		} while (++dst_ps != dst_ps_end);
-	} else
-		std::fill (dst_ps_begin, dst_ps_end, Memory::READ_ONLY & flags ? PageState::RO_MAPPED_SHARED : PageState::RW_MAPPED_SHARED);
+	DWORD copied_pages_state;
+	if (Memory::READ_ONLY & flags)
+		copied_pages_state = PageState::READ_ONLY;
+	else if (!move || handle_count (src.mapping ()) > 1)
+		copied_pages_state = PageState::READ_WRITE_SHARED;
+	else
+		copied_pages_state = PageState::READ_WRITE_PRIVATE;
+	std::fill (dst_ps_begin, dst_ps_end, copied_pages_state);
 
 	if (remap) {
 		HANDLE hm;
 		if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), space_.process (), &hm, 0, FALSE, DUPLICATE_SAME_ACCESS))
 			throw_NO_MEMORY ();
 		try {
-			map (hm, move ? MAP_PRIVATE : MAP_SHARED);
+			map (hm, copied_pages_state);
 		} catch (...) {
 			CloseHandle (hm);
 			throw;
@@ -254,11 +262,12 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, unsigned
 	}
 
 	// Manage protection of copied pages
-	const DWORD* cur_ps = state ().mapped.page_state;
+	const PageState* cur_ps = state ().page_state;
 	const DWORD* region_begin = dst_page_state, *block_end = dst_page_state + PAGES_PER_BLOCK;
 	do {
-		DWORD state;
-		while (!(PageState::MASK_ACCESS & (*cur_ps ^ (state = *region_begin)))) {
+		DWORD protection;
+		while (!(PageState::MASK_ACCESS & (cur_ps->protection () ^ (protection = *region_begin)))) {
+			// We need to change access of the copied pages
 			++cur_ps;
 			if (++region_begin == block_end)
 				return;
@@ -267,11 +276,11 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, unsigned
 		do {
 			++cur_ps;
 			++region_end;
-		} while (region_end < block_end && state == *region_end);
+		} while (region_end < block_end && protection == *region_end);
 
 		BYTE* ptr = address () + (region_begin - dst_page_state) * PAGE_SIZE;
 		size_t size = (region_end - region_begin) * PAGE_SIZE;
-		space_.protect (ptr, size, state);
+		space_.protect (ptr, size, protection);
 		invalidate_state ();
 
 		region_begin = region_end;

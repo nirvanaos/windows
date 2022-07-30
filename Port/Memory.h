@@ -132,8 +132,6 @@ private:
 
 	static Windows::AddressSpace& space ();
 
-	static uint32_t handle_count (HANDLE h);
-
 	static long __stdcall exception_filter (_EXCEPTION_POINTERS* pex);
 
 private:

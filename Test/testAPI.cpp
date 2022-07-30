@@ -161,6 +161,7 @@ TEST_F (TestAPI, Sharing)
 	EXPECT_TRUE (VirtualQuery (p, &mbi0, sizeof (mbi0)));
 	EXPECT_TRUE (VirtualQuery (p + PAGE_SIZE, &mbi1, sizeof (mbi1)));
 
+	// Make copies and check
 	for (size_t i = 0; i < size (copies); ++i) {
 		HANDLE mh1 = dup_mapping (mh);
 		handles [i] = mh1;
@@ -173,6 +174,7 @@ TEST_F (TestAPI, Sharing)
 		}
 	}
 
+	// Release copies
 	for (size_t i = 0; i < size (copies); ++i) {
 		char* p = copies [i];
 		copies [i] = 0;
@@ -184,6 +186,7 @@ TEST_F (TestAPI, Sharing)
 			EXPECT_TRUE (CloseHandle (h));
 	}
 
+	// Make copies and check
 	for (size_t i = 0; i < size (copies); ++i) {
 		HANDLE mh1 = dup_mapping (mh);
 		handles [i] = mh1;
@@ -199,6 +202,7 @@ TEST_F (TestAPI, Sharing)
 		}
 	}
 
+	// Change copies
 	for (size_t i = 0; i < size (copies); ++i) {
 		char* p = copies [i];
 		char buf [16] = "test";
@@ -206,6 +210,10 @@ TEST_F (TestAPI, Sharing)
 		EXPECT_STREQ (p, buf);
 	}
 
+	// Check source
+	EXPECT_STREQ (p, "test");
+
+	// Release copies
 	for (size_t i = 0; i < size (copies); ++i) {
 		char* p = copies [i];
 		copies [i] = 0;
@@ -217,7 +225,31 @@ TEST_F (TestAPI, Sharing)
 			EXPECT_TRUE (CloseHandle (h));
 	}
 
-	EXPECT_STREQ (p, "test");
+	// Make copies and check
+	for (size_t i = 0; i < size (copies); ++i) {
+		HANDLE mh1 = dup_mapping (mh);
+		handles [i] = mh1;
+		char* p = (char*)MapViewOfFile (mh1, FILE_MAP_COPY, 0, 0, ALLOCATION_GRANULARITY);
+		EXPECT_TRUE (p);
+		copies [i] = p;
+		EXPECT_STREQ (p, "test");
+	}
+
+	// Commit one more page
+	EXPECT_TRUE (VirtualAlloc (p + PAGE_SIZE, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
+	strcpy (p + PAGE_SIZE, "test1");
+
+	// Decommit source page
+	EXPECT_TRUE (VirtualProtect (p, PAGE_SIZE, PAGE_NOACCESS | PAGE_REVERT_TO_FILE_MAP, &old));
+	EXPECT_TRUE (VirtualAlloc (p, PAGE_SIZE, MEM_RESET, PAGE_NOACCESS));
+
+	// Check copies
+	for (size_t i = 0; i < size (copies); ++i) {
+		char* p = copies [i];
+		EXPECT_STREQ (p, "test");
+	}
+
+	// Release source
 	EXPECT_TRUE (UnmapViewOfFile (p));
 	EXPECT_TRUE (CloseHandle (mh));
 }
@@ -737,8 +769,18 @@ TEST_F (TestAPI, PageState)
 	// Commit page private
 	EXPECT_TRUE (VirtualAlloc (mem, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
 	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
-	EXPECT_FALSE (info.VirtualAttributes.Valid); // If committed page was not accessed, it remains invalid.
+	// If committed page was not accessed, it remains invalid.
+	EXPECT_FALSE (info.VirtualAttributes.Valid);
 	EXPECT_TRUE (info.VirtualAttributes.Shared);
+
+	MEMORY_BASIC_INFORMATION mbi;
+	EXPECT_EQ (VirtualQuery (mem, &mbi, sizeof (mbi)), sizeof (mbi));
+	EXPECT_EQ (mbi.Protect, PAGE_READWRITE);
+
+	// VirtualQuery does not change page state
+	ASSERT_TRUE (QueryWorkingSetEx (GetCurrentProcess (), &info, sizeof (info)));
+	// If committed page was not accessed, it remains invalid.
+	EXPECT_FALSE (info.VirtualAttributes.Valid);
 
 	// Read from private page
 	EXPECT_EQ (*(int*)mem, 0);

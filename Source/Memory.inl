@@ -38,7 +38,8 @@ namespace Port {
 inline
 void Memory::protect (void* address, size_t size, uint32_t protection)
 {
-	//space_.protect (address, size, protection);
+	assert (!(protection & ~Nirvana::Core::Windows::PageState::MASK_PROTECTION));
+	assert (size && 0 == size % PAGE_SIZE);
 	DWORD old;
 	verify (VirtualProtect (address, size, protection, &old));
 }
@@ -69,8 +70,8 @@ public:
 			prepare_to_share_no_remap (offset, size);
 	}
 
-	void aligned_copy (void* src, size_t size, unsigned flags);
-	void copy (size_t offset, size_t size, const void* src, unsigned flags);
+	void copy_aligned (void* src, size_t size, unsigned flags);
+	void copy_unaligned (size_t offset, size_t size, const void* src, unsigned flags);
 
 	void decommit (size_t offset, size_t size);
 	DWORD check_committed (size_t offset, size_t size);
