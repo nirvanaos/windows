@@ -79,10 +79,6 @@ const unsigned SYNC_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For syncronization d
 const unsigned SYS_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For system-wide scheduler.
 const unsigned PROT_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For protection domain scheduler.
 
-typedef uint32_t ProtDomainId;
-typedef uint32_t ObjRefSignature;
-typedef uint32_t UserToken;
-
 /// Unused module unloading timeout
 /// 
 /// If module was not used during this period of time, it will be unloaded.
@@ -98,6 +94,12 @@ const bool RUNTIME_SUPPORT_DISABLE = false;
 /// Execution domain creation may be heavy.
 /// So we can enable pooling.
 const bool EXEC_DOMAIN_POOLING = false;
+
+// Interoperability
+typedef uint32_t ProtDomainId;
+typedef uint64_t MaxPlatformPtr;
+typedef uint32_t ObjRefSignature; // TODO: Remove
+typedef uint32_t UserToken;
 
 }
 }
