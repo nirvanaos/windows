@@ -49,26 +49,26 @@ typedef char16_t WinWChar;
 typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, UserAllocator <WinWChar> > StringW;
 typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, SharedAllocator <WinWChar> > SharedStringW;
 
-size_t utf8_to_ucs16 (const char* utf8, size_t len, WinWChar* ucs16);
+size_t utf8_to_ucs2 (const char* utf, size_t len, WinWChar* ucs);
 
 template <class S, class Tr, class Al> inline
-void utf8_to_ucs16 (
-	const S& utf8,
-	std::basic_string <WinWChar, Tr, Al>& ucs16)
+void utf8_to_ucs2 (
+	const S& utf,
+	std::basic_string <WinWChar, Tr, Al>& ucs)
 {
-	size_t size = utf8.size ();
-	ucs16.resize (size);
-	ucs16.resize (utf8_to_ucs16 (utf8.data (), size, &*ucs16.begin ()));
+	size_t size = utf.size ();
+	ucs.resize (size);
+	ucs.resize (utf8_to_ucs2 (utf.data (), size, &*ucs.begin ()));
 }
 
 template <class Tr, class Al> inline
-void utf8_to_ucs16 (
-	const char* utf8,
-	std::basic_string <WinWChar, Tr, Al>& ucs16)
+void utf8_to_ucs2 (
+	const char* utf,
+	std::basic_string <WinWChar, Tr, Al>& ucs)
 {
-	size_t size = strlen (utf8);
-	ucs16.resize (size);
-	ucs16.resize (utf8_to_ucs16 (utf8, size, &*ucs16.begin ()));
+	size_t size = strlen (utf);
+	ucs.resize (size);
+	ucs.resize (utf8_to_ucs2 (utf, size, &*ucs.begin ()));
 }
 
 }

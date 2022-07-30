@@ -34,7 +34,7 @@ namespace Port {
 void Debugger::output_debug_string (const char* msg)
 {
 	Windows::StringW ws;
-	Windows::utf8_to_ucs16 (msg, ws);
+	Windows::utf8_to_ucs2 (msg, ws);
 	if (IsDebuggerPresent ())
 		OutputDebugStringW (ws.c_str ());
 	else {
