@@ -49,6 +49,7 @@ void BlockState::query (HANDLE process)
 	verify (QueryWorkingSetEx (process, page_state, sizeof (page_state)));
 	PageState* ps = page_state;
 	do {
+		assert (ps->VirtualAttributes.Valid || 0 == ps->VirtualAttributes.Win32Protection);
 		// If committed page was not accessed, it's state remains invalid.
 		// For such pages we call VirtualQuery to obtain memory protection.
 		if (!ps->VirtualAttributes.Valid && ps->VirtualAttributes.Shared) {
@@ -264,8 +265,8 @@ restart:
 	const PageState* cur_ps = state ().page_state;
 	const DWORD* region_begin = dst_page_state, *block_end = dst_page_state + PAGES_PER_BLOCK;
 	do {
-		DWORD state;
-		while (!(PageState::MASK_ACCESS & (cur_ps->state () ^ (state = *region_begin)))) {
+		DWORD protection;
+		while (!(PageState::MASK_ACCESS & (cur_ps->protection () ^ (protection = *region_begin)))) {
 			// We need to change access of the copied pages
 			++cur_ps;
 			if (++region_begin == block_end)
@@ -275,11 +276,11 @@ restart:
 		do {
 			++cur_ps;
 			++region_end;
-		} while (region_end < block_end && state == *region_end);
+		} while (region_end < block_end && protection == *region_end);
 
 		BYTE* ptr = address () + (region_begin - dst_page_state) * PAGE_SIZE;
 		size_t size = (region_end - region_begin) * PAGE_SIZE;
-		space_.protect (ptr, size, state);
+		space_.protect (ptr, size, protection);
 		invalidate_state ();
 
 		region_begin = region_end;

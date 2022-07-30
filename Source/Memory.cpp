@@ -304,7 +304,7 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 	if ((flags & Nirvana::Memory::SIMPLE_COPY) && has_data (offset, size, PageState::MASK_NO_WRITE))
 		throw_NO_PERMISSION ();
 
-	Block src_block (src, size % ALLOCATION_GRANULARITY == 0);
+	Block src_block (src, size == ALLOCATION_GRANULARITY);
 	for (;;) {
 		bool src_remap = false;
 		if ((offset || size < ALLOCATION_GRANULARITY) && INVALID_HANDLE_VALUE != mapping ()) {
@@ -663,23 +663,23 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 	unsigned release_flags = flags & Nirvana::Memory::SRC_RELEASE;
 
 	// Source range have to be committed.
-	uint32_t src_prot_mask;
+	uint32_t src_state_mask;
 	uint32_t src_type;
 	if (space ().allocated_block (src)) {
-		src_prot_mask = 0;
+		src_state_mask = 0;
 		for (BYTE* p = (BYTE*)src, *end = p + size; p < end;) {
 			Block block (p);
 			BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
 			if (block_end > end)
 				block_end = end;
-			src_prot_mask |= block.check_committed (p - block.address (), block_end - p);
+			src_state_mask |= block.check_committed (p - block.address (), block_end - p);
 			p = block_end;
 		}
 		src_own = true;
 	} else {
 		if (release_flags)
 			throw_FREE_MEM (); // Can't release memory that is not own.
-		src_prot_mask = check_committed (src, size, src_type);
+		src_state_mask = check_committed (src, size, src_type);
 	}
 
 	uintptr_t src_align = (uintptr_t)src % ALLOCATION_GRANULARITY;
@@ -742,7 +742,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 			if (flags & Nirvana::Memory::SIMPLE_COPY)
 				throw_NO_PERMISSION ();
 
-			if (src_prot_mask & ((flags & Nirvana::Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO)) {
+			if (src_state_mask & ((flags & Nirvana::Memory::READ_ONLY) ? PageState::MASK_RW : PageState::MASK_RO)) {
 				if (dst_own)
 					change_protection (src, size, flags);
 				else if ((uintptr_t)dst % PAGE_SIZE == 0) {
@@ -774,7 +774,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							unsigned overlapped_flags = (flags & ~Nirvana::Memory::SRC_RELEASE) | Nirvana::Memory::SRC_DECOMMIT;
 							while (d_p < overlapped_end) {
 								size_t cb = round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY - d_p;
-								Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
+								Block block (d_p, cb == ALLOCATION_GRANULARITY);
 								block.copy_aligned (s_p, cb, overlapped_flags);
 								d_p += cb;
 								s_p += cb;
@@ -782,7 +782,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 						}
 						while (d_p < d_end) {
 							size_t cb = min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
-							Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
+							Block block (d_p, cb == ALLOCATION_GRANULARITY);
 							block.copy_aligned (s_p, cb, flags);
 							d_p += cb;
 							s_p += cb;
@@ -798,7 +798,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							while (d_p > overlapped_begin) {
 								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
 								size_t cb = d_p - block_begin;
-								Block block (block_begin, cb % ALLOCATION_GRANULARITY == 0);
+								Block block (block_begin, cb == ALLOCATION_GRANULARITY);
 								s_p -= cb;
 								block.copy_aligned (s_p, cb, overlapped_flags);
 								d_p = block_begin;
@@ -809,7 +809,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							if (block_begin < dst)
 								block_begin = (BYTE*)dst;
 							size_t cb = d_p - block_begin;
-							Block block (block_begin, cb % ALLOCATION_GRANULARITY == 0);
+							Block block (block_begin, cb == ALLOCATION_GRANULARITY);
 							s_p -= cb;
 							block.copy_aligned (s_p, cb, flags);
 							d_p = block_begin;
@@ -827,7 +827,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							BYTE* s_p = (BYTE*)src;
 							while (d_p < d_end) {
 								size_t cb = min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
-								Block block (d_p, cb % ALLOCATION_GRANULARITY == 0);
+								Block block (d_p, cb == ALLOCATION_GRANULARITY);
 								block.copy_unaligned (d_p - block.address (), cb, s_p, flags);
 								d_p += cb;
 								s_p += cb;
@@ -839,7 +839,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 								if (block_begin < dst)
 									block_begin = (BYTE*)dst;
 								size_t cb = d_p - block_begin;
-								Block block (block_begin, cb % ALLOCATION_GRANULARITY == 0);
+								Block block (block_begin, cb == ALLOCATION_GRANULARITY);
 								s_p -= cb;
 								block.copy_unaligned (block_begin - block.address (), cb, s_p, flags);
 								d_p = block_begin;

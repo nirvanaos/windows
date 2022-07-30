@@ -277,6 +277,8 @@ private:
 
 	void protect (void* address, size_t size, DWORD protection)
 	{
+		static const DWORD MASK_PROTECTION = PageState::MASK_ACCESS | PAGE_NOACCESS | PAGE_REVERT_TO_FILE_MAP;
+		assert (!(protection & ~MASK_PROTECTION));
 		DWORD old;
 		verify (VirtualProtectEx (process_, address, size, protection, &old));
 	}
