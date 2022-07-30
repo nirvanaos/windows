@@ -817,8 +817,8 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 					}
 				} else {
 					// Physical copy.
-					uint32_t dst_prot_mask = commit_no_check (dst, size);
-					if ((dst_prot_mask & PageState::MASK_RO) || (flags & Nirvana::Memory::READ_ONLY)) {
+					uint32_t dst_state_mask = commit_no_check (dst, size);
+					if ((dst_state_mask & PageState::MASK_RO) || (flags & Nirvana::Memory::READ_ONLY)) {
 						if (flags & Nirvana::Memory::SIMPLE_COPY)
 							throw_NO_PERMISSION ();
 
