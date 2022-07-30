@@ -42,48 +42,47 @@ class Memory;
 
 namespace Windows {
 
-/// TODO: Fix documentation
-/// Page state for mapped block
-/// 
-///	We use "execute" protection to distinct private pages from shared pages.
-///	Note: "Page was shared" means that page has been shared at least once. Currently, page may be still shared or already not.
-///	Page state changes.
-/// 
-///		Prepare to share:
-///			- #RW_MAPPED_PRIVATE -> #RW_MAPPED_SHARED
-///			- #RO_MAPPED_PRIVATE, #RW_MAPPED_SHARED, #RO_MAPPED_SHARED, #NOT_COMMITTED, #DECOMMITTED: The page was not changed
-///			- #RW_UNMAPPED, #RO_UNMAPPED: We need to remap the block.
-/// 
-///		Remap:
-///			- #RW_MAPPED_SHARED, #RW_UNMAPPED -> #RW_MAPPED_PRIVAT
-///			- #RO_MAPPED_SHARED, #RO_UNMAPPED -> #RO_MAPPED_PRIVATE
-/// 
-///		Write-protection:
-///			#RW_MAPPED_PRIVATE <-> #RO_MAPPED_PRIVATE
-///			#RW_MAPPED_SHARED <-> #RO_MAPPED_SHARED
-///			#RW_UNMAPPED <-> #RO_UNMAPPED
-/// 
+/// Page state for a mapped memory block
 struct PageState : public PSAPI_WORKING_SET_EX_INFORMATION
 {
 public:
 	enum : DWORD
 	{
-		// Page protection
+		/// @{ Page protection
+
+		/// Page was committed but thed decommitted
 		DECOMMITTED = PAGE_NOACCESS,
 		READ_WRITE_SHARED = PAGE_WRITECOPY,
 		READ_WRITE_PRIVATE = PAGE_READWRITE,
 		READ_ONLY = PAGE_READONLY,
+		/// @}
 
-		// Page state masks.
+		/// @{ Page state masks
+		
+		/// Page is mapped to a shared section
 		MASK_MAPPED = 1 << 11,
-		MASK_UNMAPPED = 1 << 12,
-		MASK_NOT_COMMITTED = 1 << 13,
-		MASK_RW = PAGE_READWRITE | PAGE_EXECUTE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY,
-		MASK_RO = PAGE_READONLY | PAGE_EXECUTE | PAGE_EXECUTE_READ,
-		MASK_ACCESS = MASK_RW | MASK_RO,
-		MASK_NO_WRITE = MASK_RO | MASK_NOT_COMMITTED | DECOMMITTED,
 
-		// Possible bits for VirtualProtect. Used in assertions.
+		/// Page is detached from shared section due to copy-on-write
+		MASK_UNMAPPED = 1 << 12,
+
+		/// Page was not committed
+		MASK_NOT_COMMITTED = 1 << 13,
+
+		/// Read-write access
+		MASK_RW = PAGE_READWRITE | PAGE_EXECUTE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY,
+		
+		/// Read-only access
+		MASK_RO = PAGE_READONLY | PAGE_EXECUTE | PAGE_EXECUTE_READ,
+
+		/// Accessible memory
+		MASK_ACCESS = MASK_RW | MASK_RO,
+
+		/// No write access
+		MASK_NO_WRITE = MASK_RO | MASK_NOT_COMMITTED | DECOMMITTED,
+		
+		/// @}
+
+		/// Possible bits for VirtualProtect. Used in assertions.
 		MASK_PROTECTION = MASK_ACCESS | DECOMMITTED | PAGE_REVERT_TO_FILE_MAP
 	};
 
@@ -97,12 +96,16 @@ public:
 		return VirtualAttributes.Win32Protection;
 	}
 
-	// Returns protection and flags
+	// Returns page state
 	DWORD state () const
 	{
 		if (!VirtualAttributes.Valid && !VirtualAttributes.Shared)
 			return MASK_NOT_COMMITTED;
-		return (DWORD)VirtualAttributes.Win32Protection | (VirtualAttributes.Shared ? MASK_MAPPED : MASK_UNMAPPED);
+		// Optimization: eliminate conditional operator
+		// return (DWORD)VirtualAttributes.Win32Protection | (VirtualAttributes.Shared ? MASK_MAPPED : MASK_UNMAPPED);
+		DWORD ret = (DWORD)VirtualAttributes.Win32Protection | (VirtualAttributes.Shared << 11) | (!VirtualAttributes.Shared << 12);
+		assert (((DWORD)VirtualAttributes.Win32Protection | (VirtualAttributes.Shared ? MASK_MAPPED : MASK_UNMAPPED)) == ret);
+		return ret;
 	}
 };
 
