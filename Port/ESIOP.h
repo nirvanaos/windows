@@ -32,8 +32,7 @@
 #include <Nirvana/NirvanaBase.h>
 
 namespace Nirvana {
-namespace Core {
-namespace Port {
+namespace ESIOP {
 
 /// Unique protection domain id
 typedef uint32_t ProtDomainId;
@@ -62,7 +61,6 @@ typedef uint64_t MaxPlatformPtr;
 /// User security token.
 typedef uint32_t UserToken;
 
-}
 }
 }
 
