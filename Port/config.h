@@ -34,41 +34,57 @@
 namespace Nirvana {
 namespace Core {
 
-// Heap parameters
+// 
 
-/*
-	HEAP_UNIT - минимальный размер выделяемого блока памяти по умолчанию.
-	Размер выделяемого блока выравнивается в сторону увеличения на эту величину.
-	Таким образом, за счет выравнивания, накладные расходы составляют
-	HEAP_UNIT/2 байт на каждый выделенный блок.
-	Кроме того, размер битовой карты составляет 2 бита на HEAP_UNIT байт кучи.
-	Таким образом, оптимальная величина HEAP_UNIT зависит от количества и среднего
-	размера выделенных блоков.
-	В классических реализациях кучи, накладные расходы составляют обычно не менее 8 байт
-	на выделенный блок. Для современных объектно-ориентированных программ характерно большое
-	количество небольших блоков памяти. Таким образом, накладные расходы в обычной
-	куче достаточно велики.
-	В данной реализации размер блока по умолчанию равен 16 байт.
+/** \defgroup heap_parameters Heap parameters
+@{
+HEAP_UNIT is the minimum size of the allocated memory block,
+also called the heap granularity.
+The size of the allocated block is aligned up to this margin.
+Thus, due to the size alignment, overhead costs are
+HEAP_UNIT/2 bytes per allocated block.
+In addition, the size of the bitmap is 2 bits per HEAP_UNIT heap bytes.
+Thus, the optimal value of the HEAP_UNIT depends on the number and average
+size of the allocated blocks.
+In classic heap implementations, the overhead is usually at least 8 bytes
+per allocated block. Modern object-oriented programs are characterized by a large
+number of the quite small memory blocks. Thus, overhead costs in the classic heap
+implementations are quite large.
+In this implementation, the default block size is 16 bytes and average overhead
+cost is 8 bytes per block.
+User can create own heaps, see System::create_heap() API and specify heap granularity,
+from HEAP_UNIT_MIN to HEAP_UNIT_MAX.
 */
 
-const size_t HEAP_UNIT_MIN = 4;
+/// Heap unit size by default, optimal
 const size_t HEAP_UNIT_DEFAULT = 16;
-const size_t HEAP_UNIT_CORE = 16; // Core heap unit.
+
+/// Minimal possible user heap granularity
+const size_t HEAP_UNIT_MIN = 4;
+
+/// Mmaximal possible user heap granularity
 const size_t HEAP_UNIT_MAX = 4096;
 
-/**	Размер управляющего блока кучи. 
-Размер должен быть кратен гранулярности памяти домена защиты - максимальному
-значению MAX (ALLOCATION_UNIT, PROTECTION_UNIT, SHARING_UNIT). Если HEAP_DIRECTORY_SIZE
-меньше этой величины, заголовок кучи содержит несколько управляющих блоков, а сама куча
-делится на соответствующее количество частей, каждая из которых работает отдельно.
-Для Windows размер заголовка равен 64K. Для систем с меньшими размерами ALLOCATION_UNIT
-и SHARING_UNIT его можно сделать меньше.
+/// Core heap granularity
+const size_t HEAP_UNIT_CORE = 16;
+
+/**	Size of the heap control block.
+The size should be a multiple of the protection domain's heap granularity:
+MAX (ALLOCATION_UNIT, PROTECTION_UNIT, SHARING_UNIT). If HEAP_DIRECTORY_SIZE
+less than this value, the heap header contains several control blocks, and the heap itself
+is divided into the corresponding number of parts, each of which works separately.
+For Windows, the header size is 64K. For systems with smaller ALLOCATION_UNIT and SHARING_UNIT sizes
+it can be made smaller.
 */
 const size_t HEAP_DIRECTORY_SIZE = 0x10000;
+
+/// See HeapDirectory.h
 const size_t HEAP_DIRECTORY_LEVELS = 11;
 
-// Skip list level count for heap skip list.
+/// Skip list level count for the heap skip list.
 static const unsigned HEAP_SKIP_LIST_LEVELS = 10;
+
+/// @}
 
 /** Maximum count of levels in PriorityQueue.
 To provide best performance with a probabilistic time complexity of
@@ -94,12 +110,6 @@ const bool RUNTIME_SUPPORT_DISABLE = false;
 /// Execution domain creation may be heavy.
 /// So we can enable pooling.
 const bool EXEC_DOMAIN_POOLING = false;
-
-// Interoperability
-typedef uint32_t ProtDomainId;
-typedef uint64_t MaxPlatformPtr;
-typedef uint32_t ObjRefSignature; // TODO: Remove
-typedef uint32_t UserToken;
 
 }
 }

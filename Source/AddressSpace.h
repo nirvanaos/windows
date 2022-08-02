@@ -40,6 +40,8 @@ namespace Port {
 class Memory;
 }
 
+/// Namespace Windows contains internal implementation details of the Windows host.
+/// This namespace is not visible to the nirvana Core code.
 namespace Windows {
 
 /// Page state for a mapped memory block

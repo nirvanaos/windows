@@ -35,13 +35,11 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-#pragma pack(push, 1)
-
 struct Message : ESIOP::Message
 {
 	enum class Type : uint16_t
 	{
-		PROCESS_START = (uint16_t)ESIOP::Message::Type::RESERVED_MESSAGES,
+		PROCESS_START = (uint16_t)ESIOP::Message::Type::MESSAGES_CNT,
 		PROCESS_START_RESPONSE,
 		PROCESS_STOP,
 		SYSTEM_ERROR,
@@ -126,8 +124,6 @@ struct Message : ESIOP::Message
 		Shutdown shutdown;
 	};
 };
-
-#pragma pack(pop)
 
 }
 }
