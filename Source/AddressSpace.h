@@ -105,7 +105,7 @@ public:
 			return MASK_NOT_COMMITTED;
 		// Optimization: eliminate conditional operator
 		// return (DWORD)VirtualAttributes.Win32Protection | (VirtualAttributes.Shared ? MASK_MAPPED : MASK_UNMAPPED);
-		DWORD ret = (DWORD)VirtualAttributes.Win32Protection | (VirtualAttributes.Shared << 11) | (!VirtualAttributes.Shared << 12);
+		DWORD ret = (DWORD)(VirtualAttributes.Win32Protection | (VirtualAttributes.Shared << 11) | (!VirtualAttributes.Shared << 12));
 		assert (((DWORD)VirtualAttributes.Win32Protection | (VirtualAttributes.Shared ? MASK_MAPPED : MASK_UNMAPPED)) == ret);
 		return ret;
 	}
