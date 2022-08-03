@@ -28,37 +28,25 @@
 #define NIRVANA_CORE_WINDOWS_MESSAGE_H_
 #pragma once
 
-#include <ORB/Message.h>
+#include <ORB/ESIOP.h>
 #include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-struct Message : ESIOP::Message
+struct Message
 {
-	enum class Type : uint16_t
+	enum Type
 	{
-		PROCESS_START = (uint16_t)ESIOP::Message::Type::MESSAGES_CNT,
+		PROCESS_START = (uint16_t)ESIOP::MessageType::MESSAGES_CNT,
 		PROCESS_START_RESPONSE,
 		PROCESS_STOP,
 		SYSTEM_ERROR,
 		SHUTDOWN
 	};
 
-	struct Header
-	{
-		Type type;
-		uint16_t flags; // Reserved, zero
-
-		Header ()
-		{}
-
-		Header (Type t) :
-			type (t),
-			flags (0)
-		{}
-	};
+	typedef Nirvana::ESIOP::MessageHeader Header;
 
 	/// A new process (protection domain) is started.
 	struct ProcessStart : Header
@@ -117,7 +105,7 @@ struct Message : ESIOP::Message
 
 	union Buffer
 	{
-		ESIOP::Message::Buffer esiop;
+		ESIOP::MessageBuffer esiop;
 		ProcessStart process_start;
 		ProcessStop process_stop;
 		SystemError system_error;

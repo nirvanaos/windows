@@ -107,7 +107,7 @@ bool SchedulerSlave::initialize ()
 		CloseHandle (hevent);
 
 		if (success) {
-			if (sizeof (ack) != size || ack.type != Message::Type::PROCESS_START_RESPONSE || !ack.sys_process_id || !ack.executor_id)
+			if (sizeof (ack) != size || ack.message_type != Message::Type::PROCESS_START_RESPONSE || !ack.sys_process_id || !ack.executor_id)
 				throw_INTERNAL ();
 
 			initialize (ack.sys_process_id, ack.executor_id);

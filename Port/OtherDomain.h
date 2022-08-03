@@ -1,5 +1,4 @@
 /// \file
-/// ESIOP definitions
 /*
 * Nirvana Core. Windows port library.
 *
@@ -25,23 +24,46 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_ESIOP_H_
-#define NIRVANA_CORE_PORT_ESIOP_H_
+#ifndef NIRVANA_CORE_PORT_OTHER_DOMAIN_H_
+#define NIRVANA_CORE_PORT_OTHER_DOMAIN_H_
 #pragma once
 
-#include <Nirvana/NirvanaBase.h>
+#include <ORB/OtherMemory.h>
 
 namespace Nirvana {
 namespace ESIOP {
 
-/// Unique protection domain id.
-typedef uint32_t ProtDomainId;
+/// Protection domain communication endpoint.
+class OtherDomain
+{
+public:
+	~OtherDomain ();
+	OtherDomain ();
+	OtherDomain (ProtDomainId id);
+	OtherDomain (const OtherDomain& src);
+	OtherDomain (OtherDomain&& src) NIRVANA_NOEXCEPT;
 
-/// SharedMemPtr points to the message recipient protection domain memory.
-/// Sender allocates the message data via OtherMemory interface.
-/// SharedMemPtr size is enough to store memory address
-/// for any supported platform.
-typedef uint64_t SharedMemPtr;
+	OtherDomain& operator = (const OtherDomain& src);
+	OtherDomain& operator = (OtherDomain&& src) NIRVANA_NOEXCEPT;
+
+	/// Reset to the null state.
+	void reset () NIRVANA_NOEXCEPT;
+
+	/// Send message to domain.
+	/// 
+	/// \param msg The message.
+	/// \param size The message size.
+	void send_message (const void* msg, size_t size);
+
+	/// Obtain access to the protection domain memory.
+	/// 
+	/// \returns OtherMemory interface reference.
+	Core::CoreRef <OtherMemory> memory ();
+
+private:
+	uint32_t mailslot;
+	uint32_t address_space;
+};
 
 }
 }
