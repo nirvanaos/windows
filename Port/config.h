@@ -34,8 +34,6 @@
 namespace Nirvana {
 namespace Core {
 
-// 
-
 /** \defgroup heap_parameters Heap parameters
 @{
 HEAP_UNIT is the minimum size of the allocated memory block,
