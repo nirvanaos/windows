@@ -61,8 +61,8 @@ public:
 	Core::CoreRef <OtherMemory> memory ();
 
 private:
-	uint32_t mailslot;
-	uint32_t address_space;
+	void* mailslot;
+	void* address_space;
 };
 
 }

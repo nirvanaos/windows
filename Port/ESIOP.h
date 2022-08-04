@@ -43,6 +43,15 @@ typedef uint32_t ProtDomainId;
 /// for any supported platform.
 typedef uint64_t SharedMemPtr;
 
+/// If an incoming request can't be processed, the system uses this function
+/// to send ESIOP error message to caller.
+/// This function must not throw exceptions.
+/// 
+/// \param domain_id The id of the error message recipient.
+/// \param msg The error message buffer.
+/// \param size The error message size.
+void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) NIRVANA_NOEXCEPT;
+
 }
 }
 
