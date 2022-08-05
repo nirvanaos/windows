@@ -37,6 +37,9 @@ namespace ESIOP {
 /// Unique protection domain id.
 typedef uint32_t ProtDomainId;
 
+/// \returns Current protection domain id.
+ProtDomainId current_domain_id () NIRVANA_NOEXCEPT;
+
 /// SharedMemPtr points to the message recipient protection domain memory.
 /// Sender allocates the message data via OtherMemory interface.
 /// SharedMemPtr size is enough to store memory address
