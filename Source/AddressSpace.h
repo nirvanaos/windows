@@ -1,5 +1,4 @@
 /// \file
-/// Protection domain (process) address space.
 /*
 * Nirvana Core. Windows port library.
 *

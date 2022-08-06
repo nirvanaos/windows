@@ -33,11 +33,6 @@ using namespace Core::Windows;
 
 namespace ESIOP {
 
-ProtDomainId current_domain_id () NIRVANA_NOEXCEPT
-{
-	return GetCurrentProcessId ();
-}
-
 void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) NIRVANA_NOEXCEPT
 {
 	try {

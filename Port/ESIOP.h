@@ -31,6 +31,9 @@
 
 #include <Nirvana/NirvanaBase.h>
 
+extern "C" __declspec (dllimport)
+unsigned long __stdcall GetCurrentProcessId (void);
+
 namespace Nirvana {
 namespace ESIOP {
 
@@ -38,7 +41,10 @@ namespace ESIOP {
 typedef uint32_t ProtDomainId;
 
 /// \returns Current protection domain id.
-ProtDomainId current_domain_id () NIRVANA_NOEXCEPT;
+inline ProtDomainId current_domain_id (void) NIRVANA_NOEXCEPT
+{
+	return GetCurrentProcessId ();
+}
 
 /// SharedMemPtr points to the message recipient protection domain memory.
 /// Sender allocates the message data via OtherMemory interface.
