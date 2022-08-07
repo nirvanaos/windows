@@ -109,6 +109,21 @@ const bool RUNTIME_SUPPORT_DISABLE = false;
 /// So we can enable pooling.
 const bool EXEC_DOMAIN_POOLING = false;
 
+///@{
+/// When a request is issued, the request deadline is not known yet.
+/// So initially request is issued with some small deadline and then deadline is adjusted.
+
+/// Initial deadline for the local system requests.
+const uint64_t INITIAL_REQUEST_DEADLINE_LOCAL = 1 * 1000; // 1 microsecond
+
+/// Initial deadline for the remote requests.
+const uint64_t INITIAL_REQUEST_DEADLINE_REMOTE = 1 * 1000000; // 1 millisecond
+
+///@}
+
+/// Cancel request deadline.
+const uint64_t CANCEL_REQUEST_DEADLINE = 1000000000; // 1 sec
+
 }
 }
 
