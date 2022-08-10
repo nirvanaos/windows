@@ -23,7 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include <Port/ESIOP.h>
+#include <ORB/OtherDomain.h>
 #include "Mailslot.h"
 #include "MailslotName.h"
 
@@ -41,6 +41,11 @@ void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) N
 		ms.send (msg, size);
 	} catch (...) {
 	}
+}
+
+OtherDomain* OtherDomain::create (ProtDomainId domain_id)
+{
+	throw_NO_IMPLEMENT ();
 }
 
 }
