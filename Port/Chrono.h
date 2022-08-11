@@ -28,32 +28,74 @@
 #define NIRVANA_CORE_PORT_CHRONO_H_
 #pragma once
 
-#include <Nirvana/NirvanaBase.h>
+#include <CORBA/CORBA.h>
+#include <CORBA/TimeBase.h>
+#include <Nirvana/muldiv64.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
+/// Time API Port implementation.
 class Chrono
 {
 public:
+	/// Called on system startup.
 	static void initialize () NIRVANA_NOEXCEPT;
 
-	static const uint16_t epoch = 2021;
+	/// Current system time.
+	/// NOTE: For the time zone implementation see https://howardhinnant.github.io/date/tz.html
+	/// 
+	static TimeBase::UtcT system_clock () NIRVANA_NOEXCEPT;
 
-	static uint64_t system_clock () NIRVANA_NOEXCEPT;
-	static uint64_t steady_clock () NIRVANA_NOEXCEPT;
+	/// Current UTC time.
+	static TimeBase::TimeT UTC () NIRVANA_NOEXCEPT;
 
-	/// Returns steady clock resolution in ns
-	static uint32_t steady_clock_resolution () NIRVANA_NOEXCEPT
+	/// Duration since system startup.
+	static SteadyTime steady_clock () NIRVANA_NOEXCEPT;
+
+	/// Steady clock frequency, counts per second.
+	static const SteadyTime& steady_clock_frequency () NIRVANA_NOEXCEPT
 	{
-		return time_increment_;
+		return performance_frequency_;
+	}
+
+	/// Convert UTC time to the local steady time.
+	/// 
+	/// \param utc UTC time.
+	/// \returns Local steady time.
+	static SteadyTime UTC_to_steady (TimeBase::TimeT utc) NIRVANA_NOEXCEPT
+	{
+		return steady_clock () + muldiv64 (utc - UTC (), steady_clock_frequency (), 10000000);
+	}
+
+	/// Convert local steady time to UTC time.
+	/// 
+	/// \param steady Local steady time.
+	/// \returns UTC time.
+	static TimeBase::TimeT steady_to_UTC (SteadyTime steady) NIRVANA_NOEXCEPT
+	{
+		return UTC () + muldiv64 (steady - steady_clock (), 10000000, steady_clock_frequency ());
+	}
+
+	/// Make deadline.
+	/// 
+	/// NOTE: If steady_clock_frequency () is too low (1 sec?), Port library can implement advanced
+	/// algorithm to create diffirent deadlines inside one clock tick, based on atomic counter.
+	///
+	/// \param timeout A timeout from the current time.
+	/// \return Deadline time as local steady clock value.
+	static DeadlineTime make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT
+	{
+		return steady_clock () + muldiv64 (timeout, steady_clock_frequency (), 10000000);
 	}
 
 private:
-	static unsigned long time_increment_; // Time between system ticks in nanoseconds
+	// Performance counter frequency
+	static uint64_t performance_frequency_;
 
-	static const uint64_t WIN_TIME_OFFSET_SEC = 13253068800UI64;
+	// Offset from 15 October 1582 00:00:00 to 1 January 1601 12:00:00 in seconds
+	static const uint64_t WIN_TIME_OFFSET_SEC = 574862400UI64;
 };
 
 }

@@ -54,7 +54,7 @@ void Mailslot::close ()
 void Mailslot::send (const void* msg, uint32_t size)
 {
 	DWORD cb;
-	if (!WriteFile (mailslot_, msg, sizeof (msg), &cb, nullptr))
+	if (!WriteFile (mailslot_, msg, size, &cb, nullptr))
 		throw_COMM_FAILURE ();
 }
 

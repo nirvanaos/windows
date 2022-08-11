@@ -29,7 +29,7 @@
 #define NIRVANA_CORE_CONFIG_H_
 #pragma once
 
-#include <stdint.h>
+#include <Nirvana/time_constants.h>
 
 namespace Nirvana {
 namespace Core {
@@ -96,10 +96,10 @@ const unsigned PROT_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For protection domai
 /// Unused module unloading timeout
 /// 
 /// If module was not used during this period of time, it will be unloaded.
-const uint64_t MODULE_UNLOAD_TIMEOUT = 30000000000; // 30 sec
+const TimeBase::TimeT MODULE_UNLOAD_TIMEOUT = 30 * TimeBase::SECOND;
 
 /// ORB proxy garbage collection deadline. May be INFINITE_DEADLINE
-const uint64_t PROXY_GC_DEADLINE = 10000000000; // 10 sec
+const TimeBase::TimeT PROXY_GC_DEADLINE = 10 * TimeBase::SECOND;
 
 /// Disable iterator debugging.
 /// May be used in production systems to eliminate unused runtime support code from core.
@@ -114,15 +114,15 @@ const bool EXEC_DOMAIN_POOLING = false;
 /// So initially request is issued with some small deadline and then deadline is adjusted.
 
 /// Initial deadline for the local system requests.
-const uint64_t INITIAL_REQUEST_DEADLINE_LOCAL = 1 * 1000; // 1 microsecond
+const TimeBase::TimeT INITIAL_REQUEST_DEADLINE_LOCAL = 1 * TimeBase::MICROSECOND;
 
 /// Initial deadline for the remote requests.
-const uint64_t INITIAL_REQUEST_DEADLINE_REMOTE = 1 * 1000000; // 1 millisecond
+const TimeBase::TimeT INITIAL_REQUEST_DEADLINE_REMOTE = 1 * TimeBase::MILLISECOND;
 
 ///@}
 
 /// Cancel request deadline.
-const uint64_t CANCEL_REQUEST_DEADLINE = 1000000000; // 1 sec
+const TimeBase::TimeT CANCEL_REQUEST_DEADLINE = 1 * TimeBase::SECOND;
 
 }
 }

@@ -38,7 +38,7 @@ void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) N
 	try {
 		Mailslot ms;
 		ms.open (MailslotName (domain_id));
-		ms.send (msg, size);
+		ms.send (msg, (DWORD)size);
 	} catch (...) {
 	}
 }
