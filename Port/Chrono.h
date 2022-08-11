@@ -29,7 +29,7 @@
 #pragma once
 
 #include <CORBA/CORBA.h>
-#include <CORBA/TimeBase.h>
+#include <Nirvana/TimeBase.h>
 #include <Nirvana/muldiv64.h>
 
 namespace Nirvana {
