@@ -85,14 +85,16 @@ public:
 	///
 	/// \param timeout A timeout from the current time.
 	/// \return Deadline time as local steady clock value.
-	static DeadlineTime make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT
-	{
-		return steady_clock () + muldiv64 (timeout, steady_clock_frequency (), 10000000);
-	}
+	static DeadlineTime make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT;
 
 private:
 	// Performance counter frequency
 	static uint64_t performance_frequency_;
+
+#ifndef NIRVANA_FAST_MULDIV64
+	// Maximal timeout fit in 64-bit multiplication
+	static uint64_t max_timeout64_;
+#endif
 
 	// Offset from 15 October 1582 00:00:00 to 1 January 1601 12:00:00 in seconds
 	static const uint64_t WIN_TIME_OFFSET_SEC = 574862400UI64;

@@ -25,6 +25,7 @@
 */
 #include "../Port/Chrono.h"
 #include "win32.h"
+#include <limits>
 
 namespace Nirvana {
 namespace Core {
@@ -32,11 +33,18 @@ namespace Port {
 
 uint64_t Chrono::performance_frequency_;
 
+#ifndef NIRVANA_FAST_MULDIV64
+uint64_t Chrono::max_timeout64_;
+#endif
+
 void Chrono::initialize () NIRVANA_NOEXCEPT
 {
 	LARGE_INTEGER pf;
 	QueryPerformanceFrequency (&pf);
 	performance_frequency_ = pf.QuadPart;
+#ifndef NIRVANA_FAST_MULDIV64
+	max_timeout64_ = std::numeric_limits <uint64_t>::max () / performance_frequency_;
+#endif
 }
 
 TimeBase::TimeT Chrono::UTC () NIRVANA_NOEXCEPT
@@ -66,6 +74,16 @@ SteadyTime Chrono::steady_clock () NIRVANA_NOEXCEPT
 	LARGE_INTEGER pc;
 	QueryPerformanceCounter (&pc);
 	return pc.QuadPart;
+}
+
+DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT
+{
+	uint64_t steady_timeout = 
+#ifndef NIRVANA_FAST_MULDIV64
+	(timeout <= max_timeout64_) ? timeout * steady_clock_frequency () / 10000000UI64 :
+#endif
+	muldiv64 (timeout, steady_clock_frequency (), 10000000);
+	return steady_clock () + steady_timeout;
 }
 
 }
