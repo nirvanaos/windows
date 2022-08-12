@@ -30,7 +30,11 @@
 
 #include <CORBA/CORBA.h>
 #include <Nirvana/TimeBase.h>
+#include <Nirvana/time_defs.h>
 #include <Nirvana/muldiv64.h>
+
+extern "C" __declspec(dllimport)
+void __stdcall QueryInterruptTimePrecise (unsigned __int64* lpInterruptTimePrecise);
 
 namespace Nirvana {
 namespace Core {
@@ -51,36 +55,47 @@ public:
 	/// Current UTC time.
 	static TimeBase::TimeT UTC () NIRVANA_NOEXCEPT;
 
+	/// Duration since system startup in 100 ns intervals.
+	static SteadyTime steady_clock () NIRVANA_NOEXCEPT
+	{
+		unsigned __int64 t;
+		QueryInterruptTimePrecise (&t);
+		return t;
+	}
+
 	/// Duration since system startup.
-	static SteadyTime steady_clock () NIRVANA_NOEXCEPT;
+	static DeadlineTime deadline_clock () NIRVANA_NOEXCEPT
+	{
+		return __rdtsc ();
+	}
 
 	/// Steady clock frequency, Hz.
-	static const SteadyTime steady_clock_frequency () NIRVANA_NOEXCEPT
+	static const DeadlineTime& deadline_clock_frequency () NIRVANA_NOEXCEPT
 	{
 		return TSC_frequency_;
 	}
 
-	/// Convert UTC time to the local steady time.
+	/// Convert UTC time to the local deadline time.
 	/// 
 	/// \param utc UTC time.
-	/// \returns Local steady time.
-	static SteadyTime UTC_to_steady (TimeBase::TimeT utc) NIRVANA_NOEXCEPT
+	/// \returns Local deadline time.
+	static DeadlineTime deadline_from_UTC (TimeBase::TimeT utc) NIRVANA_NOEXCEPT
 	{
-		return steady_clock () + muldiv64 (utc - UTC (), steady_clock_frequency (), 10000000);
+		return deadline_clock () + muldiv64 (utc - UTC (), deadline_clock_frequency (), 10000000);
 	}
 
-	/// Convert local steady time to UTC time.
+	/// Convert local deadline time to UTC time.
 	/// 
-	/// \param steady Local steady time.
+	/// \param dt Local deadline time.
 	/// \returns UTC time.
-	static TimeBase::TimeT steady_to_UTC (SteadyTime steady) NIRVANA_NOEXCEPT
+	static TimeBase::TimeT deadline_to_UTC (DeadlineTime steady) NIRVANA_NOEXCEPT
 	{
-		return UTC () + muldiv64 (steady - steady_clock (), 10000000, steady_clock_frequency ());
+		return UTC () + muldiv64 (steady - deadline_clock (), 10000000, deadline_clock_frequency ());
 	}
 
 	/// Make deadline.
 	/// 
-	/// NOTE: If steady_clock_frequency () is too low (1 sec?), Port library can implement advanced
+	/// NOTE: If deadline_clock_frequency () is too low (1 sec?), Port library can implement advanced
 	/// algorithm to create diffirent deadlines inside one clock tick, based on atomic counter.
 	///
 	/// \param timeout A timeout from the current time.

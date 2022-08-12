@@ -91,19 +91,14 @@ TimeBase::UtcT Chrono::system_clock () NIRVANA_NOEXCEPT
 	return t;
 }
 
-SteadyTime Chrono::steady_clock () NIRVANA_NOEXCEPT
-{
-	return __rdtsc ();
-}
-
 DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT
 {
-	uint64_t steady_timeout = 
+	uint64_t dt_timeout = 
 #ifndef NIRVANA_FAST_MULDIV64
-	(timeout <= max_timeout64_) ? timeout * steady_clock_frequency () / 10000000UI64 :
+	(timeout <= max_timeout64_) ? timeout * deadline_clock_frequency () / 10000000UI64 :
 #endif
-	muldiv64 (timeout, steady_clock_frequency (), 10000000);
-	return steady_clock () + steady_timeout;
+	muldiv64 (timeout, deadline_clock_frequency (), 10000000);
+	return steady_clock () + dt_timeout;
 }
 
 }
