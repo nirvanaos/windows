@@ -54,10 +54,10 @@ public:
 	/// Duration since system startup.
 	static SteadyTime steady_clock () NIRVANA_NOEXCEPT;
 
-	/// Steady clock frequency, counts per second.
-	static const SteadyTime& steady_clock_frequency () NIRVANA_NOEXCEPT
+	/// Steady clock frequency, Hz.
+	static const SteadyTime steady_clock_frequency () NIRVANA_NOEXCEPT
 	{
-		return performance_frequency_;
+		return TSC_frequency_;
 	}
 
 	/// Convert UTC time to the local steady time.
@@ -89,7 +89,7 @@ public:
 
 private:
 	// Performance counter frequency
-	static uint64_t performance_frequency_;
+	static uint64_t TSC_frequency_;
 
 #ifndef NIRVANA_FAST_MULDIV64
 	// Maximal timeout fit in 64-bit multiplication

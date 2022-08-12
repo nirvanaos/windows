@@ -31,7 +31,7 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-uint64_t Chrono::performance_frequency_;
+uint64_t Chrono::TSC_frequency_;
 
 #ifndef NIRVANA_FAST_MULDIV64
 uint64_t Chrono::max_timeout64_;
@@ -39,11 +39,33 @@ uint64_t Chrono::max_timeout64_;
 
 void Chrono::initialize () NIRVANA_NOEXCEPT
 {
-	LARGE_INTEGER pf;
-	QueryPerformanceFrequency (&pf);
-	performance_frequency_ = pf.QuadPart;
+	TSC_frequency_ = 0;
+	{
+		int info [4];
+		__cpuid (info, 0);
+		int maxfunc = info [0];
+		if (maxfunc >= 0x15) {
+			__cpuid (info, 0x15);
+			if (info [1] && info [2])
+				TSC_frequency_ = UInt32x32To64 (info [2], info [1]) / info [0];
+		}
+	}
+
+	if (!TSC_frequency_) {
+		LARGE_INTEGER pf;
+		QueryPerformanceFrequency (&pf);
+		LARGE_INTEGER pc_start;
+		QueryPerformanceCounter (&pc_start);
+		uint64_t start = __rdtsc ();
+		Sleep (100);
+		LARGE_INTEGER pc_end;
+		QueryPerformanceCounter (&pc_end);
+		uint64_t end = __rdtsc ();
+		TSC_frequency_ = muldiv64 (end - start, pf.QuadPart, (pc_end.QuadPart - pc_start.QuadPart));
+	}
+
 #ifndef NIRVANA_FAST_MULDIV64
-	max_timeout64_ = std::numeric_limits <uint64_t>::max () / performance_frequency_;
+	max_timeout64_ = std::numeric_limits <uint64_t>::max () / TSC_frequency_;
 #endif
 }
 
@@ -71,9 +93,7 @@ TimeBase::UtcT Chrono::system_clock () NIRVANA_NOEXCEPT
 
 SteadyTime Chrono::steady_clock () NIRVANA_NOEXCEPT
 {
-	LARGE_INTEGER pc;
-	QueryPerformanceCounter (&pc);
-	return pc.QuadPart;
+	return __rdtsc ();
 }
 
 DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT
