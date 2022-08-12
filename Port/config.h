@@ -29,7 +29,7 @@
 #define NIRVANA_CORE_CONFIG_H_
 #pragma once
 
-#include <Nirvana/time_constants.h>
+#include <Nirvana/time_defs.h>
 
 namespace Nirvana {
 namespace Core {
