@@ -54,13 +54,22 @@ void Chrono::initialize () NIRVANA_NOEXCEPT
 	if (!TSC_frequency_) {
 		LARGE_INTEGER pf;
 		QueryPerformanceFrequency (&pf);
+
 		LARGE_INTEGER pc_start;
+		int prio = GetThreadPriority (GetCurrentThread ());
+		verify (SetThreadPriority (GetCurrentThread (), THREAD_PRIORITY_TIME_CRITICAL));
 		QueryPerformanceCounter (&pc_start);
 		uint64_t start = __rdtsc ();
+		verify (SetThreadPriority (GetCurrentThread (), prio));
+		
 		Sleep (100);
+		
 		LARGE_INTEGER pc_end;
+		verify (SetThreadPriority (GetCurrentThread (), THREAD_PRIORITY_TIME_CRITICAL));
 		QueryPerformanceCounter (&pc_end);
 		uint64_t end = __rdtsc ();
+		verify (SetThreadPriority (GetCurrentThread (), prio));
+		
 		TSC_frequency_ = muldiv64 (end - start, pf.QuadPart, (pc_end.QuadPart - pc_start.QuadPart));
 	}
 
