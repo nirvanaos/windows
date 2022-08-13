@@ -31,7 +31,7 @@
 #include <CORBA/CORBA.h>
 #include <Nirvana/TimeBase.h>
 #include <Nirvana/time_defs.h>
-#include <Nirvana/muldiv64.h>
+#include <Nirvana/rescale.h>
 
 extern "C" __declspec(dllimport)
 void __stdcall QueryInterruptTimePrecise (unsigned __int64* lpInterruptTimePrecise);
@@ -81,16 +81,16 @@ public:
 	/// \returns Local deadline time.
 	static DeadlineTime deadline_from_UTC (TimeBase::TimeT utc) NIRVANA_NOEXCEPT
 	{
-		return deadline_clock () + muldiv64 (utc - UTC (), deadline_clock_frequency (), 10000000);
+		return deadline_clock () + rescale64 (utc - UTC (), deadline_clock_frequency (), 0, 10000000);
 	}
 
 	/// Convert local deadline time to UTC time.
 	/// 
-	/// \param dt Local deadline time.
+	/// \param deadline Local deadline time.
 	/// \returns UTC time.
-	static TimeBase::TimeT deadline_to_UTC (DeadlineTime steady) NIRVANA_NOEXCEPT
+	static TimeBase::TimeT deadline_to_UTC (DeadlineTime deadline) NIRVANA_NOEXCEPT
 	{
-		return UTC () + muldiv64 (steady - deadline_clock (), 10000000, deadline_clock_frequency ());
+		return UTC () + rescale64 (deadline - deadline_clock (), 10000000, deadline_clock_frequency () - 1, deadline_clock_frequency ());
 	}
 
 	/// Make deadline.
@@ -106,7 +106,7 @@ private:
 	// Performance counter frequency
 	static uint64_t TSC_frequency_;
 
-#ifndef NIRVANA_FAST_MULDIV64
+#ifndef NIRVANA_FAST_RESCALE64
 	// Maximal timeout fit in 64-bit multiplication
 	static uint64_t max_timeout64_;
 #endif

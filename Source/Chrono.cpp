@@ -33,7 +33,7 @@ namespace Port {
 
 uint64_t Chrono::TSC_frequency_;
 
-#ifndef NIRVANA_FAST_MULDIV64
+#ifndef NIRVANA_FAST_RESCALE64
 uint64_t Chrono::max_timeout64_;
 #endif
 
@@ -70,10 +70,10 @@ void Chrono::initialize () NIRVANA_NOEXCEPT
 		uint64_t end = __rdtsc ();
 		verify (SetThreadPriority (GetCurrentThread (), prio));
 		
-		TSC_frequency_ = muldiv64 (end - start, pf.QuadPart, (pc_end.QuadPart - pc_start.QuadPart));
+		TSC_frequency_ = rescale64 (end - start, pf.QuadPart, 0, pc_end.QuadPart - pc_start.QuadPart);
 	}
 
-#ifndef NIRVANA_FAST_MULDIV64
+#ifndef NIRVANA_FAST_RESCALE64
 	max_timeout64_ = std::numeric_limits <uint64_t>::max () / TSC_frequency_;
 #endif
 }
@@ -104,9 +104,9 @@ DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT
 {
 	uint64_t dt_timeout = 
 #ifndef NIRVANA_FAST_MULDIV64
-	(timeout <= max_timeout64_) ? timeout * deadline_clock_frequency () / 10000000UI64 :
+	(timeout <= max_timeout64_) ? ((timeout * deadline_clock_frequency () + 9999999) / 10000000) :
 #endif
-	muldiv64 (timeout, deadline_clock_frequency (), 10000000);
+	rescale64 ((int64_t)timeout, deadline_clock_frequency (), 9999999I64, 10000000UI64);
 	return steady_clock () + dt_timeout;
 }
 
