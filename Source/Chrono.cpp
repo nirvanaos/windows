@@ -78,20 +78,20 @@ void Chrono::initialize () NIRVANA_NOEXCEPT
 #endif
 }
 
-TimeBase::TimeT Chrono::UTC () NIRVANA_NOEXCEPT
+TimeBase::UtcT Chrono::UTC () NIRVANA_NOEXCEPT
 {
 	FILETIME ft;
 	GetSystemTimePreciseAsFileTime (&ft);
 	ULARGE_INTEGER ui;
 	ui.LowPart = ft.dwLowDateTime;
 	ui.HighPart = ft.dwHighDateTime;
-	return ui.QuadPart + WIN_TIME_OFFSET_SEC * 10000000UI64;
+	// TODO: Inaccuracy? Check NTP configuration.
+	return TimeBase::UtcT (ui.QuadPart + WIN_TIME_OFFSET_SEC * 10000000UI64, 1, 0, 0);
 }
 
 TimeBase::UtcT Chrono::system_clock () NIRVANA_NOEXCEPT
 {
-	TimeBase::UtcT t;
-	t.time (UTC ());
+	TimeBase::UtcT t = UTC ();
 
 	TIME_ZONE_INFORMATION tzi;
 	GetTimeZoneInformation (&tzi);
@@ -103,11 +103,11 @@ TimeBase::UtcT Chrono::system_clock () NIRVANA_NOEXCEPT
 DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT
 {
 	uint64_t dt_timeout = 
-#ifndef NIRVANA_FAST_MULDIV64
+#ifndef NIRVANA_FAST_RESCALE64
 	(timeout <= max_timeout64_) ? ((timeout * deadline_clock_frequency () + 9999999) / 10000000) :
 #endif
-	rescale64 ((int64_t)timeout, deadline_clock_frequency (), 9999999I64, 10000000UI64);
-	return steady_clock () + dt_timeout;
+	rescale64 (timeout, deadline_clock_frequency (), 9999999, 10000000);
+	return deadline_clock () + dt_timeout;
 }
 
 }

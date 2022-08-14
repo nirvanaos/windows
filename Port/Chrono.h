@@ -53,7 +53,7 @@ public:
 	static TimeBase::UtcT system_clock () NIRVANA_NOEXCEPT;
 
 	/// Current UTC time.
-	static TimeBase::TimeT UTC () NIRVANA_NOEXCEPT;
+	static TimeBase::UtcT UTC () NIRVANA_NOEXCEPT;
 
 	/// Duration since system startup in 100 ns intervals.
 	static SteadyTime steady_clock () NIRVANA_NOEXCEPT
@@ -79,18 +79,23 @@ public:
 	/// 
 	/// \param utc UTC time.
 	/// \returns Local deadline time.
-	static DeadlineTime deadline_from_UTC (TimeBase::TimeT utc) NIRVANA_NOEXCEPT
+	static DeadlineTime deadline_from_UTC (TimeBase::UtcT utc) NIRVANA_NOEXCEPT
 	{
-		return deadline_clock () + rescale64 (utc - UTC (), deadline_clock_frequency (), 0, 10000000);
+		TimeBase::UtcT cur = UTC ();
+		return deadline_clock () + rescale64 (utc.time () - cur.time () + inacc_max (utc, cur),
+			deadline_clock_frequency (), 0, 10000000);
 	}
 
 	/// Convert local deadline time to UTC time.
 	/// 
 	/// \param deadline Local deadline time.
 	/// \returns UTC time.
-	static TimeBase::TimeT deadline_to_UTC (DeadlineTime deadline) NIRVANA_NOEXCEPT
+	static TimeBase::UtcT deadline_to_UTC (DeadlineTime deadline) NIRVANA_NOEXCEPT
 	{
-		return UTC () + rescale64 (deadline - deadline_clock (), 10000000, deadline_clock_frequency () - 1, deadline_clock_frequency ());
+		TimeBase::UtcT utc = UTC ();
+		utc.time (utc.time () + rescale64 (deadline - deadline_clock (), 10000000,
+			deadline_clock_frequency () - 1, deadline_clock_frequency ()));
+		return utc;
 	}
 
 	/// Make deadline.
@@ -101,6 +106,17 @@ public:
 	/// \param timeout A timeout from the current time.
 	/// \return Deadline time as local steady clock value.
 	static DeadlineTime make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT;
+
+private:
+	static uint64_t inacc_max (const TimeBase::UtcT& t1, const TimeBase::UtcT& t2) NIRVANA_NOEXCEPT
+	{
+		if (t1.inacchi () > t2.inacchi ())
+			return ((uint64_t)t1.inacchi () << 32) | t1.inacclo ();
+		else if (t1.inacchi () < t2.inacchi ())
+			return ((uint64_t)t2.inacchi () << 32) | t2.inacclo ();
+		else
+			return ((uint64_t)t1.inacchi () << 32) | std::max (t1.inacclo (), t2.inacclo ());
+	}
 
 private:
 	// Performance counter frequency
