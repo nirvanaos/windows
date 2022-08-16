@@ -44,9 +44,6 @@ namespace Port {
 class Chrono
 {
 public:
-	/// Called on system startup.
-	static void initialize () NIRVANA_NOEXCEPT;
-
 	/// Current system time.
 	/// NOTE: For the time zone implementation see https://howardhinnant.github.io/date/tz.html
 	/// 
@@ -107,6 +104,9 @@ public:
 	/// \return Deadline time as local steady clock value.
 	static DeadlineTime make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT;
 
+	static void initialize () NIRVANA_NOEXCEPT;
+	static void terminate () NIRVANA_NOEXCEPT;
+
 private:
 	static uint64_t inacc_max (const TimeBase::UtcT& t1, const TimeBase::UtcT& t2) NIRVANA_NOEXCEPT
 	{
@@ -118,7 +118,15 @@ private:
 			return ((uint64_t)t1.inacchi () << 32) | std::max (t1.inacclo (), t2.inacclo ());
 	}
 
+	static bool NTP_client_enabled ();
+	static uint32_t local_clock_dispersion_sec ();
+	static uint32_t max_allowed_phase_offset_sec ();
+	static bool adjustment_in_progress ();
+
 private:
+	// Offset from 15 October 1582 00:00:00 to 1 January 1601 12:00:00 in seconds
+	static const uint64_t WIN_TIME_OFFSET_SEC = 574862400UI64;
+
 	// Performance counter frequency
 	static uint64_t TSC_frequency_;
 
@@ -127,8 +135,8 @@ private:
 	static uint64_t max_timeout64_;
 #endif
 
-	// Offset from 15 October 1582 00:00:00 to 1 January 1601 12:00:00 in seconds
-	static const uint64_t WIN_TIME_OFFSET_SEC = 574862400UI64;
+	static void* hkey_time_config_;
+	static void* hkey_time_client_;
 };
 
 }

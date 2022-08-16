@@ -37,6 +37,9 @@ uint64_t Chrono::TSC_frequency_;
 uint64_t Chrono::max_timeout64_;
 #endif
 
+void* Chrono::hkey_time_config_;
+void* Chrono::hkey_time_client_;
+
 void Chrono::initialize () NIRVANA_NOEXCEPT
 {
 	TSC_frequency_ = 0;
@@ -71,11 +74,57 @@ void Chrono::initialize () NIRVANA_NOEXCEPT
 		verify (SetThreadPriority (GetCurrentThread (), prio));
 		
 		TSC_frequency_ = rescale64 (end - start, pf.QuadPart, 0, pc_end.QuadPart - pc_start.QuadPart);
+
+		HKEY time_service;
+		if (RegOpenKeyW (HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services\\W32Time", &time_service))
+			throw_INITIALIZE ();
+		if (RegOpenKeyW (time_service, L"Config", &hkey_time_config_))
+			throw_INITIALIZE ();
+		if (RegOpenKeyW (time_service, L"TimeProviders\\NtpClient", &hkey_time_client_))
+			throw_INITIALIZE ();
+		RegCloseKey (time_service);
 	}
 
 #ifndef NIRVANA_FAST_RESCALE64
 	max_timeout64_ = std::numeric_limits <uint64_t>::max () / TSC_frequency_;
 #endif
+}
+
+void Chrono::terminate () NIRVANA_NOEXCEPT
+{
+	RegCloseKey (hkey_time_config_);
+	RegCloseKey (hkey_time_client_);
+}
+
+inline bool Chrono::NTP_client_enabled ()
+{
+	DWORD d, cb;
+	return ERROR_SUCCESS == RegQueryValueExW (hkey_time_client_, L"Enabled",
+		nullptr, nullptr, (BYTE*)&d, &cb) && d;
+}
+
+inline uint32_t Chrono::local_clock_dispersion_sec ()
+{
+	DWORD d = 10, cb;
+	RegQueryValueExW (hkey_time_config_, L"LocalClockDispersion", nullptr, nullptr, (BYTE*)&d, &cb);
+	return d;
+}
+
+inline uint32_t Chrono::max_allowed_phase_offset_sec ()
+{
+	DWORD d = 1, cb;
+	RegQueryValueExW (hkey_time_config_, L"MaxAllowedPhaseOffset", nullptr, nullptr, (BYTE*)&d, &cb);
+	return d;
+}
+
+inline bool Chrono::adjustment_in_progress ()
+{
+	DWORD adj, inc;
+	BOOL disabled;
+	if (GetSystemTimeAdjustment (&adj, &inc, &disabled))
+		return !disabled && adj != 0;
+	else
+		return false;
 }
 
 TimeBase::UtcT Chrono::UTC () NIRVANA_NOEXCEPT
@@ -85,8 +134,16 @@ TimeBase::UtcT Chrono::UTC () NIRVANA_NOEXCEPT
 	ULARGE_INTEGER ui;
 	ui.LowPart = ft.dwLowDateTime;
 	ui.HighPart = ft.dwHighDateTime;
-	// TODO: Inaccuracy? Check NTP configuration.
-	return TimeBase::UtcT (ui.QuadPart + WIN_TIME_OFFSET_SEC * 10000000UI64, 1, 0, 0);
+
+	uint32_t inacclo;
+	if (!NTP_client_enabled ())
+		inacclo = local_clock_dispersion_sec () * 10000000;
+	else if (adjustment_in_progress ())
+		inacclo = max_allowed_phase_offset_sec () * 10000000;
+	else
+		inacclo = 1;
+
+	return TimeBase::UtcT (ui.QuadPart + WIN_TIME_OFFSET_SEC * 10000000UI64, inacclo, 0, 0);
 }
 
 TimeBase::UtcT Chrono::system_clock () NIRVANA_NOEXCEPT

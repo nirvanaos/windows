@@ -58,6 +58,7 @@ void terminate (void) NIRVANA_NOEXCEPT
 {
   Port::Thread::terminate ();
   terminate0 ();
+  Port::Chrono::terminate ();
 }
 
 }
