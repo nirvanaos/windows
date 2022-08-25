@@ -42,7 +42,7 @@ Module::Module (const StringView& file)
 
 	{
 		SharedStringW wpath;
-		utf8_to_ucs2 (file, wpath);
+		utf8_to_wide (file, wpath);
 		DWORD att = GetFileAttributesW (wpath.c_str ());
 		if (att & FILE_ATTRIBUTE_DIRECTORY)
 			throw runtime_error ("File not found");
