@@ -34,10 +34,10 @@
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
 
-using namespace ::Nirvana::Core::Windows;
-using namespace std;
+using namespace Windows;
+
+namespace Port {
 
 StaticallyAllocated <Windows::AddressSpace> Memory::space_;
 void* Memory::handler_;
@@ -202,7 +202,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 			if (copy_rgn) {
 				copy_begin = page_protection + (copy_rgn->offset + PAGE_SIZE - 1) / PAGE_SIZE;
 				copy_end = page_protection + (copy_rgn->offset + copy_rgn->size) / PAGE_SIZE;
-				fill (copy_begin, copy_end, 0);
+				std::fill (copy_begin, copy_end, 0);
 			}
 			do {
 				auto region_end = region_begin;
@@ -236,7 +236,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 
 			if (copy_rgn) {
 				if (copy_begin < copy_end) {
-					fill (copy_begin, copy_end, PageState::READ_ONLY);
+					std::fill (copy_begin, copy_end, PageState::READ_ONLY);
 					size_t offset = (copy_begin - page_protection) * PAGE_SIZE;
 					LONG_PTR* dst = (LONG_PTR*)(ptmp + offset);
 					size_t size = (copy_end - copy_begin) * PAGE_SIZE;
@@ -783,7 +783,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							}
 						}
 						while (d_p < d_end) {
-							size_t cb = min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
+							size_t cb = std::min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
 							Block block (d_p, cb == ALLOCATION_GRANULARITY);
 							block.copy_aligned (s_p, cb, flags);
 							d_p += cb;
@@ -828,7 +828,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							BYTE* d_p = (BYTE*)dst, *d_end = d_p + size;
 							BYTE* s_p = (BYTE*)src;
 							while (d_p < d_end) {
-								size_t cb = min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
+								size_t cb = std::min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
 								Block block (d_p, cb == ALLOCATION_GRANULARITY);
 								block.copy_unaligned (d_p - block.address (), cb, s_p, flags);
 								d_p += cb;

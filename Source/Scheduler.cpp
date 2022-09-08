@@ -32,8 +32,6 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-using namespace std;
-
 Windows::SchedulerAbstract* Scheduler::singleton_ = nullptr;
 
 }

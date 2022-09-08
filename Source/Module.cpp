@@ -28,13 +28,12 @@
 #include "win32.h"
 #include <stdexcept>
 
-using namespace std;
-
 namespace Nirvana {
 namespace Core {
-namespace Port {
 
-using namespace Nirvana::Core::Windows;
+using namespace Windows;
+
+namespace Port {
 
 Module::Module (const StringView& file)
 {
@@ -45,9 +44,9 @@ Module::Module (const StringView& file)
 		utf8_to_wide (file, wpath);
 		DWORD att = GetFileAttributesW (wpath.c_str ());
 		if (att & FILE_ATTRIBUTE_DIRECTORY)
-			throw runtime_error ("File not found");
+			throw std::runtime_error ("File not found");
 		WCHAR temp_dir [MAX_PATH + 1];
-		if (!GetTempPathW ((DWORD)size(temp_dir), temp_dir))
+		if (!GetTempPathW ((DWORD)std::size(temp_dir), temp_dir))
 			throw_UNKNOWN ();
 		for (UINT uniq = GetTickCount ();; ++uniq) {
 			if (!GetTempFileNameW (temp_dir, WINWCS("nex"), uniq, temp_path))
@@ -64,13 +63,13 @@ Module::Module (const StringView& file)
 	void* mod = LoadLibraryW (temp_path_.c_str ());
 	try {
 		if (!mod)
-			throw runtime_error ("Can not load module");
+			throw std::runtime_error ("Can not load module");
 		Nirvana::Core::PortableExecutable pe (mod);
 		if (!pe.find_OLF_section (metadata_))
-			throw runtime_error ("Invalid file format");
+			throw std::runtime_error ("Invalid file format");
 		const COFF::PE32Header* pehdr = pe.pe32_header ();
 		if (!pehdr || pehdr->AddressOfEntryPoint)
-			throw runtime_error ("Invalid file format");
+			throw std::runtime_error ("Invalid file format");
 	} catch (...) {
 		unload ();
 		throw;

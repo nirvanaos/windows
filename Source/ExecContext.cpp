@@ -28,15 +28,13 @@
 #include "ExecContext.inl"
 #include "ex2signal.h"
 
-using namespace std;
-
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
 unsigned long ExecContext::current_;
 void* ExecContext::main_fiber_;
-atomic_flag ExecContext::main_fiber_allocated_ = ATOMIC_FLAG_INIT;
+std::atomic_flag ExecContext::main_fiber_allocated_ = ATOMIC_FLAG_INIT;
 Core::ExecContext* ExecContext::main_fiber_context_;
 
 #ifdef _DEBUG

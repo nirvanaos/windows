@@ -30,8 +30,6 @@
 
 // Convert Windows error code to POSIX error code.
 
-using namespace std;
-
 namespace Nirvana {
 namespace Core {
 namespace Windows {
@@ -119,8 +117,8 @@ int error2errno (unsigned err, int default_errno)
 {
   assert (err);
   if (err) {
-    const ErrMap* p = lower_bound (errmap, end (errmap), err, ErrPred ());
-    if (p != end (errmap) && p->w == err)
+    const ErrMap* p = std::lower_bound (errmap, std::end (errmap), err, ErrPred ());
+    if (p != std::end (errmap) && p->w == err)
       return p->e;
   }
   return default_errno;
