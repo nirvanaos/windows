@@ -25,7 +25,7 @@
 *  popov.nirvana@gmail.com
 */
 #ifndef NIRVANA_ESIOP_PORT_OTHERDOMAIN_H_
-#define NIRVANA_ESIOP_PORT_OTHEROMAIN_H_
+#define NIRVANA_ESIOP_PORT_OTHERDOMAIN_H_
 #pragma once
 
 #include <ORB/ESIOP.h>
