@@ -25,8 +25,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_ESIOP_H_
-#define NIRVANA_CORE_PORT_ESIOP_H_
+#ifndef NIRVANA_ESIOP_PORT_H_
+#define NIRVANA_ESIOP_PORT_H_
 #pragma once
 
 #include <Nirvana/NirvanaBase.h>
@@ -34,7 +34,6 @@
 extern "C" __declspec (dllimport)
 unsigned long __stdcall GetCurrentProcessId (void);
 
-namespace Nirvana {
 namespace ESIOP {
 
 /// Unique protection domain id.
@@ -61,7 +60,6 @@ typedef uint64_t SharedMemPtr;
 /// \param size The error message size.
 void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) NIRVANA_NOEXCEPT;
 
-}
 }
 
 #endif

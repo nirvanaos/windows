@@ -46,7 +46,7 @@ struct Message
 		SHUTDOWN
 	};
 
-	typedef Nirvana::ESIOP::MessageHeader Header;
+	typedef ESIOP::MessageHeader Header;
 
 	/// A new process (protection domain) is started.
 	struct ProcessStart : Header

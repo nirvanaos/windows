@@ -23,13 +23,11 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include <ORB/OtherDomain.h>
+#include <ORB/ESIOP.h>
 #include "Mailslot.h"
 #include "MailslotName.h"
 
-namespace Nirvana {
-
-using namespace Core::Windows;
+using namespace Nirvana::Core::Windows;
 
 namespace ESIOP {
 
@@ -43,10 +41,4 @@ void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) N
 	}
 }
 
-OtherDomain* OtherDomain::create (ProtDomainId domain_id)
-{
-	throw_NO_IMPLEMENT ();
-}
-
-}
 }
