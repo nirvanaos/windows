@@ -89,8 +89,8 @@ bool SchedulerSlave::initialize ()
 		memset (&ovl, 0, sizeof (ovl));
 		ovl.hEvent = (HANDLE)((LONG_PTR)hevent | 1); // Avoid passing result to the completion port.
 
-		Message::ProcessStartResponse ack;
-		if (!ReadFile (message_broker_.mailslot_handle (), &ack, sizeof (ack), nullptr, &ovl)) {
+		BYTE buf [sizeof (Message::Buffer)];
+		if (!ReadFile (message_broker_.mailslot_handle (), buf, sizeof (buf), nullptr, &ovl)) {
 			assert (ERROR_IO_PENDING == GetLastError ());
 
 			if (WAIT_OBJECT_0 != WaitForSingleObject (hevent, PROCESS_START_ACK_TIMEOUT))
@@ -107,10 +107,11 @@ bool SchedulerSlave::initialize ()
 		CloseHandle (hevent);
 
 		if (success) {
-			if (sizeof (ack) != size || ack.message_type != Message::Type::PROCESS_START_RESPONSE || !ack.sys_process_id || !ack.executor_id)
+			Message::ProcessStartResponse* ack = (Message::ProcessStartResponse*)buf;
+			if (sizeof (*ack) != size || ack->message_type != Message::Type::PROCESS_START_RESPONSE || !ack->sys_process_id || !ack->executor_id)
 				throw_INTERNAL ();
 
-			initialize (ack.sys_process_id, ack.executor_id);
+			initialize (ack->sys_process_id, ack->executor_id);
 		} else
 			return false;
 	}

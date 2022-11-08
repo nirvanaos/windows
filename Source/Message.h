@@ -66,9 +66,6 @@ struct Message
 		/// Handle of the semaphore.
 		uint32_t executor_id;
 
-		ProcessStartResponse ()
-		{}
-
 		ProcessStartResponse (uint32_t process_id, void* semaphore) :
 			Header (Type::PROCESS_START_RESPONSE),
 			sys_process_id (process_id),

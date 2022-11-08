@@ -36,6 +36,9 @@ unsigned long __stdcall GetCurrentProcessId (void);
 
 namespace ESIOP {
 
+/// If some of the supported platforms have different endianness, this constant must be `true`.
+const bool PLATFORMS_ENDIAN_DIFFERENT = false;
+
 /// Unique protection domain id.
 typedef uint32_t ProtDomainId;
 

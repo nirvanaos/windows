@@ -32,7 +32,7 @@ namespace Windows {
 
 void MessageBroker::received (void* message, DWORD size) NIRVANA_NOEXCEPT
 {
-	const Message::Header* hdr = (const Message::Header*)message;
+	Message::Header* hdr = (Message::Header*)message;
 	if (hdr->message_type < ESIOP::MessageType::MESSAGES_CNT)
 		ESIOP::dispatch_message (*hdr);
 	else
