@@ -46,7 +46,7 @@ Module::Module (const StringView& file)
 		if (att & FILE_ATTRIBUTE_DIRECTORY)
 			throw std::runtime_error ("File not found");
 		WCHAR temp_dir [MAX_PATH + 1];
-		if (!GetTempPathW ((DWORD)std::size(temp_dir), temp_dir))
+		if (!GetTempPathW ((DWORD)countof(temp_dir), temp_dir))
 			throw_UNKNOWN ();
 		for (UINT uniq = GetTickCount ();; ++uniq) {
 			if (!GetTempFileNameW (temp_dir, WINWCS("nex"), uniq, temp_path))
