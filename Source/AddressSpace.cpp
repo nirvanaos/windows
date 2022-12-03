@@ -234,12 +234,6 @@ restart:
 	if (move && src.exclusive_lock ())
 		goto restart;
 
-	DWORD dst_page_state [PAGES_PER_BLOCK];
-	DWORD* dst_ps_begin = dst_page_state + offset / PAGE_SIZE;
-	DWORD* dst_ps_end = dst_page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
-	std::fill (dst_page_state, dst_ps_begin, PageState::DECOMMITTED);
-	std::fill (dst_ps_end, dst_page_state + PAGES_PER_BLOCK, PageState::DECOMMITTED);
-
 	DWORD copied_pages_state;
 	if (Memory::READ_ONLY & flags)
 		copied_pages_state = PageState::READ_ONLY;
@@ -247,7 +241,6 @@ restart:
 		copied_pages_state = PageState::READ_WRITE_SHARED;
 	else
 		copied_pages_state = PageState::READ_WRITE_PRIVATE;
-	std::fill (dst_ps_begin, dst_ps_end, copied_pages_state);
 
 	if (remap) {
 		HANDLE hm;
@@ -261,30 +254,53 @@ restart:
 		}
 	}
 
-	// Manage protection of copied pages
-	const PageState* cur_ps = state ().page_state;
-	const DWORD* region_begin = dst_page_state, *block_end = dst_page_state + PAGES_PER_BLOCK;
-	do {
-		DWORD protection;
-		while (!(PageState::MASK_ACCESS & (cur_ps->protection () ^ (protection = *region_begin)))) {
-			// We need to change access of the copied pages
-			++cur_ps;
-			if (++region_begin == block_end)
-				return;
-		}
-		auto region_end = region_begin;
+	// Disable access to the committed pages out of range.
+	size_t start_page = offset / PAGE_SIZE;
+	if (start_page) {
+		const PageState* page_state = src.state ().page_state;
+		const PageState* region_begin = page_state;
+		const PageState* end = page_state + start_page;
 		do {
-			++cur_ps;
-			++region_end;
-		} while (region_end < block_end && protection == *region_end);
-
-		BYTE* ptr = address () + (region_begin - dst_page_state) * PAGE_SIZE;
-		size_t size = (region_end - region_begin) * PAGE_SIZE;
-		space_.protect (ptr, size, protection);
-		invalidate_state ();
-
-		region_begin = region_end;
-	} while (region_begin < block_end);
+			do {
+				if (region_begin->VirtualAttributes.Win32Protection)
+					break;
+			} while (end > ++region_begin);
+			if (region_begin < end) {
+				const PageState* region_end = region_begin + 1;
+				while (region_end < end) {
+					if (!region_end->VirtualAttributes.Win32Protection)
+						break;
+					++region_end;
+				}
+				space_.protect (address () + (region_begin - page_state) * PAGE_SIZE,
+					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
+				region_begin = region_end;
+			}
+		} while (region_begin < end);
+	}
+	size_t end_page = (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+	if (end_page < PAGES_PER_BLOCK) {
+		const PageState* page_state = src.state ().page_state;
+		const PageState* region_begin = page_state + end_page;
+		const PageState* end = page_state + PAGES_PER_BLOCK;
+		do {
+			do {
+				if (region_begin->VirtualAttributes.Win32Protection)
+					break;
+			} while (end > ++region_begin);
+			if (region_begin < end) {
+				const PageState* region_end = region_begin + 1;
+				while (region_end < end) {
+					if (!region_end->VirtualAttributes.Win32Protection)
+						break;
+					++region_end;
+				}
+				space_.protect (address () + (region_begin - page_state) * PAGE_SIZE,
+					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
+				region_begin = region_end;
+			}
+		} while (region_begin < end);
+	}
 }
 
 AddressSpace::AddressSpace (DWORD process_id, HANDLE process_handle) :
@@ -292,15 +308,13 @@ AddressSpace::AddressSpace (DWORD process_id, HANDLE process_handle) :
 	mapping_ (nullptr),
 	directory_ (nullptr)
 {
-	assert (!mapping_ && !directory_);
-
 	static const WCHAR fmt [] = OBJ_NAME_PREFIX WINWCS (".mmap.%08X");
 	WCHAR name [_countof (fmt) + 8 - 3];
 	wsprintfW (name, fmt, process_id);
 
 	SYSTEM_INFO si;
 	GetSystemInfo (&si);
-	directory_size_ = ((size_t)si.lpMaximumApplicationAddress + ALLOCATION_GRANULARITY) / ALLOCATION_GRANULARITY;
+	directory_size_ = ((size_t)si.lpMaximumApplicationAddress + ALLOCATION_GRANULARITY - 1) / ALLOCATION_GRANULARITY;
 
 	if (GetCurrentProcessId () == process_id) {
 		LARGE_INTEGER size;

@@ -66,7 +66,7 @@ public:
 		/// Page is detached from shared section due to copy-on-write
 		MASK_UNMAPPED = 1 << 12,
 
-		/// Page was not committed
+		/// Page is not committed
 		MASK_NOT_COMMITTED = 1 << 13,
 
 		/// Read-write access
@@ -204,11 +204,14 @@ public:
 			return exclusive_;
 		}
 
-		// Copy from other block
-		// Source block must be prepared for share
+		/// Copy from other block
+		/// Source block must be prepared for share
 		void copy (Block& src, size_t offset, size_t size, unsigned flags);
+
+		/// Unmap the block
 		void unmap ();
 
+		/// Obtain the block state
 		const BlockState& state ();
 
 	protected:
@@ -218,14 +221,6 @@ public:
 		{
 			state_ = State::PAGE_STATE_UNKNOWN;
 		}
-
-		/*
-		enum MappingType
-		{
-			MAP_PRIVATE = PageState::READ_WRITE_PRIVATE,
-			MAP_SHARED = PageState::READ_WRITE_SHARED,
-			MAP_READ_ONLY = PageState::READ_ONLY
-		};*/
 
 		void map (HANDLE mapping, DWORD protection);
 
