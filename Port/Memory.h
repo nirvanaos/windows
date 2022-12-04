@@ -86,6 +86,8 @@ public:
 	/// Used in test only
 	static bool is_copy (const void* p1, const void* p2, size_t size);
 
+	class Block;
+
 private:
 	struct Region
 	{
@@ -109,8 +111,6 @@ private:
 			return size;
 		}
 	};
-
-	class Block;
 
 private:
 	static uint32_t commit_no_check (void* ptr, size_t size, bool exclusive = false);

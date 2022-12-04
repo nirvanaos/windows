@@ -36,6 +36,31 @@
 namespace Nirvana {
 namespace Core {
 
+namespace Windows {
+
+void BlockState::query (HANDLE process)
+{
+	verify (QueryWorkingSetEx (process, page_state, sizeof (page_state)));
+	PageState* ps = page_state;
+	do {
+		assert (ps->VirtualAttributes.Valid || 0 == ps->VirtualAttributes.Win32Protection);
+		// If committed page was not accessed, it's state remains invalid.
+		// For such pages we call VirtualQuery to obtain memory protection.
+		if (!ps->VirtualAttributes.Valid && ps->VirtualAttributes.Shared) {
+			MEMORY_BASIC_INFORMATION mbi;
+			VirtualQueryEx (process, ps->VirtualAddress, &mbi, sizeof (mbi));
+			BYTE* end = (BYTE*)mbi.BaseAddress + mbi.RegionSize;
+			do {
+				ps->VirtualAttributes.Win32Protection = mbi.Protect;
+				++ps;
+			} while (ps < std::end (page_state) && ps->VirtualAddress < end);
+		} else
+			++ps;
+	} while (ps < std::end (page_state));
+}
+
+}
+
 using namespace Windows;
 
 namespace Port {
@@ -49,6 +74,49 @@ static ULONG handle_count (HANDLE h)
 		return info.HandleCount;
 	assert (false);
 	return 0;
+}
+
+const BlockState& Memory::Block::state ()
+{
+	if (State::PAGE_STATE_UNKNOWN == state_) {
+		block_state_.query (space_.process ());
+		state_ = State::MAPPED;
+	}
+	return block_state_;
+}
+
+bool Memory::Block::has_data (size_t offset, size_t size, uint32_t mask)
+{
+	size_t offset_end = offset + size;
+	assert (offset_end <= ALLOCATION_GRANULARITY);
+	auto page_state = state ().page_state;
+	for (auto ps = page_state + (offset + PAGE_SIZE - 1) / PAGE_SIZE, end = page_state + offset_end / PAGE_SIZE; ps < end; ++ps) {
+		if (mask & ps->state ())
+			return true;
+	}
+	return false;
+}
+
+bool Memory::Block::has_data_outside_of (size_t offset, size_t size, uint32_t mask)
+{
+	size_t offset_end = offset + size;
+	assert (offset_end <= ALLOCATION_GRANULARITY);
+	if (offset || size < ALLOCATION_GRANULARITY) {
+		auto page_state = state ().page_state;
+		if (offset) {
+			for (auto ps = page_state, end = page_state + (offset + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps) {
+				if (mask & ps->state ())
+					return true;
+			}
+		}
+		if (offset_end < ALLOCATION_GRANULARITY) {
+			for (auto ps = page_state + offset_end / PAGE_SIZE, end = page_state + PAGES_PER_BLOCK; ps < end; ++ps) {
+				if (mask & ps->state ())
+					return true;
+			}
+		}
+	}
+	return false;
 }
 
 DWORD Memory::Block::commit (size_t offset, size_t size)
@@ -70,7 +138,7 @@ restart:
 		}
 		size_t begin = round_down (offset, PAGE_SIZE);
 		size = round_up (offset + size, PAGE_SIZE) - begin;
-		if (!VirtualAlloc (address () + begin, size, MEM_COMMIT, PageState::READ_WRITE_PRIVATE))
+		if (!VirtualAlloc ((BYTE*)address () + begin, size, MEM_COMMIT, PageState::READ_WRITE_PRIVATE))
 			throw_NO_MEMORY ();
 		ret = PageState::READ_WRITE_PRIVATE;
 	} else {
@@ -86,7 +154,7 @@ restart:
 						++region_end;
 					} while (region_end < state_end && !(PageState::MASK_ACCESS & (state = region_end->state ())));
 
-					regions.add (address () + (region_begin - bs.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE);
+					regions.add ((BYTE*)address () + (region_begin - bs.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE);
 				} else {
 					do {
 						ret |= state;
@@ -173,7 +241,7 @@ void Memory::Block::prepare_to_share_no_remap (size_t offset, size_t size)
 		while (region_end < block_end && protection == region_end->protection ());
 
 		if (PageState::READ_WRITE_PRIVATE == protection) {
-			BYTE* ptr = address () + (region_begin - st.page_state) * PAGE_SIZE;
+			BYTE* ptr = (BYTE*)address () + (region_begin - st.page_state) * PAGE_SIZE;
 			size_t size = (region_end - region_begin) * PAGE_SIZE;
 			protect (ptr, size, PageState::READ_WRITE_SHARED);
 		}
@@ -227,7 +295,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 					size_t size = (region_end - region_begin) * PAGE_SIZE;
 					if (!VirtualAlloc (dst, size, MEM_COMMIT, PageState::READ_WRITE_PRIVATE))
 						throw_NO_MEMORY ();
-					LONG_PTR* src = (LONG_PTR*)(address () + offset);
+					LONG_PTR* src = (LONG_PTR*)((BYTE*)address () + offset);
 					
 					// Temporary disable write access to save data consistency.
 					if (access_mask & PageState::MASK_RW)
@@ -262,7 +330,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 			for (const DWORD* p = page_protection, *end = p + PAGES_PER_BLOCK; p != end; ++p) {
 				DWORD protection = *p;
 				if (PageState::MASK_RW & protection)
-					protect (address () + (p - page_protection) * PAGE_SIZE, PAGE_SIZE, protection);
+					protect ((BYTE*)address () + (p - page_protection) * PAGE_SIZE, PAGE_SIZE, protection);
 			}
 			throw;
 		}
@@ -284,7 +352,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 				while (region_end < block_end && protection == *region_end);
 
 				size_t offset = (region_begin - page_protection) * PAGE_SIZE;
-				void* dst = address () + offset;
+				void* dst = (BYTE*)address () + offset;
 				size_t size = (region_end - region_begin) * PAGE_SIZE;
 				protect (dst, size, PageState::READ_ONLY);
 			} else {
@@ -412,7 +480,7 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 					++region_end;
 				} while (region_end < block_end && protection == *region_end);
 
-				BYTE* ptr = address () + (region_begin - dst_page_state) * PAGE_SIZE;
+				BYTE* ptr = (BYTE*)address () + (region_begin - dst_page_state) * PAGE_SIZE;
 				size_t size = (region_end - region_begin) * PAGE_SIZE;
 				protect (ptr, size, protection);
 				invalidate_state ();
@@ -457,10 +525,10 @@ repeat:
 			}
 		} else {
 			change_protection (offset, size, Nirvana::Memory::READ_WRITE);
-			real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
+			real_copy ((const BYTE*)src, (const BYTE*)src + size, (BYTE*)address () + offset);
 		}
 	} else {
-		real_copy ((const BYTE*)src, (const BYTE*)src + size, address () + offset);
+		real_copy ((const BYTE*)src, (const BYTE*)src + size, (BYTE*)address () + offset);
 		if (flags & Nirvana::Memory::READ_ONLY)
 			change_protection (offset, size, Nirvana::Memory::READ_ONLY);
 	}
@@ -481,7 +549,7 @@ void Memory::Block::decommit (size_t offset, size_t size)
 					unmap ();
 				else {
 					// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
-					BYTE* ptr = address () + offset;
+					BYTE* ptr = (BYTE*)address () + offset;
 					size_t size = offset_end - offset;
 					protect (ptr, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
 					verify (VirtualAlloc (ptr, size, MEM_RESET, PageState::DECOMMITTED));
@@ -505,7 +573,7 @@ void Memory::Block::change_protection (size_t offset, size_t size, unsigned flag
 		offset_end = round_down (offset_end, PAGE_SIZE);
 		ptrdiff_t cb = offset_end - offset;
 		if (cb > 0)
-			protect (address () + offset, cb, PageState::READ_ONLY);
+			protect ((BYTE*)address () + offset, cb, PageState::READ_ONLY);
 		return;
 	}
 	offset = round_down (offset, PAGE_SIZE);
@@ -514,7 +582,7 @@ void Memory::Block::change_protection (size_t offset, size_t size, unsigned flag
 	exclusive_lock ();
 	if (handle_count (mapping ()) <= 1) {
 		// Not shared
-		protect (address () + offset, offset_end - offset, PageState::READ_WRITE_PRIVATE);
+		protect ((BYTE*)address () + offset, offset_end - offset, PageState::READ_WRITE_PRIVATE);
 		return;
 	}
 
@@ -528,7 +596,7 @@ void Memory::Block::change_protection (size_t offset, size_t size, unsigned flag
 		while (region_end < state_end && region_end->is_mapped () == mapped);
 
 		DWORD new_prot = mapped ? PageState::READ_WRITE_SHARED : PageState::READ_WRITE_PRIVATE;
-		BYTE* ptr = address () + (region_begin - page_state) * PAGE_SIZE;
+		BYTE* ptr = (BYTE*)address () + (region_begin - page_state) * PAGE_SIZE;
 		size_t size = (region_end - region_begin) * PAGE_SIZE;
 		protect (ptr, size, new_prot);
 
@@ -592,10 +660,10 @@ uint32_t Memory::commit_no_check (void* ptr, size_t size, bool exclusive)
 	uint32_t state_bits = 0; // Page states bit mask
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
 		Block block (p, exclusive);
-		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
-		state_bits |= block.commit (p - block.address (), block_end - p);
+		state_bits |= block.commit (p - (BYTE*)block.address (), block_end - p);
 		p = block_end;
 	}
 	return state_bits;
@@ -610,10 +678,10 @@ void Memory::prepare_to_share (void* src, size_t size, unsigned flags)
 
 	for (BYTE* p = (BYTE*)src, *end = p + size; p < end;) {
 		Block block (p);
-		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
-		block.prepare_to_share (p - block.address (), block_end - p, flags);
+		block.prepare_to_share (p - (BYTE*)block.address (), block_end - p, flags);
 		p = block_end;
 	}
 }
@@ -629,10 +697,10 @@ void Memory::change_protection (void* ptr, size_t size, unsigned flags)
 	BYTE* end = begin + size;
 	for (BYTE* p = begin; p < end;) {
 		Block block (p);
-		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
-		block.change_protection (p - block.address (), block_end - p, flags);
+		block.change_protection (p - (BYTE*)block.address (), block_end - p, flags);
 		p = block_end;
 	}
 }
@@ -699,10 +767,10 @@ void Memory::decommit (void* ptr, size_t size)
 
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
 		Block block (p);
-		BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
-		block.decommit (p - block.address (), block_end - p);
+		block.decommit (p - (BYTE*)block.address (), block_end - p);
 		p = block_end;
 	}
 }
@@ -749,10 +817,10 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 		src_state_mask = 0;
 		for (BYTE* p = (BYTE*)src, *end = p + size; p < end;) {
 			Block block (p);
-			BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+			BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 			if (block_end > end)
 				block_end = end;
-			src_state_mask |= block.check_committed (p - block.address (), block_end - p);
+			src_state_mask |= block.check_committed (p - (BYTE*)block.address (), block_end - p);
 			p = block_end;
 		}
 		src_own = true;
@@ -908,7 +976,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							while (d_p < d_end) {
 								size_t cb = std::min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
 								Block block (d_p, cb == ALLOCATION_GRANULARITY);
-								block.copy_unaligned (d_p - block.address (), cb, s_p, flags);
+								block.copy_unaligned (d_p - (BYTE*)block.address (), cb, s_p, flags);
 								d_p += cb;
 								s_p += cb;
 							}
@@ -921,7 +989,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 								size_t cb = d_p - block_begin;
 								Block block (block_begin, cb == ALLOCATION_GRANULARITY);
 								s_p -= cb;
-								block.copy_unaligned (block_begin - block.address (), cb, s_p, flags);
+								block.copy_unaligned (block_begin - (BYTE*)block.address (), cb, s_p, flags);
 								d_p = block_begin;
 							}
 						}
@@ -1028,10 +1096,10 @@ bool Memory::is_private (const void* p, size_t size)
 {
 	for (const BYTE* begin = (const BYTE*)p, *end = begin + size; begin < end;) {
 		Block block (const_cast <BYTE*> (begin));
-		const BYTE* block_end = block.address () + ALLOCATION_GRANULARITY;
+		const BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
-		if (!block.is_private (begin - block.address (), block_end - begin))
+		if (!block.is_private (begin - (BYTE*)block.address (), block_end - begin))
 			return false;
 		begin = block_end;
 	}
@@ -1057,13 +1125,13 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 			for (BYTE* begin1 = (BYTE*)p, *end1 = begin1 + size, *begin2 = (BYTE*)plocal; begin1 < end1;) {
 				Block block1 (begin1);
 				Block block2 (begin2);
-				BYTE* block_end1 = block1.address () + ALLOCATION_GRANULARITY;
+				BYTE* block_end1 = (BYTE*)block1.address () + ALLOCATION_GRANULARITY;
 				if (block_end1 > end1)
 					block_end1 = end1;
-				if (!block1.is_copy (block2, begin1 - block1.address (), block_end1 - begin1))
+				if (!block1.is_copy (block2, begin1 - (BYTE*)block1.address (), block_end1 - begin1))
 					return false;
 				begin1 = block_end1;
-				begin2 = block2.address () + ALLOCATION_GRANULARITY;
+				begin2 = (BYTE*)block2.address () + ALLOCATION_GRANULARITY;
 			}
 			return true;
 		} catch (...) {

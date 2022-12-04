@@ -32,6 +32,8 @@
 #include <BackOff.h>
 #include <atomic>
 
+typedef void* HANDLE;
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {

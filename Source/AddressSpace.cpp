@@ -23,8 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "../Port/Memory.h"
-#include "AddressSpace.h"
+#include "Memory.inl"
 #include <algorithm>
 
 // wsprintfW
@@ -36,31 +35,28 @@ namespace Windows {
 
 StaticallyAllocated <AddressSpace> AddressSpace::local_space_;
 
-void BlockState::query (HANDLE process)
+void AddressSpace::initialize ()
 {
-	verify (QueryWorkingSetEx (process, page_state, sizeof (page_state)));
-	PageState* ps = page_state;
-	do {
-		assert (ps->VirtualAttributes.Valid || 0 == ps->VirtualAttributes.Win32Protection);
-		// If committed page was not accessed, it's state remains invalid.
-		// For such pages we call VirtualQuery to obtain memory protection.
-		if (!ps->VirtualAttributes.Valid && ps->VirtualAttributes.Shared) {
-			MEMORY_BASIC_INFORMATION mbi;
-			VirtualQueryEx (process, ps->VirtualAddress, &mbi, sizeof (mbi));
-			BYTE* end = (BYTE*)mbi.BaseAddress + mbi.RegionSize;
-			do {
-				ps->VirtualAttributes.Win32Protection = mbi.Protect;
-				++ps;
-			} while (ps < std::end (page_state) && ps->VirtualAddress < end);
-		} else
-			++ps;
-	} while (ps < std::end (page_state));
+	local_space_.construct (GetCurrentProcessId (), GetCurrentProcess ());
+}
+
+inline void AddressSpace::query (const void* address, MEMORY_BASIC_INFORMATION& mbi) const
+{
+	verify (VirtualQueryEx (process_, address, &mbi, sizeof (mbi)));
+}
+
+inline void AddressSpace::protect (void* address, size_t size, uint32_t protection) const
+{
+	assert (!(protection & ~PageState::MASK_PROTECTION));
+	assert (size && 0 == size % PAGE_SIZE);
+	unsigned long old;
+	verify (VirtualProtectEx (process_, address, size, protection, &old));
 }
 
 AddressSpace::Block::Block (AddressSpace& space, void* address, bool exclusive) :
 	space_ (space),
+	address_ (address),
 	info_ (check_block (space.allocated_block (address))),
-	block_state_ (round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
 	exclusive_ (exclusive)
 {
 	mapping_ = exclusive ? info_.mapping.exclusive_lock () : info_.mapping.lock ();
@@ -99,16 +95,7 @@ bool AddressSpace::Block::exclusive_lock ()
 	return false;
 }
 
-const BlockState& AddressSpace::Block::state ()
-{
-	if (State::PAGE_STATE_UNKNOWN == state_) {
-		block_state_.query (space_.process ());
-		state_ = State::MAPPED;
-	}
-	return block_state_;
-}
-
-void AddressSpace::Block::map (HANDLE hm, DWORD protection)
+void AddressSpace::Block::map (HANDLE hm, uint32_t protection)
 {
 	assert (hm);
 	assert (exclusive_);
@@ -163,41 +150,7 @@ void AddressSpace::Block::unmap ()
 	}
 }
 
-bool AddressSpace::Block::has_data (size_t offset, size_t size, DWORD mask)
-{
-	size_t offset_end = offset + size;
-	assert (offset_end <= ALLOCATION_GRANULARITY);
-	auto page_state = state ().page_state;
-	for (auto ps = page_state + (offset + PAGE_SIZE - 1) / PAGE_SIZE, end = page_state + offset_end / PAGE_SIZE; ps < end; ++ps) {
-		if (mask & ps->state ())
-			return true;
-	}
-	return false;
-}
-
-bool AddressSpace::Block::has_data_outside_of (size_t offset, size_t size, DWORD mask)
-{
-	size_t offset_end = offset + size;
-	assert (offset_end <= ALLOCATION_GRANULARITY);
-	if (offset || size < ALLOCATION_GRANULARITY) {
-		auto page_state = state ().page_state;
-		if (offset) {
-			for (auto ps = page_state, end = page_state + (offset + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps) {
-				if (mask & ps->state ())
-					return true;
-			}
-		}
-		if (offset_end < ALLOCATION_GRANULARITY) {
-			for (auto ps = page_state + offset_end / PAGE_SIZE, end = page_state + PAGES_PER_BLOCK; ps < end; ++ps) {
-				if (mask & ps->state ())
-					return true;
-			}
-		}
-	}
-	return false;
-}
-
-void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, DWORD copied_pages_state)
+void AddressSpace::Block::copy (Port::Memory::Block& src, size_t offset, size_t size, uint32_t copied_pages_state)
 {
 	assert (exclusive_locked ());
 	assert (size);
@@ -231,7 +184,7 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, DWORD co
 						break;
 					++region_end;
 				}
-				space_.protect (address () + (region_begin - page_state) * PAGE_SIZE,
+				space_.protect ((BYTE*)address () + (region_begin - page_state) * PAGE_SIZE,
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}
@@ -254,7 +207,7 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, DWORD co
 						break;
 					++region_end;
 				}
-				space_.protect (address () + (region_begin - page_state) * PAGE_SIZE,
+				space_.protect ((BYTE*)address () + (region_begin - page_state) * PAGE_SIZE,
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}
@@ -262,7 +215,7 @@ void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, DWORD co
 	}
 }
 
-AddressSpace::AddressSpace (DWORD process_id, HANDLE process_handle) :
+AddressSpace::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 	process_ (process_handle),
 	mapping_ (nullptr),
 	directory_ (nullptr)
