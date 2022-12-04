@@ -44,18 +44,12 @@ void Memory::protect (void* address, size_t size, uint32_t protection)
 	verify (VirtualProtect (address, size, protection, &old));
 }
 
-inline
-Windows::AddressSpace& Memory::space ()
-{
-	return space_;
-}
-
 class Memory::Block :
-	public Core::Windows::AddressSpace::Block
+	public Windows::AddressSpace::Block
 {
 public:
 	Block (void* addr, bool exclusive = false) :
-		Core::Windows::AddressSpace::Block (Memory::space (), addr, exclusive)
+		Windows::AddressSpace::Block (Windows::AddressSpace::local (), addr, exclusive)
 	{}
 
 	DWORD commit (size_t offset, size_t size);

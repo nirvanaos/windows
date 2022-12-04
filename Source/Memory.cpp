@@ -27,6 +27,7 @@
 #include <Nirvana/real_copy.h>
 #include <ExecDomain.h>
 #include <signal.h>
+#include <winternl.h>
 #include "ex2signal.h"
 
 #pragma comment (lib, "OneCore.lib")
@@ -39,8 +40,16 @@ using namespace Windows;
 
 namespace Port {
 
-StaticallyAllocated <Windows::AddressSpace> Memory::space_;
 void* Memory::handler_;
+
+static ULONG handle_count (HANDLE h)
+{
+	PUBLIC_OBJECT_BASIC_INFORMATION info;
+	if (!NtQueryObject (h, ObjectBasicInformation, &info, sizeof (info), nullptr))
+		return info.HandleCount;
+	assert (false);
+	return 0;
+}
 
 DWORD Memory::Block::commit (size_t offset, size_t size)
 { // This operation must be thread-safe.
@@ -341,7 +350,77 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 	// Virtual copy.
 	if (!(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
-	AddressSpace::Block::copy (src_block, offset, size, flags);
+	{
+		exclusive_lock ();
+		assert (size);
+		assert (offset + size <= ALLOCATION_GRANULARITY);
+
+	restart:
+		HANDLE src_mapping = src_block.mapping ();
+		assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
+		assert (address () != src_block.address ());
+
+		bool remap;
+		HANDLE cur_mapping = mapping ();
+		if (INVALID_HANDLE_VALUE == cur_mapping)
+			remap = true;
+		else {
+			if (!CompareObjectHandles (cur_mapping, src_mapping)) {
+				// Change mapping
+				assert (!has_data_outside_of (offset, size));
+				remap = true;
+			} else
+				remap = false;
+		}
+
+		bool move = src_block.can_move (offset, size, flags);
+
+		if (move && src_block.exclusive_lock ())
+			goto restart;
+
+		DWORD copied_pages_state;
+		if (Nirvana::Memory::READ_ONLY & flags)
+			copied_pages_state = PageState::READ_ONLY;
+		else if (!move || handle_count (src_block.mapping ()) > 1)
+			copied_pages_state = PageState::READ_WRITE_SHARED;
+		else
+			copied_pages_state = PageState::READ_WRITE_PRIVATE;
+
+		if (remap)
+			AddressSpace::Block::copy (src_block, offset, size, copied_pages_state);
+		else {
+			// Manage protection of copied pages
+			DWORD dst_page_state [PAGES_PER_BLOCK];
+			DWORD* dst_ps_begin = dst_page_state + offset / PAGE_SIZE;
+			DWORD* dst_ps_end = dst_page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+			std::fill (dst_page_state, dst_ps_begin, PageState::DECOMMITTED);
+			std::fill (dst_ps_end, dst_page_state + PAGES_PER_BLOCK, PageState::DECOMMITTED);
+			std::fill (dst_ps_begin, dst_ps_end, copied_pages_state);
+			const PageState* cur_ps = state ().page_state;
+			const DWORD* region_begin = dst_page_state, * block_end = dst_page_state + PAGES_PER_BLOCK;
+			do {
+				DWORD protection;
+				while (!(PageState::MASK_ACCESS & (cur_ps->protection () ^ (protection = *region_begin)))) {
+					// We need to change access of the copied pages
+					++cur_ps;
+					if (++region_begin == block_end)
+						return;
+				}
+				auto region_end = region_begin;
+				do {
+					++cur_ps;
+					++region_end;
+				} while (region_end < block_end && protection == *region_end);
+
+				BYTE* ptr = address () + (region_begin - dst_page_state) * PAGE_SIZE;
+				size_t size = (region_end - region_begin) * PAGE_SIZE;
+				protect (ptr, size, protection);
+				invalidate_state ();
+
+				region_begin = region_end;
+			} while (region_begin < block_end);
+		}
+	}
 	return;
 
 fallback:
@@ -404,7 +483,7 @@ void Memory::Block::decommit (size_t offset, size_t size)
 					// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
 					BYTE* ptr = address () + offset;
 					size_t size = offset_end - offset;
-					space ().protect (ptr, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
+					protect (ptr, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
 					verify (VirtualAlloc (ptr, size, MEM_RESET, PageState::DECOMMITTED));
 
 					// Invalidate block state.
@@ -497,7 +576,6 @@ bool Memory::Block::is_private (size_t offset, size_t size)
 
 inline void Memory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi) NIRVANA_NOEXCEPT
 {
-	//space ().query (address, mbi);
 	verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 }
 
@@ -569,7 +647,7 @@ void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 
 	void* ret;
 	try {
-		if (!(ret = space ().reserve (dst, size, flags)))
+		if (!(ret = AddressSpace::local ().reserve (dst, size, flags)))
 			return nullptr;
 
 		if (!(Nirvana::Memory::RESERVED & flags)) {
@@ -577,7 +655,7 @@ void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 				uint32_t prot_mask = commit_no_check (ret, size, true);
 				assert (!(prot_mask & PageState::MASK_RO));
 			} catch (...) {
-				space ().release (ret, size);
+				AddressSpace::local ().release (ret, size);
 				throw;
 			}
 		}
@@ -592,7 +670,7 @@ void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 
 void Memory::release (void* dst, size_t size)
 {
-	space ().release (dst, size);
+	AddressSpace::local ().release (dst, size);
 }
 
 void Memory::commit (void* ptr, size_t size)
@@ -604,7 +682,7 @@ void Memory::commit (void* ptr, size_t size)
 		throw_BAD_PARAM ();
 
 	// Memory must be allocated.
-	space ().check_allocated (ptr, size);
+	AddressSpace::local ().check_allocated (ptr, size);
 
 	uint32_t prot_mask = commit_no_check (ptr, size);
 	if (prot_mask & PageState::MASK_RO)
@@ -617,7 +695,7 @@ void Memory::decommit (void* ptr, size_t size)
 		return;
 
 	// Memory must be allocated.
-	space ().check_allocated (ptr, size);
+	AddressSpace::local ().check_allocated (ptr, size);
 
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
 		Block block (p);
@@ -667,7 +745,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 	// Source range have to be committed.
 	uint32_t src_state_mask;
 	uint32_t src_type;
-	if (space ().allocated_block (src)) {
+	if (AddressSpace::local ().allocated_block (src)) {
 		src_state_mask = 0;
 		for (BYTE* p = (BYTE*)src, *end = p + size; p < end;) {
 			Block block (p);
@@ -702,7 +780,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 					allocated.ptr = dst;
 					allocated.size = size;
 					allocated.subtract (round_down (src, ALLOCATION_GRANULARITY), round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY));
-					dst = space ().reserve (allocated.ptr, allocated.size, flags | Nirvana::Memory::EXACTLY);
+					dst = AddressSpace::local ().reserve (allocated.ptr, allocated.size, flags | Nirvana::Memory::EXACTLY);
 					if (!dst) {
 						if (flags & Nirvana::Memory::EXACTLY)
 							return nullptr;
@@ -716,7 +794,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 				else {
 					size_t dst_align = src_own ? src_align : 0;
 					size_t cb_res = size + dst_align;
-					BYTE* res = (BYTE*)space ().reserve (nullptr, cb_res, flags);
+					BYTE* res = (BYTE*)AddressSpace::local ().reserve (nullptr, cb_res, flags);
 					if (!res) {
 						assert (flags & Nirvana::Memory::EXACTLY);
 						return nullptr;
@@ -729,8 +807,8 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 			assert (dst);
 			dst_own = true;
 		} else {
-			if (space ().allocated_block (dst)) {
-				space ().check_allocated (dst, size);
+			if (AddressSpace::local ().allocated_block (dst)) {
+				AddressSpace::local ().check_allocated (dst, size);
 				dst_own = true;
 			} else if ((dst != src) && !is_writable (dst, size))
 				throw_NO_PERMISSION ();
@@ -896,7 +974,7 @@ uintptr_t Memory::query (const void* p, Nirvana::Memory::QueryParam q)
 		}
 
 		case Nirvana::Memory::QueryParam::ALLOCATION_SPACE_END:
-			return (uintptr_t)space ().end ();
+			return (uintptr_t)AddressSpace::local ().end ();
 
 		case Nirvana::Memory::QueryParam::ALLOCATION_UNIT:
 		case Nirvana::Memory::QueryParam::GRANULARITY:
@@ -1006,7 +1084,7 @@ long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
 		) {
 		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
-		AddressSpace::BlockInfo* block = space ().allocated_block (address);
+		AddressSpace::BlockInfo* block = AddressSpace::local ().allocated_block (address);
 		if (block) {
 			HANDLE mapping = block->mapping.lock ();
 			if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
@@ -1040,12 +1118,12 @@ void Memory::initialize ()
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
-	space_.construct (GetCurrentProcessId (), GetCurrentProcess ());
+	AddressSpace::initialize ();
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
-	space_.destruct ();
+	AddressSpace::terminate ();
 	RemoveVectoredExceptionHandler (handler_);
 }
 

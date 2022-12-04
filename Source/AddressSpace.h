@@ -28,6 +28,7 @@
 #define NIRVANA_CORE_WINDOWS_ADDRESSSPACE_H_
 #pragma once
 
+#include <StaticallyAllocated.h>
 #include "LockableHandle.h"
 #include "win32.h"
 #include <Psapi.h>
@@ -133,8 +134,6 @@ struct BlockState
 	}
 };
 
-ULONG handle_count (HANDLE h);
-
 /// Logical address space of some Windows process.
 class AddressSpace
 {
@@ -204,9 +203,9 @@ public:
 			return exclusive_;
 		}
 
-		/// Copy from other block
+		/// Virtual copy from other block
 		/// Source block must be prepared for share
-		void copy (Block& src, size_t offset, size_t size, unsigned flags);
+		void copy (Block& src, size_t offset, size_t size, DWORD copied_pages_state);
 
 		/// Unmap the block
 		void unmap ();
@@ -274,6 +273,21 @@ public:
 
 	void check_allocated (void* ptr, size_t size);
 
+	static void initialize ()
+	{
+		local_space_.construct (GetCurrentProcessId (), GetCurrentProcess ());
+	}
+
+	static void terminate () NIRVANA_NOEXCEPT
+	{
+		local_space_.destruct ();
+	}
+
+	static AddressSpace& local () NIRVANA_NOEXCEPT
+	{
+		return local_space_;
+	}
+
 private:
 	friend class Port::Memory;
 
@@ -297,6 +311,8 @@ private:
 	BlockInfo* directory_;
 #endif
 	size_t directory_size_;
+
+	static StaticallyAllocated <AddressSpace> local_space_;
 };
 
 }

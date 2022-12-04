@@ -31,7 +31,6 @@
 
 #include <CORBA/CORBA.h>
 #include <Nirvana/Memory.h>
-#include <StaticallyAllocated.h>
 
 struct _EXCEPTION_POINTERS;
 typedef void *HANDLE;
@@ -39,9 +38,6 @@ typedef struct _MEMORY_BASIC_INFORMATION MEMORY_BASIC_INFORMATION;
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
-class AddressSpace;
-}
 namespace Port {
 
 class Memory
@@ -130,12 +126,9 @@ private:
 	// Create new mapping
 	static HANDLE new_mapping ();
 
-	static Windows::AddressSpace& space ();
-
 	static long __stdcall exception_filter (_EXCEPTION_POINTERS* pex);
 
 private:
-	static StaticallyAllocated <Windows::AddressSpace> space_;
 	static void* handler_;
 };
 

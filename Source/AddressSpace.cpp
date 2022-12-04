@@ -26,7 +26,6 @@
 #include "../Port/Memory.h"
 #include "AddressSpace.h"
 #include <algorithm>
-#include <winternl.h>
 
 // wsprintfW
 #pragma comment (lib, "User32.lib")
@@ -35,14 +34,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-ULONG handle_count (HANDLE h)
-{
-	PUBLIC_OBJECT_BASIC_INFORMATION info;
-	if (!NtQueryObject (h, ObjectBasicInformation, &info, sizeof (info), nullptr))
-		return info.HandleCount;
-	assert (false);
-	return 0;
-}
+StaticallyAllocated <AddressSpace> AddressSpace::local_space_;
 
 void BlockState::query (HANDLE process)
 {
@@ -205,53 +197,20 @@ bool AddressSpace::Block::has_data_outside_of (size_t offset, size_t size, DWORD
 	return false;
 }
 
-void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, unsigned flags)
+void AddressSpace::Block::copy (Block& src, size_t offset, size_t size, DWORD copied_pages_state)
 {
-	exclusive_lock ();
+	assert (exclusive_locked ());
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
-restart:
-	HANDLE src_mapping = src.mapping ();
-	assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
-	assert (address () != src.address ());
-
-	bool remap;
-	HANDLE cur_mapping = mapping ();
-	if (INVALID_HANDLE_VALUE == cur_mapping)
-		remap = true;
-	else {
-		if (!CompareObjectHandles (cur_mapping, src_mapping)) {
-			// Change mapping
-			assert (!has_data_outside_of (offset, size));
-			remap = true;
-		} else
-			remap = false;
-	}
-
-	bool move = src.can_move (offset, size, flags);
-
-	if (move && src.exclusive_lock ())
-		goto restart;
-
-	DWORD copied_pages_state;
-	if (Memory::READ_ONLY & flags)
-		copied_pages_state = PageState::READ_ONLY;
-	else if (!move || handle_count (src.mapping ()) > 1)
-		copied_pages_state = PageState::READ_WRITE_SHARED;
-	else
-		copied_pages_state = PageState::READ_WRITE_PRIVATE;
-
-	if (remap) {
-		HANDLE hm;
-		if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), space_.process (), &hm, 0, FALSE, DUPLICATE_SAME_ACCESS))
-			throw_NO_MEMORY ();
-		try {
-			map (hm, copied_pages_state);
-		} catch (...) {
-			CloseHandle (hm);
-			throw;
-		}
+	HANDLE hm;
+	if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), space_.process (), &hm, 0, FALSE, DUPLICATE_SAME_ACCESS))
+		throw_NO_MEMORY ();
+	try {
+		map (hm, copied_pages_state);
+	} catch (...) {
+		CloseHandle (hm);
+		throw;
 	}
 
 	// Disable access to the committed pages out of range.
