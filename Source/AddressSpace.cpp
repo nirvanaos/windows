@@ -55,8 +55,8 @@ inline void AddressSpace::protect (void* address, size_t size, uint32_t protecti
 
 AddressSpace::Block::Block (AddressSpace& space, void* address, bool exclusive) :
 	space_ (space),
-	address_ (address),
-	info_ (check_block (space.allocated_block (address))),
+	address_ (Nirvana::round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
+	info_ (check_block (space.allocated_block (address_))),
 	exclusive_ (exclusive)
 {
 	mapping_ = exclusive ? info_.mapping.exclusive_lock () : info_.mapping.lock ();

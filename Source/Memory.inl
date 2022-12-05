@@ -148,7 +148,7 @@ class Memory::Block :
 public:
 	Block (void* addr, bool exclusive = false) :
 		Windows::AddressSpace::Block (Windows::AddressSpace::local (), addr, exclusive),
-		block_state_ (Nirvana::round_down ((BYTE*)addr, ALLOCATION_GRANULARITY))
+		block_state_ (address ())
 	{}
 
 	DWORD commit (size_t offset, size_t size);
