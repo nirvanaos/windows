@@ -143,11 +143,13 @@ void Memory::protect (void* address, size_t size, uint32_t protection)
 }
 
 class Memory::Block :
-	public Windows::AddressSpace::Block
+	public Windows::AddressSpace <sizeof (void*) == 8>::Block
 {
+	typedef Windows::AddressSpace <sizeof (void*) == 8> Space;
+	typedef Space::Block Base;
 public:
 	Block (void* addr, bool exclusive = false) :
-		Windows::AddressSpace::Block (Windows::AddressSpace::local (), addr, exclusive),
+		Base (Windows::local_address_space, (uint8_t*)addr, exclusive),
 		block_state_ (address ())
 	{}
 

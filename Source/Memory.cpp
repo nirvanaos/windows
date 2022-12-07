@@ -23,7 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "Memory.inl"
+#include "AddressSpace.inl"
 #include <Nirvana/real_copy.h>
 #include <ExecDomain.h>
 #include <signal.h>
@@ -35,8 +35,9 @@
 
 namespace Nirvana {
 namespace Core {
-
 namespace Windows {
+
+StaticallyAllocated <AddressSpace <sizeof (void*) == 8> > local_address_space;
 
 void BlockState::query (HANDLE process)
 {
@@ -455,7 +456,7 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 			copied_pages_state = PageState::READ_WRITE_PRIVATE;
 
 		if (remap)
-			AddressSpace::Block::copy (src_block, offset, size, copied_pages_state);
+			Base::copy (src_block, offset, size, copied_pages_state);
 		else {
 			// Manage protection of copied pages
 			DWORD dst_page_state [PAGES_PER_BLOCK];
@@ -715,7 +716,7 @@ void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 
 	void* ret;
 	try {
-		if (!(ret = AddressSpace::local ().reserve (dst, size, flags)))
+		if (!(ret = local_address_space->reserve ((uint8_t*)dst, size, flags)))
 			return nullptr;
 
 		if (!(Nirvana::Memory::RESERVED & flags)) {
@@ -723,7 +724,7 @@ void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 				uint32_t prot_mask = commit_no_check (ret, size, true);
 				assert (!(prot_mask & PageState::MASK_RO));
 			} catch (...) {
-				AddressSpace::local ().release (ret, size);
+				local_address_space->release ((uint8_t*)ret, size);
 				throw;
 			}
 		}
@@ -738,7 +739,7 @@ void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 
 void Memory::release (void* dst, size_t size)
 {
-	AddressSpace::local ().release (dst, size);
+	local_address_space->release ((uint8_t*)dst, size);
 }
 
 void Memory::commit (void* ptr, size_t size)
@@ -750,7 +751,7 @@ void Memory::commit (void* ptr, size_t size)
 		throw_BAD_PARAM ();
 
 	// Memory must be allocated.
-	AddressSpace::local ().check_allocated (ptr, size);
+	local_address_space->check_allocated ((uint8_t*)ptr, size);
 
 	uint32_t prot_mask = commit_no_check (ptr, size);
 	if (prot_mask & PageState::MASK_RO)
@@ -763,7 +764,7 @@ void Memory::decommit (void* ptr, size_t size)
 		return;
 
 	// Memory must be allocated.
-	AddressSpace::local ().check_allocated (ptr, size);
+	local_address_space->check_allocated ((uint8_t*)ptr, size);
 
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
 		Block block (p);
@@ -813,7 +814,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 	// Source range have to be committed.
 	uint32_t src_state_mask;
 	uint32_t src_type;
-	if (AddressSpace::local ().allocated_block (src)) {
+	if (local_address_space->allocated_block ((uint8_t*)src)) {
 		src_state_mask = 0;
 		for (BYTE* p = (BYTE*)src, *end = p + size; p < end;) {
 			Block block (p);
@@ -848,7 +849,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 					allocated.ptr = dst;
 					allocated.size = size;
 					allocated.subtract (round_down (src, ALLOCATION_GRANULARITY), round_up ((BYTE*)src + size, ALLOCATION_GRANULARITY));
-					dst = AddressSpace::local ().reserve (allocated.ptr, allocated.size, flags | Nirvana::Memory::EXACTLY);
+					dst = local_address_space->reserve ((uint8_t*)allocated.ptr, allocated.size, flags | Nirvana::Memory::EXACTLY);
 					if (!dst) {
 						if (flags & Nirvana::Memory::EXACTLY)
 							return nullptr;
@@ -862,7 +863,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 				else {
 					size_t dst_align = src_own ? src_align : 0;
 					size_t cb_res = size + dst_align;
-					BYTE* res = (BYTE*)AddressSpace::local ().reserve (nullptr, cb_res, flags);
+					BYTE* res = (BYTE*)local_address_space->reserve (nullptr, cb_res, flags);
 					if (!res) {
 						assert (flags & Nirvana::Memory::EXACTLY);
 						return nullptr;
@@ -875,8 +876,8 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 			assert (dst);
 			dst_own = true;
 		} else {
-			if (AddressSpace::local ().allocated_block (dst)) {
-				AddressSpace::local ().check_allocated (dst, size);
+			if (local_address_space->allocated_block ((uint8_t*)dst)) {
+				local_address_space->check_allocated ((uint8_t*)dst, size);
 				dst_own = true;
 			} else if ((dst != src) && !is_writable (dst, size))
 				throw_NO_PERMISSION ();
@@ -1042,7 +1043,7 @@ uintptr_t Memory::query (const void* p, Nirvana::Memory::QueryParam q)
 		}
 
 		case Nirvana::Memory::QueryParam::ALLOCATION_SPACE_END:
-			return (uintptr_t)AddressSpace::local ().end ();
+			return (uintptr_t)local_address_space->end ();
 
 		case Nirvana::Memory::QueryParam::ALLOCATION_UNIT:
 		case Nirvana::Memory::QueryParam::GRANULARITY:
@@ -1152,7 +1153,7 @@ long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
 		) {
 		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
-		AddressSpace::BlockInfo* block = AddressSpace::local ().allocated_block (address);
+		BlockInfo* block = local_address_space->allocated_block ((uint8_t*)address);
 		if (block) {
 			HANDLE mapping = block->mapping.lock ();
 			if (INVALID_HANDLE_VALUE == mapping || nullptr == mapping) {
@@ -1186,12 +1187,12 @@ void Memory::initialize ()
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
-	AddressSpace::initialize ();
+	local_address_space.construct (GetCurrentProcessId (), GetCurrentProcess ());
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
-	AddressSpace::terminate ();
+	local_address_space.destruct ();
 	RemoveVectoredExceptionHandler (handler_);
 }
 

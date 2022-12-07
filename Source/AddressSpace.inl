@@ -33,19 +33,14 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-StaticallyAllocated <AddressSpace> AddressSpace::local_space_;
-
-void AddressSpace::initialize ()
-{
-	local_space_.construct (GetCurrentProcessId (), GetCurrentProcess ());
-}
-
-inline void AddressSpace::query (const void* address, MEMORY_BASIC_INFORMATION& mbi) const
+template <bool x64> inline
+void AddressSpace <x64>::query (Address address, MEMORY_BASIC_INFORMATION& mbi) const
 {
 	verify (VirtualQueryEx (process_, address, &mbi, sizeof (mbi)));
 }
 
-inline void AddressSpace::protect (void* address, size_t size, uint32_t protection) const
+template <bool x64> inline
+void AddressSpace <x64>::protect (Address address, Size size, uint32_t protection) const
 {
 	assert (!(protection & ~PageState::MASK_PROTECTION));
 	assert (size && 0 == size % PAGE_SIZE);
@@ -53,9 +48,10 @@ inline void AddressSpace::protect (void* address, size_t size, uint32_t protecti
 	verify (VirtualProtectEx (process_, address, size, protection, &old));
 }
 
-AddressSpace::Block::Block (AddressSpace& space, void* address, bool exclusive) :
+template <bool x64>
+AddressSpace <x64>::Block::Block (AddressSpace <x64>& space, Address address, bool exclusive) :
 	space_ (space),
-	address_ (Nirvana::round_down ((BYTE*)address, ALLOCATION_GRANULARITY)),
+	address_ (Nirvana::round_down (address, ALLOCATION_GRANULARITY)),
 	info_ (check_block (space.allocated_block (address_))),
 	exclusive_ (exclusive)
 {
@@ -73,7 +69,8 @@ AddressSpace::Block::Block (AddressSpace& space, void* address, bool exclusive) 
 		state_ = State::PAGE_STATE_UNKNOWN;
 }
 
-AddressSpace::Block::~Block ()
+template <bool x64>
+AddressSpace <x64>::Block::~Block ()
 {
 	if (exclusive_)
 		info_.mapping.set_and_unlock (mapping_);
@@ -81,7 +78,8 @@ AddressSpace::Block::~Block ()
 		info_.mapping.unlock ();
 }
 
-bool AddressSpace::Block::exclusive_lock ()
+template <bool x64>
+bool AddressSpace <x64>::Block::exclusive_lock ()
 {
 	if (!exclusive_) {
 		info_.mapping.unlock ();
@@ -95,7 +93,8 @@ bool AddressSpace::Block::exclusive_lock ()
 	return false;
 }
 
-void AddressSpace::Block::map (HANDLE hm, uint32_t protection)
+template <bool x64>
+void AddressSpace <x64>::Block::map (HANDLE hm, uint32_t protection)
 {
 	assert (hm);
 	assert (exclusive_);
@@ -134,7 +133,8 @@ void AddressSpace::Block::map (HANDLE hm, uint32_t protection)
 	verify (MapViewOfFile3 (hm, space_.process (), address (), 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
 }
 
-void AddressSpace::Block::unmap ()
+template <bool x64>
+void AddressSpace <x64>::Block::unmap ()
 {
 	if (!exclusive_) {
 		if (INVALID_HANDLE_VALUE == mapping ())
@@ -150,7 +150,8 @@ void AddressSpace::Block::unmap ()
 	}
 }
 
-void AddressSpace::Block::copy (Port::Memory::Block& src, size_t offset, size_t size, uint32_t copied_pages_state)
+template <bool x64>
+void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, size_t size, uint32_t copied_pages_state)
 {
 	assert (exclusive_locked ());
 	assert (size);
@@ -184,7 +185,7 @@ void AddressSpace::Block::copy (Port::Memory::Block& src, size_t offset, size_t 
 						break;
 					++region_end;
 				}
-				space_.protect ((BYTE*)address () + (region_begin - page_state) * PAGE_SIZE,
+				space_.protect (address () + (region_begin - page_state) * PAGE_SIZE,
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}
@@ -207,7 +208,7 @@ void AddressSpace::Block::copy (Port::Memory::Block& src, size_t offset, size_t 
 						break;
 					++region_end;
 				}
-				space_.protect ((BYTE*)address () + (region_begin - page_state) * PAGE_SIZE,
+				space_.protect (address () + (region_begin - page_state) * PAGE_SIZE,
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}
@@ -215,7 +216,8 @@ void AddressSpace::Block::copy (Port::Memory::Block& src, size_t offset, size_t 
 	}
 }
 
-AddressSpace::AddressSpace (uint32_t process_id, HANDLE process_handle) :
+template <bool x64>
+AddressSpace <x64>::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 	process_ (process_handle),
 	mapping_ (nullptr),
 	directory_ (nullptr)
@@ -224,13 +226,9 @@ AddressSpace::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 	WCHAR name [_countof (fmt) + 8 - 3];
 	wsprintfW (name, fmt, process_id);
 
-	SYSTEM_INFO si;
-	GetSystemInfo (&si);
-	directory_size_ = ((size_t)si.lpMaximumApplicationAddress + ALLOCATION_GRANULARITY - 1) / ALLOCATION_GRANULARITY;
-
 	if (GetCurrentProcessId () == process_id) {
 		LARGE_INTEGER size;
-		size.QuadPart = (LONGLONG)(directory_size_ * sizeof (BlockInfo));
+		size.QuadPart = (LONGLONG)(DIRECTORY_SIZE * sizeof (BlockInfo));
 		mapping_ = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_READWRITE | SEC_RESERVE, size.HighPart, size.LowPart, name);
 		if (!mapping_)
 			throw_INITIALIZE ();
@@ -240,11 +238,11 @@ AddressSpace::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 			throw_INITIALIZE ();
 	}
 
-#ifdef _WIN64
-	directory_ = (BlockInfo**)VirtualAlloc (0, (directory_size_ + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK * sizeof (BlockInfo*), MEM_RESERVE, PAGE_READWRITE);
-#else
-	directory_ = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-#endif
+	if (x64)
+		directory64_ = (BlockInfo**)VirtualAlloc (nullptr, (DIRECTORY_SIZE + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK * sizeof (BlockInfo*), MEM_RESERVE, PAGE_READWRITE);
+	else
+		directory32_ = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+
 	if (!directory_) {
 		verify (CloseHandle (mapping_));
 		mapping_ = nullptr;
@@ -252,73 +250,74 @@ AddressSpace::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 	}
 }
 
-AddressSpace::~AddressSpace () NIRVANA_NOEXCEPT
+template <bool x64>
+AddressSpace <x64>::~AddressSpace () NIRVANA_NOEXCEPT
 {
 	if (directory_) {
-#ifdef _WIN64
-		BlockInfo** end = directory_ + (directory_size_ + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK;
-		for (BlockInfo** page = directory_; page < end; page += PAGE_SIZE / sizeof (BlockInfo**)) {
-			MEMORY_BASIC_INFORMATION mbi;
-			verify (VirtualQuery (page, &mbi, sizeof (mbi)));
-			if (mbi.State == MEM_COMMIT) {
-				BlockInfo** end = page + PAGE_SIZE / sizeof (BlockInfo**);
-				for (BlockInfo** p = page; p < end; ++p) {
-					BlockInfo* block = *p;
-					if (block) {
-#ifdef _DEBUG
-						if (GetCurrentProcess () == process_) {
-							BYTE* address = (BYTE*)((p - directory_) * SECOND_LEVEL_BLOCK * ALLOCATION_GRANULARITY);
-							for (BlockInfo* page = block, *end = block + SECOND_LEVEL_BLOCK; page != end; page += PAGE_SIZE / sizeof (BlockInfo)) {
-								verify (VirtualQuery (page, &mbi, sizeof (mbi)));
-								if (mbi.State == MEM_COMMIT) {
-									for (BlockInfo* p = page, *end = page + PAGE_SIZE / sizeof (BlockInfo); p != end; ++p, address += ALLOCATION_GRANULARITY) {
-										HANDLE hm = p->mapping.handle ();
-										if (INVALID_HANDLE_VALUE == hm) {
-											VirtualFreeEx (process_, address, 0, MEM_RELEASE);
-										} else {
-											if (hm) {
-												UnmapViewOfFile2 (process_, address, 0);
-												CloseHandle (hm);
-											}
-										}
-									}
-								} else
-									address += PAGE_SIZE / sizeof (BlockInfo) * ALLOCATION_GRANULARITY;
-							}
-						}
-#endif
-						verify (UnmapViewOfFile (block));
-					}
-				}
-			}
-		}
-		verify (VirtualFree (directory_, 0, MEM_RELEASE));
-#else
-#ifdef _DEBUG
-		if (GetCurrentProcess () == process_) {
-			BYTE* address = 0;
-			for (BlockInfo* page = directory_, *end = directory_ + directory_size_; page < end; page += PAGE_SIZE / sizeof (BlockInfo)) {
+		if (x64) {
+			BlockInfo** end = directory64_ + (DIRECTORY_SIZE + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK;
+			for (BlockInfo** page = directory64_; page < end; page += PAGE_SIZE / sizeof (BlockInfo**)) {
 				MEMORY_BASIC_INFORMATION mbi;
 				verify (VirtualQuery (page, &mbi, sizeof (mbi)));
 				if (mbi.State == MEM_COMMIT) {
-					for (BlockInfo* p = page, *end = page + PAGE_SIZE / sizeof (BlockInfo); p != end; ++p, address += ALLOCATION_GRANULARITY) {
-						HANDLE hm = p->mapping.handle ();
-						if (INVALID_HANDLE_VALUE == hm) {
-							VirtualFreeEx (process_, address, 0, MEM_RELEASE);
-						} else {
-							if (hm) {
-								UnmapViewOfFile2 (process_, address, 0);
-								CloseHandle (hm);
+					BlockInfo** end = page + PAGE_SIZE / sizeof (BlockInfo**);
+					for (BlockInfo** p = page; p < end; ++p) {
+						BlockInfo* block = *p;
+						if (block) {
+#ifdef _DEBUG
+							if (GetCurrentProcess () == process_) {
+								BYTE* address = (BYTE*)((p - directory64_) * SECOND_LEVEL_BLOCK * ALLOCATION_GRANULARITY);
+								for (BlockInfo* page = block, *end = block + SECOND_LEVEL_BLOCK; page != end; page += PAGE_SIZE / sizeof (BlockInfo)) {
+									verify (VirtualQuery (page, &mbi, sizeof (mbi)));
+									if (mbi.State == MEM_COMMIT) {
+										for (BlockInfo* p = page, *end = page + PAGE_SIZE / sizeof (BlockInfo); p != end; ++p, address += ALLOCATION_GRANULARITY) {
+											HANDLE hm = p->mapping.handle ();
+											if (INVALID_HANDLE_VALUE == hm) {
+												VirtualFreeEx (process_, address, 0, MEM_RELEASE);
+											} else {
+												if (hm) {
+													UnmapViewOfFile2 (process_, address, 0);
+													CloseHandle (hm);
+												}
+											}
+										}
+									} else
+										address += PAGE_SIZE / sizeof (BlockInfo) * ALLOCATION_GRANULARITY;
+								}
 							}
+#endif
+							verify (UnmapViewOfFile (block));
 						}
 					}
-				} else
-					address += PAGE_SIZE / sizeof (BlockInfo) * ALLOCATION_GRANULARITY;
+				}
 			}
+			verify (VirtualFree (directory64_, 0, MEM_RELEASE));
+		} else {
+#ifdef _DEBUG
+			if (GetCurrentProcess () == process_) {
+				BYTE* address = 0;
+				for (BlockInfo* page = directory32_, *end = directory32_ + DIRECTORY_SIZE; page < end; page += PAGE_SIZE / sizeof (BlockInfo)) {
+					MEMORY_BASIC_INFORMATION mbi;
+					verify (VirtualQuery (page, &mbi, sizeof (mbi)));
+					if (mbi.State == MEM_COMMIT) {
+						for (BlockInfo* p = page, *end = page + PAGE_SIZE / sizeof (BlockInfo); p != end; ++p, address += ALLOCATION_GRANULARITY) {
+							HANDLE hm = p->mapping.handle ();
+							if (INVALID_HANDLE_VALUE == hm) {
+								VirtualFreeEx (process_, address, 0, MEM_RELEASE);
+							} else {
+								if (hm) {
+									UnmapViewOfFile2 (process_, address, 0);
+									CloseHandle (hm);
+								}
+							}
+						}
+					} else
+						address += PAGE_SIZE / sizeof (BlockInfo) * ALLOCATION_GRANULARITY;
+				}
+			}
+#endif
+			verify (UnmapViewOfFile (directory32_));
 		}
-#endif
-		verify (UnmapViewOfFile (directory_));
-#endif
 		directory_ = nullptr;
 	}
 	if (mapping_) {
@@ -327,38 +326,40 @@ AddressSpace::~AddressSpace () NIRVANA_NOEXCEPT
 	}
 }
 
-AddressSpace::BlockInfo* AddressSpace::block_no_commit (const void* address)
+template <bool x64>
+BlockInfo* AddressSpace <x64>::block_no_commit (Address address)
 {
-	size_t idx = (size_t)address / ALLOCATION_GRANULARITY;
-	assert (idx < directory_size_);
+	Size idx = (Size)address / ALLOCATION_GRANULARITY;
+	assert (idx < DIRECTORY_SIZE);
 	BlockInfo* p;
-#ifdef _WIN64
-	size_t i0 = idx / SECOND_LEVEL_BLOCK;
-	size_t i1 = idx % SECOND_LEVEL_BLOCK;
-	if (!VirtualAlloc (directory_ + i0, sizeof (BlockInfo*), MEM_COMMIT, PAGE_READWRITE))
-		throw_NO_MEMORY ();
-	BlockInfo** pp = directory_ + i0;
-	p = *pp;
-	if (!p) {
-		LARGE_INTEGER offset;
-		offset.QuadPart = ALLOCATION_GRANULARITY * i0;
-		p = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, offset.HighPart, offset.LowPart, ALLOCATION_GRANULARITY);
-		if (!p)
+	if (x64) {
+		Size i0 = idx / SECOND_LEVEL_BLOCK;
+		Size i1 = idx % SECOND_LEVEL_BLOCK;
+		if (!VirtualAlloc (directory64_ + i0, sizeof (BlockInfo*), MEM_COMMIT, PAGE_READWRITE))
 			throw_NO_MEMORY ();
-		BlockInfo* cur = (BlockInfo*)InterlockedCompareExchangePointer ((void* volatile*)pp, p, 0);
-		if (cur) {
-			UnmapViewOfFile (p);
-			p = cur;
+		BlockInfo** pp = directory64_ + i0;
+		p = *pp;
+		if (!p) {
+			LARGE_INTEGER offset;
+			offset.QuadPart = ALLOCATION_GRANULARITY * i0;
+			p = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, offset.HighPart, offset.LowPart, ALLOCATION_GRANULARITY);
+			if (!p)
+				throw_NO_MEMORY ();
+			BlockInfo* cur = (BlockInfo*)InterlockedCompareExchangePointer ((void* volatile*)pp, p, 0);
+			if (cur) {
+				UnmapViewOfFile (p);
+				p = cur;
+			}
 		}
-	}
-	p += i1;
-#else
-	p = directory_ + idx;
-#endif
+		p += i1;
+	} else
+		p = directory32_ + idx;
+
 	return p;
 }
 
-AddressSpace::BlockInfo& AddressSpace::block (const void* address)
+template <bool x64>
+BlockInfo& AddressSpace <x64>::block (Address address)
 {
 	BlockInfo* p = block_no_commit (address);
 	if (!VirtualAlloc (p, sizeof (BlockInfo), MEM_COMMIT, PAGE_READWRITE))
@@ -366,11 +367,12 @@ AddressSpace::BlockInfo& AddressSpace::block (const void* address)
 	return *p;
 }
 
-AddressSpace::BlockInfo* AddressSpace::allocated_block (const void* address)
+template <bool x64>
+BlockInfo* AddressSpace <x64>::allocated_block (Address address)
 {
 	BlockInfo* p = nullptr;
-	size_t idx = (size_t)address / ALLOCATION_GRANULARITY;
-	if (idx < directory_size_) {
+	Size idx = (Size)address / ALLOCATION_GRANULARITY;
+	if (idx < DIRECTORY_SIZE) {
 		p = block_no_commit (address);
 		MEMORY_BASIC_INFORMATION mbi;
 		verify (VirtualQuery (p, &mbi, sizeof (mbi)));
@@ -380,17 +382,18 @@ AddressSpace::BlockInfo* AddressSpace::allocated_block (const void* address)
 	return p;
 }
 
-void* AddressSpace::reserve (void* dst, size_t& size, unsigned flags)
+template <bool x64>
+typename AddressSpace <x64>::Address AddressSpace <x64>::reserve (Address dst, Size& size, unsigned flags)
 {
 	if (!size)
 		throw_BAD_PARAM ();
 
-	BYTE* p;
-	BYTE* tgt;
+	Address p;
+	Address tgt;
 	if (dst) {
-		tgt = round_down ((BYTE*)dst, ALLOCATION_GRANULARITY);
+		tgt = (Address)round_down ((Size)dst, ALLOCATION_GRANULARITY);
 		if (flags & Memory::EXACTLY)
-			size = round_up ((size_t)((BYTE*)dst + size - tgt), ALLOCATION_GRANULARITY);
+			size = round_up (dst - tgt + size, ALLOCATION_GRANULARITY);
 		else
 			size = round_up (size, ALLOCATION_GRANULARITY);
 	} else {
@@ -406,9 +409,9 @@ void* AddressSpace::reserve (void* dst, size_t& size, unsigned flags)
 	}
 
 	{
-		BYTE* pb = p;
+		Address pb = p;
 		try {
-			for (BYTE* end = p + size; pb < end; pb += ALLOCATION_GRANULARITY) {
+			for (Address end = p + size; pb < end; pb += ALLOCATION_GRANULARITY) {
 				BlockInfo& bi = block (pb);
 				bi.mapping.exclusive_lock ();
 				assert (!bi.mapping);
@@ -429,13 +432,14 @@ void* AddressSpace::reserve (void* dst, size_t& size, unsigned flags)
 	return p;
 }
 
-void AddressSpace::release (void* dst, size_t size)
+template <bool x64>
+void AddressSpace <x64>::release (Address dst, Size size)
 {
 	if (!(dst && size))
 		return;
 
-	BYTE* const begin = round_down ((BYTE*)dst, ALLOCATION_GRANULARITY);
-	BYTE* const end = round_up ((BYTE*)dst + size, ALLOCATION_GRANULARITY);
+	Address const begin = round_down (dst, ALLOCATION_GRANULARITY);
+	Address const end = round_up (dst + size, ALLOCATION_GRANULARITY);
 
 	// Check allocation and exclusive lock all released blocks.
 	HANDLE begin_handle, end_handle;
@@ -462,7 +466,7 @@ void AddressSpace::release (void* dst, size_t size)
 		if (INVALID_HANDLE_VALUE == begin_handle) {
 			query (begin, begin_mbi);
 			assert (MEM_RESERVE == begin_mbi.State);
-			if ((BYTE*)begin_mbi.BaseAddress + begin_mbi.RegionSize >= end)
+			if ((Address)begin_mbi.BaseAddress + begin_mbi.RegionSize >= end)
 				end_mbi = begin_mbi;
 		}
 
@@ -476,20 +480,20 @@ void AddressSpace::release (void* dst, size_t size)
 
 		// Split reserved blocks at begin and end if need.
 		if (begin_mbi.BaseAddress) {
-			SSIZE_T realloc = begin - (BYTE*)begin_mbi.AllocationBase;
+			SSize realloc = begin - (Address)begin_mbi.AllocationBase;
 			if (realloc > 0)
 				verify (VirtualFreeEx (process_, begin_mbi.AllocationBase, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 
 		if (end_mbi.BaseAddress) {
-			SSIZE_T realloc = (BYTE*)end_mbi.BaseAddress + end_mbi.RegionSize - end;
+			SSize realloc = (Address)end_mbi.BaseAddress + end_mbi.RegionSize - end;
 			if (realloc > 0)
 				verify (VirtualFreeEx (process_, end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 	}
 
 	// Release memory
-	for (BYTE* p = begin; p < end;) {
+	for (Address p = begin; p < end;) {
 		BlockInfo* block = allocated_block (p);
 		HANDLE mapping = block->mapping.reset_and_unlock ();
 		assert (mapping);
@@ -515,7 +519,8 @@ void AddressSpace::release (void* dst, size_t size)
 	}
 }
 
-void AddressSpace::check_allocated (void* ptr, size_t size)
+template <bool x64>
+void AddressSpace <x64>::check_allocated (Address ptr, Size size)
 {
 	if (!size)
 		return;

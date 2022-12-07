@@ -38,7 +38,15 @@ namespace Core {
 /// This namespace is not visible to the nirvana Core code.
 namespace Windows {
 
+/// Memory block (64K) information.
+struct BlockInfo
+{
+	// Currently we are using only one field. But we create structure for possible future extensions.
+	LockableHandle mapping;
+};
+
 /// Logical address space of some Windows process.
+template <bool x64>
 class AddressSpace
 {
 	AddressSpace (const AddressSpace&) = delete;
@@ -52,27 +60,26 @@ public:
 		return process_;
 	}
 
-	void* end () const
+	static const size_t ADDRESS_SIZE = x64 ? 8 : 4;
+	typedef std::conditional_t <x64, uint64_t, uint32_t> Size;
+	typedef std::conditional_t <x64, int64_t, int32_t> SSize;
+	typedef std::conditional_t <sizeof (void*) == ADDRESS_SIZE, uint8_t*, Size> Address;
+
+	static Address end ()
 	{
-		return (void*)(directory_size_ * Port::Memory::ALLOCATION_UNIT);
+		return (Address)(DIRECTORY_SIZE * (Size)Port::Memory::ALLOCATION_UNIT);
 	}
 
-	struct BlockInfo
-	{
-		// Currently we are using only one field. But we create structure for possible future extensions.
-		LockableHandle mapping;
-	};
-
-	BlockInfo& block (const void* address);
-	BlockInfo* allocated_block (const void* address);
+	BlockInfo& block (Address address);
+	BlockInfo* allocated_block (Address address);
 
 	class Block
 	{
 	public:
-		Block (AddressSpace& space, void* address, bool exclusive = false);
+		Block (AddressSpace& space, Address address, bool exclusive = false);
 		~Block ();
 
-		void* address () const
+		Address address () const
 		{
 			return address_;
 		}
@@ -129,7 +136,7 @@ public:
 
 	private:
 		AddressSpace& space_;
-		void* address_;
+		Address address_;
 		BlockInfo& info_;
 		HANDLE mapping_;
 
@@ -144,45 +151,33 @@ public:
 		bool exclusive_;
 	};
 
-	void* reserve (void* dst, size_t& size, unsigned flags);
-	void release (void* ptr, size_t size);
+	Address reserve (Address dst, Size& size, unsigned flags);
+	void release (Address ptr, Size size);
 
-	void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) const;
+	void query (Address address, MEMORY_BASIC_INFORMATION& mbi) const;
 
-	void check_allocated (void* ptr, size_t size);
-
-	static void initialize ();
-
-	static void terminate () NIRVANA_NOEXCEPT
-	{
-		local_space_.destruct ();
-	}
-
-	static AddressSpace& local () NIRVANA_NOEXCEPT
-	{
-		return local_space_;
-	}
+	void check_allocated (Address ptr, Size size);
 
 private:
 	friend class Port::Memory;
 
-	void protect (void* address, size_t size, uint32_t protection) const;
+	void protect (Address address, Size size, uint32_t protection) const;
 
-	BlockInfo* block_no_commit (const void* address);
+	BlockInfo* block_no_commit (Address address);
 
 private:
 	HANDLE process_;
 	HANDLE mapping_;
-#ifdef _WIN64
-	static const size_t SECOND_LEVEL_BLOCK = Port::Memory::ALLOCATION_UNIT / sizeof (BlockInfo);
-	BlockInfo** directory_;
-#else
-	BlockInfo* directory_;
-#endif
-	size_t directory_size_;
-
-	static StaticallyAllocated <AddressSpace> local_space_;
+	union {
+		BlockInfo* directory32_;
+		BlockInfo** directory64_;
+		void* directory_;
+	};
+	static const uint32_t SECOND_LEVEL_BLOCK = Port::Memory::ALLOCATION_UNIT / sizeof (BlockInfo);
+	static const Size DIRECTORY_SIZE = x64 ? 0x80000000 : 0x00008000;
 };
+
+extern StaticallyAllocated <AddressSpace <sizeof (void*) == 8> > local_address_space;
 
 }
 }
