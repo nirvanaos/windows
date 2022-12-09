@@ -798,6 +798,8 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 {
 	if (!size)
 		return dst;
+	if (!src)
+		throw_BAD_PARAM ();
 
 	if (flags != Nirvana::Memory::SIMPLE_COPY && (flags & ~(Nirvana::Memory::READ_ONLY
 		| Nirvana::Memory::SRC_RELEASE
@@ -811,7 +813,7 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 	// release_flags can be 0, Memory::SRC_RELEASE, Memory::SRC_DECOMMIT.
 	unsigned release_flags = flags & Nirvana::Memory::SRC_RELEASE;
 
-	// Source range have to be committed.
+	// Source range has to be committed.
 	uint32_t src_state_mask;
 	uint32_t src_type;
 	if (local_address_space->allocated_block ((uint8_t*)src)) {
@@ -1187,12 +1189,12 @@ void Memory::initialize ()
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
-	local_address_space.construct (GetCurrentProcessId (), GetCurrentProcess ());
+	address_space_init ();
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
-	local_address_space.destruct ();
+	address_space_term ();
 	RemoveVectoredExceptionHandler (handler_);
 }
 

@@ -23,8 +23,11 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
+#ifndef NIRVANA_CORE_WINDOWS_ADDRESSSPACE_INL_
+#define NIRVANA_CORE_WINDOWS_ADDRESSSPACE_INL_
+#pragma once
+
 #include "Memory.inl"
-#include <algorithm>
 
 // wsprintfW
 #pragma comment (lib, "User32.lib")
@@ -33,10 +36,20 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+inline void address_space_init ()
+{
+	local_address_space.construct (GetCurrentProcessId (), GetCurrentProcess ());
+}
+
+inline void address_space_term () NIRVANA_NOEXCEPT
+{
+	local_address_space.destruct ();
+}
+
 template <bool x64> inline
 void AddressSpace <x64>::query (Address address, MEMORY_BASIC_INFORMATION& mbi) const
 {
-	verify (VirtualQueryEx (process_, address, &mbi, sizeof (mbi)));
+	verify (VirtualQueryEx (process_, (void*)(uintptr_t)address, &mbi, sizeof (mbi)));
 }
 
 template <bool x64> inline
@@ -383,27 +396,32 @@ BlockInfo* AddressSpace <x64>::allocated_block (Address address)
 }
 
 template <bool x64>
-typename AddressSpace <x64>::Address AddressSpace <x64>::reserve (Address dst, Size& size, unsigned flags)
+typename AddressSpace <x64>::Address AddressSpace <x64>::reserve (Address dst, size_t& size, unsigned flags)
 {
 	if (!size)
 		throw_BAD_PARAM ();
 
+	if (sizeof (size_t) > sizeof (Size)) {
+		if (size > std::numeric_limits <Size>::max ())
+			throw_IMP_LIMIT ();
+	}
+
 	Address p;
 	Address tgt;
 	if (dst) {
-		tgt = (Address)round_down ((Size)dst, ALLOCATION_GRANULARITY);
+		tgt = (Address)round_down ((Size)dst, (Size)ALLOCATION_GRANULARITY);
 		if (flags & Memory::EXACTLY)
-			size = round_up (dst - tgt + size, ALLOCATION_GRANULARITY);
+			size = round_up ((size_t)(dst - tgt + size), ALLOCATION_GRANULARITY);
 		else
 			size = round_up (size, ALLOCATION_GRANULARITY);
 	} else {
-		tgt = nullptr;
+		tgt = 0;
 		size = round_up (size, ALLOCATION_GRANULARITY);
 	}
-	p = (BYTE*)VirtualAlloc2 (process_, tgt, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+	p = (Address)(uintptr_t)VirtualAlloc2 (process_, (void*)(uintptr_t)tgt, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
 	if (!p) {
 		if (flags & Memory::EXACTLY)
-			return nullptr;
+			return 0;
 		else
 			throw_NO_MEMORY ();
 	}
@@ -411,7 +429,7 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::reserve (Address dst, S
 	{
 		Address pb = p;
 		try {
-			for (Address end = p + size; pb < end; pb += ALLOCATION_GRANULARITY) {
+			for (Address end = p + (Size)size; pb < end; pb += ALLOCATION_GRANULARITY) {
 				BlockInfo& bi = block (pb);
 				bi.mapping.exclusive_lock ();
 				assert (!bi.mapping);
@@ -422,9 +440,9 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::reserve (Address dst, S
 				pb -= ALLOCATION_GRANULARITY;
 				block (pb).mapping.reset_on_failure ();
 			}
-			VirtualFreeEx (process_, p, 0, MEM_RELEASE);
+			VirtualFreeEx (process_, (void*)(uintptr_t)p, 0, MEM_RELEASE);
 			if (flags & Memory::EXACTLY)
-				return nullptr;
+				return 0;
 			throw;
 		}
 	}
@@ -433,13 +451,13 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::reserve (Address dst, S
 }
 
 template <bool x64>
-void AddressSpace <x64>::release (Address dst, Size size)
+void AddressSpace <x64>::release (Address dst, size_t size)
 {
 	if (!(dst && size))
 		return;
 
-	Address const begin = round_down (dst, ALLOCATION_GRANULARITY);
-	Address const end = round_up (dst + size, ALLOCATION_GRANULARITY);
+	Address const begin = (Address)round_down ((Size)dst, (Size)ALLOCATION_GRANULARITY);
+	Address const end = (Address)round_up (dst + size, (Size)ALLOCATION_GRANULARITY);
 
 	// Check allocation and exclusive lock all released blocks.
 	HANDLE begin_handle, end_handle;
@@ -448,7 +466,7 @@ void AddressSpace <x64>::release (Address dst, Size size)
 		if (!block)
 			throw_FREE_MEM ();
 		begin_handle = end_handle = block->mapping.exclusive_lock ();
-		for (BYTE* p = begin + ALLOCATION_GRANULARITY; p != end; p += ALLOCATION_GRANULARITY) {
+		for (Address p = begin + ALLOCATION_GRANULARITY; p != end; p += ALLOCATION_GRANULARITY) {
 			BlockInfo* block = allocated_block (p);
 			if (!block) {
 				while (p > begin) {
@@ -466,12 +484,12 @@ void AddressSpace <x64>::release (Address dst, Size size)
 		if (INVALID_HANDLE_VALUE == begin_handle) {
 			query (begin, begin_mbi);
 			assert (MEM_RESERVE == begin_mbi.State);
-			if ((Address)begin_mbi.BaseAddress + begin_mbi.RegionSize >= end)
+			if ((Address)(uintptr_t)begin_mbi.BaseAddress + begin_mbi.RegionSize >= end)
 				end_mbi = begin_mbi;
 		}
 
 		if (!end_mbi.BaseAddress) {
-			BYTE* back = end - PAGE_SIZE;
+			Address back = end - PAGE_SIZE;
 			if (INVALID_HANDLE_VALUE == end_handle) {
 				query (back, end_mbi);
 				assert (MEM_RESERVE == end_mbi.State);
@@ -480,15 +498,15 @@ void AddressSpace <x64>::release (Address dst, Size size)
 
 		// Split reserved blocks at begin and end if need.
 		if (begin_mbi.BaseAddress) {
-			SSize realloc = begin - (Address)begin_mbi.AllocationBase;
+			SSize realloc = begin - (Address)(uintptr_t)begin_mbi.AllocationBase;
 			if (realloc > 0)
 				verify (VirtualFreeEx (process_, begin_mbi.AllocationBase, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 
 		if (end_mbi.BaseAddress) {
-			SSize realloc = (Address)end_mbi.BaseAddress + end_mbi.RegionSize - end;
+			SSize realloc = (SSize )((Address)(uintptr_t)end_mbi.BaseAddress + end_mbi.RegionSize - end);
 			if (realloc > 0)
-				verify (VirtualFreeEx (process_, end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
+				verify (VirtualFreeEx (process_, (void*)(uintptr_t)end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 	}
 
@@ -501,8 +519,8 @@ void AddressSpace <x64>::release (Address dst, Size size)
 			MEMORY_BASIC_INFORMATION mbi;
 			query (p, mbi);
 			assert (mbi.State == MEM_RESERVE);
-			verify (VirtualFreeEx (process_, p, 0, MEM_RELEASE));
-			BYTE* region_end = (BYTE*)mbi.BaseAddress + mbi.RegionSize;
+			verify (VirtualFreeEx (process_, (void*)(uintptr_t)p, 0, MEM_RELEASE));
+			Address region_end = (Address)((uintptr_t)mbi.BaseAddress + mbi.RegionSize);
 			if (region_end > end)
 				region_end = end;
 			p += ALLOCATION_GRANULARITY;
@@ -512,7 +530,7 @@ void AddressSpace <x64>::release (Address dst, Size size)
 				p += ALLOCATION_GRANULARITY;
 			}
 		} else {
-			verify (UnmapViewOfFile2 (process_, p, 0));
+			verify (UnmapViewOfFile2 (process_, (void*)(uintptr_t)p, 0));
 			verify (CloseHandle (mapping));
 			p += ALLOCATION_GRANULARITY;
 		}
@@ -520,14 +538,14 @@ void AddressSpace <x64>::release (Address dst, Size size)
 }
 
 template <bool x64>
-void AddressSpace <x64>::check_allocated (Address ptr, Size size)
+void AddressSpace <x64>::check_allocated (Address ptr, size_t size)
 {
 	if (!size)
 		return;
 	if (!ptr)
 		throw_BAD_PARAM ();
 
-	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end; p += ALLOCATION_GRANULARITY)
+	for (Address p = ptr, end = p + (Size)size; p < end; p += ALLOCATION_GRANULARITY)
 		if (!allocated_block (p))
 			throw_BAD_PARAM ();
 }
@@ -535,3 +553,5 @@ void AddressSpace <x64>::check_allocated (Address ptr, Size size)
 }
 }
 }
+
+#endif
