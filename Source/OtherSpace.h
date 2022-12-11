@@ -42,6 +42,8 @@ class OtherSpace : private Nirvana::Core::Windows::AddressSpace <x64>
 	typedef typename Base::Address Address;
 	typedef typename Base::Size Size;
 
+	static const size_t ALLOCATION_GRANULARITY = Nirvana::Core::Port::Memory::ALLOCATION_UNIT;
+
 public:
 	OtherSpace (ProtDomainId process_id, HANDLE process_handle) :
 		Base (process_id, process_handle)
@@ -53,8 +55,8 @@ public:
 
 	static void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT
 	{
-		sizes.allocation_unit = Nirvana::Core::Port::Memory::ALLOCATION_UNIT;
-		sizes.block_size = Nirvana::Core::Port::Memory::ALLOCATION_UNIT;
+		sizes.allocation_unit = ALLOCATION_GRANULARITY;
+		sizes.block_size = ALLOCATION_GRANULARITY;
 		sizes.sizeof_pointer = sizeof (Address);
 		sizes.sizeof_size = sizeof (Size);
 		sizes.max_size = std::max (std::numeric_limits <size_t>::max (), (size_t)std::numeric_limits <Size>::max ());

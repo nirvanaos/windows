@@ -27,17 +27,30 @@
 #include <Nirvana/real_copy.h>
 #include <ExecDomain.h>
 #include <signal.h>
-#include <winternl.h>
 #include "ex2signal.h"
 
 #pragma comment (lib, "OneCore.lib")
 #pragma comment (lib, "ntdll.lib")
+
+// wsprintfW
+#pragma comment (lib, "User32.lib")
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
 StaticallyAllocated <AddressSpace <sizeof (void*) == 8> > local_address_space;
+
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+DWORD64 wow64_NtQueryVirtualMemory;
+DWORD64 wow64_NtProtectVirtualMemory;
+DWORD64 wow64_NtAllocateVirtualMemoryEx;
+DWORD64 wow64_NtFreeVirtualMemory;
+DWORD64 wow64_NtMapViewOfSectionEx;
+DWORD64 wow64_NtUnmapViewOfSectionEx;
+#endif
+
+extern ULONG handle_count (HANDLE h);
 
 void BlockState::query (HANDLE process)
 {
@@ -67,15 +80,6 @@ using namespace Windows;
 namespace Port {
 
 void* Memory::handler_;
-
-static ULONG handle_count (HANDLE h)
-{
-	PUBLIC_OBJECT_BASIC_INFORMATION info;
-	if (!NtQueryObject (h, ObjectBasicInformation, &info, sizeof (info), nullptr))
-		return info.HandleCount;
-	assert (false);
-	return 0;
-}
 
 const BlockState& Memory::Block::state ()
 {

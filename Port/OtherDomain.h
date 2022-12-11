@@ -38,7 +38,7 @@ namespace ESIOP {
 
 namespace Windows {
 
-class Mailslot : public Nirvana::Core::Windows::Mailslot
+class OtherDomainBase : public Nirvana::Core::Windows::Mailslot
 {
 	typedef Nirvana::Core::Windows::Mailslot Base;
 
@@ -49,7 +49,19 @@ public:
 	}
 
 protected:
-	Mailslot (ProtDomainId domain_id);
+	HANDLE process () const NIRVANA_NOEXCEPT
+	{
+		return process_;
+	}
+
+	bool is_64_bit () const NIRVANA_NOEXCEPT;
+
+protected:
+	OtherDomainBase (ProtDomainId domain_id);
+	~OtherDomainBase ();
+
+private:
+	HANDLE process_;
 };
 
 }
@@ -58,8 +70,8 @@ protected:
 
 /// Other protection domain communication endpoint.
 class OtherDomain :
+	public ESIOP::Windows::OtherDomainBase,
 	public ESIOP::Windows::OtherSpace <sizeof (void*) == 8>,
-	public ESIOP::Windows::Mailslot
 {
 	typedef ESIOP::Windows::OtherSpace <sizeof (void*) == 8> Space;
 
@@ -111,7 +123,7 @@ public:
 
 /// Other protection domain communication endpoint.
 class OtherDomain :
-	public Windows::Mailslot
+	public Windows::OtherDomainBase
 {
 public:
 	static const bool slow_creation = true;

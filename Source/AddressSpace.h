@@ -32,6 +32,8 @@
 #include "LockableHandle.h"
 #include "../Port/Memory.h"
 
+typedef struct _MEMORY_BASIC_INFORMATION64 MEMORY_BASIC_INFORMATION64;
+
 namespace Nirvana {
 namespace Core {
 /// Namespace Windows contains internal implementation details of the Windows host.
@@ -154,14 +156,24 @@ public:
 	Address reserve (Address dst, size_t& size, unsigned flags);
 	void release (Address ptr, size_t size);
 
-	void query (Address address, MEMORY_BASIC_INFORMATION& mbi) const;
+#ifndef _WIN64
+	typedef std::conditional_t <x64, MEMORY_BASIC_INFORMATION64, MEMORY_BASIC_INFORMATION> MBI;
+#else
+	typedef MEMORY_BASIC_INFORMATION MBI;
+#endif
+
+	void query (Address address, MBI& mbi) const;
 
 	void check_allocated (Address ptr, size_t size);
 
 private:
 	friend class Port::Memory;
 
-	void protect (Address address, Size size, uint32_t protection) const;
+	void protect (Address address, size_t size, uint32_t protection) const;
+	Address alloc (Address address, size_t size, uint32_t flags, uint32_t protection) const;
+	bool free (Address address, Size size, uint32_t flags) const;
+	Address map (HANDLE hm, Address address, size_t size, uint32_t flags, uint32_t protection) const;
+	bool unmap (Address address, uint32_t flags) const;
 
 	BlockInfo* block_no_commit (Address address);
 

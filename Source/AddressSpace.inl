@@ -29,16 +29,37 @@
 
 #include "Memory.inl"
 
-// wsprintfW
-#pragma comment (lib, "User32.lib")
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+#include "rewolf-wow64ext/src/wow64ext.h"
+extern DWORD64 getNTDLL64 ();
+
+#endif
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+extern DWORD64 wow64_NtQueryVirtualMemory;
+extern DWORD64 wow64_NtProtectVirtualMemory;
+extern DWORD64 wow64_NtAllocateVirtualMemoryEx;
+extern DWORD64 wow64_NtFreeVirtualMemory;
+extern DWORD64 wow64_NtMapViewOfSectionEx;
+extern DWORD64 wow64_NtUnmapViewOfSectionEx;
+#endif
+
 inline void address_space_init ()
 {
 	local_address_space.construct (GetCurrentProcessId (), GetCurrentProcess ());
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+	DWORD64 ntdll = getNTDLL64 ();
+	wow64_NtQueryVirtualMemory = GetProcAddress64 (ntdll, "NtQueryVirtualMemory");
+	wow64_NtProtectVirtualMemory = GetProcAddress64 (ntdll, "NtProtectVirtualMemory");
+	wow64_NtAllocateVirtualMemoryEx = GetProcAddress64 (ntdll, "NtAllocateVirtualMemoryEx");
+	wow64_NtFreeVirtualMemory = GetProcAddress64 (ntdll, "NtFreeVirtualMemory");
+	wow64_NtMapViewOfSectionEx = GetProcAddress64 (ntdll, "NtMapViewOfSectionEx");
+	wow64_NtUnmapViewOfSectionEx = GetProcAddress64 (ntdll, "NtUnmapViewOfSectionEx");
+#endif
 }
 
 inline void address_space_term () NIRVANA_NOEXCEPT
@@ -47,24 +68,108 @@ inline void address_space_term () NIRVANA_NOEXCEPT
 }
 
 template <bool x64> inline
-void AddressSpace <x64>::query (Address address, MEMORY_BASIC_INFORMATION& mbi) const
+void AddressSpace <x64>::query (Address address, MBI& mbi) const
 {
-	verify (VirtualQueryEx (process_, (void*)(uintptr_t)address, &mbi, sizeof (mbi)));
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+	if (x64) {
+		DWORD64 status = X64Call (wow64_NtQueryVirtualMemory, 6, HANDLE_TO_DWORD64 (process_), address,
+			PTR_TO_DWORD64 (&mbi), (DWORD64)sizeof (mbi), (DWORD64)0);
+		assert (!status);
+	} else
+#endif
+		verify (VirtualQueryEx (process_, (void*)(uintptr_t)address, (MEMORY_BASIC_INFORMATION*)&mbi,
+			sizeof (mbi)));
 }
 
 template <bool x64> inline
-void AddressSpace <x64>::protect (Address address, Size size, uint32_t protection) const
+void AddressSpace <x64>::protect (Address address, size_t size, uint32_t protection) const
 {
 	assert (!(protection & ~PageState::MASK_PROTECTION));
 	assert (size && 0 == size % PAGE_SIZE);
-	unsigned long old;
-	verify (VirtualProtectEx (process_, address, size, protection, &old));
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+	if (x64) {
+		DWORD64 tmp_size = size;
+		DWORD64 old;
+		DWORD64 status = X64Call (wow64_NtProtectVirtualMemory, 5, HANDLE_TO_DWORD64 (process_),
+			PTR_TO_DWORD64 (&address), PTR_TO_DWORD64 (&tmp_size), (DWORD64)protection, PTR_TO_DWORD64 (&old));
+	} else
+#endif
+	{
+		unsigned long old;
+		verify (VirtualProtectEx (process_, (void*)(uintptr_t)address, size, protection, &old));
+	}
+}
+
+template <bool x64> inline
+typename AddressSpace <x64>::Address AddressSpace <x64>::alloc (Address address, size_t size,
+	uint32_t flags, uint32_t protection) const
+{
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+	if (x64) {
+		DWORD64 tmp_addr = (uintptr_t)address;
+		DWORD64 tmp_size = size;
+		DWORD64 status = X64Call (wow64_NtAllocateVirtualMemoryEx, 6, PTR_TO_DWORD64 (&tmp_addr),
+			(DWORD64)0, PTR_TO_DWORD64 (&tmp_size), (DWORD64)flags, (DWORD64)protection);
+		if (!status)
+			return (Address)tmp_addr;
+		else
+			return 0;
+	} else
+#endif
+		return (Address)(uintptr_t)VirtualAlloc2 (process_, (void*)(uintptr_t)address, size, flags,
+			protection, nullptr, 0);
+}
+
+template <bool x64> inline
+bool AddressSpace <x64>::free (Address address, Size size, uint32_t flags) const
+{
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+	if (x64) {
+		DWORD64 status = X64Call (wow64_NtFreeVirtualMemory, 5, HANDLE_TO_DWORD64 (process_),
+			(DWORD64)address, (DWORD64)size, (DWORD64)flags);
+		return !status;
+	} else
+#endif
+		return VirtualFreeEx (process_, (void*)(uintptr_t)address, (size_t)size, flags);
+}
+
+template <bool x64> inline
+typename AddressSpace <x64>::Address AddressSpace <x64>::map (HANDLE hm, Address address,
+	size_t size, uint32_t flags, uint32_t protection) const
+{
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+	if (x64) {
+		DWORD64 tmp_addr = (uintptr_t)address;
+		DWORD64 tmp_size = size;
+		DWORD64 status = X64Call (wow64_NtMapViewOfSectionEx, 9, HANDLE_TO_DWORD64 (hm),
+			HANDLE_TO_DWORD64 (process_), PTR_TO_DWORD64 (&tmp_addr), (DWORD64)0, PTR_TO_DWORD64 (&tmp_size),
+			(DWORD64)flags, (DWORD64)protection, (DWORD64)0, (DWORD64)0);
+		if (!status)
+			return (Address)tmp_addr;
+		else
+			return 0;
+	} else
+#endif
+		return (Address)(uintptr_t)MapViewOfFile3 (hm, process_, (void*)(uintptr_t)address, 0, size,
+			flags, protection, nullptr, 0);
+}
+
+template <bool x64> inline
+bool AddressSpace <x64>::unmap (Address address, uint32_t flags) const
+{
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+	if (x64) {
+		DWORD64 status = X64Call (wow64_NtUnmapViewOfSectionEx, 3, HANDLE_TO_DWORD64 (process_), (DWORD64)address, (DWORD64)flags);
+		return !status;
+	} else
+#endif
+		return UnmapViewOfFile2 (process_, (void*)(uintptr_t)address, flags);
 }
 
 template <bool x64>
 AddressSpace <x64>::Block::Block (AddressSpace <x64>& space, Address address, bool exclusive) :
 	space_ (space),
-	address_ (Nirvana::round_down (address, ALLOCATION_GRANULARITY)),
+	address_ (Nirvana::round_down (address, (Size)ALLOCATION_GRANULARITY)),
 	info_ (check_block (space.allocated_block (address_))),
 	exclusive_ (exclusive)
 {
@@ -121,29 +226,29 @@ void AddressSpace <x64>::Block::map (HANDLE hm, uint32_t protection)
 		// Block is reserved.
 #ifdef _DEBUG
 		{
-			MEMORY_BASIC_INFORMATION mbi;
+			MBI mbi;
 			space_.query (address (), mbi);
 			assert (MEM_RESERVE == mbi.State);
 		}
 #endif
 		// If the reserved placeholder size is more than block, we must split it.
-		VirtualFreeEx (space_.process (), address (), ALLOCATION_GRANULARITY, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
+		space_.free (address (), ALLOCATION_GRANULARITY, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
 		// VirtualFreeEx will return TRUE if placeholder was splitted or FALSE if the placeholder is one block.
 		// Both results are normal.
 	} else {
 		// Block is committed.
 #ifdef _DEBUG
 		{
-			MEMORY_BASIC_INFORMATION mbi;
+			MBI mbi;
 			space_.query (address (), mbi);
 			assert (MEM_COMMIT == mbi.State);
 		}
 #endif
-		verify (UnmapViewOfFile2 (space_.process (), address (), MEM_PRESERVE_PLACEHOLDER));
+		verify (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
 		verify (CloseHandle (old));
 	}
 
-	verify (MapViewOfFile3 (hm, space_.process (), address (), 0, ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection, nullptr, 0));
+	verify (space_.map (hm, address (), ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection));
 }
 
 template <bool x64>
@@ -157,7 +262,7 @@ void AddressSpace <x64>::Block::unmap ()
 	HANDLE hm = mapping ();
 	assert (hm);
 	if (INVALID_HANDLE_VALUE != hm) {
-		verify (UnmapViewOfFile2 (space_.process (), address (), MEM_PRESERVE_PLACEHOLDER));
+		verify (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
 		verify (CloseHandle (hm));
 		mapping (INVALID_HANDLE_VALUE);
 	}
@@ -198,7 +303,7 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 						break;
 					++region_end;
 				}
-				space_.protect (address () + (region_begin - page_state) * PAGE_SIZE,
+				space_.protect ((Address)(address () + (region_begin - page_state) * PAGE_SIZE),
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}
@@ -221,7 +326,7 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 						break;
 					++region_end;
 				}
-				space_.protect (address () + (region_begin - page_state) * PAGE_SIZE,
+				space_.protect ((Address)(address () + (region_begin - page_state) * PAGE_SIZE),
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}
@@ -286,10 +391,10 @@ AddressSpace <x64>::~AddressSpace () NIRVANA_NOEXCEPT
 										for (BlockInfo* p = page, *end = page + PAGE_SIZE / sizeof (BlockInfo); p != end; ++p, address += ALLOCATION_GRANULARITY) {
 											HANDLE hm = p->mapping.handle ();
 											if (INVALID_HANDLE_VALUE == hm) {
-												VirtualFreeEx (process_, address, 0, MEM_RELEASE);
+												VirtualFree (address, 0, MEM_RELEASE);
 											} else {
 												if (hm) {
-													UnmapViewOfFile2 (process_, address, 0);
+													UnmapViewOfFile (address);
 													CloseHandle (hm);
 												}
 											}
@@ -316,10 +421,10 @@ AddressSpace <x64>::~AddressSpace () NIRVANA_NOEXCEPT
 						for (BlockInfo* p = page, *end = page + PAGE_SIZE / sizeof (BlockInfo); p != end; ++p, address += ALLOCATION_GRANULARITY) {
 							HANDLE hm = p->mapping.handle ();
 							if (INVALID_HANDLE_VALUE == hm) {
-								VirtualFreeEx (process_, address, 0, MEM_RELEASE);
+								VirtualFree (address, 0, MEM_RELEASE);
 							} else {
 								if (hm) {
-									UnmapViewOfFile2 (process_, address, 0);
+									UnmapViewOfFile (address);
 									CloseHandle (hm);
 								}
 							}
@@ -418,7 +523,7 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::reserve (Address dst, s
 		tgt = 0;
 		size = round_up (size, ALLOCATION_GRANULARITY);
 	}
-	p = (Address)(uintptr_t)VirtualAlloc2 (process_, (void*)(uintptr_t)tgt, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+	p = alloc (tgt, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS);
 	if (!p) {
 		if (flags & Memory::EXACTLY)
 			return 0;
@@ -440,7 +545,7 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::reserve (Address dst, s
 				pb -= ALLOCATION_GRANULARITY;
 				block (pb).mapping.reset_on_failure ();
 			}
-			VirtualFreeEx (process_, (void*)(uintptr_t)p, 0, MEM_RELEASE);
+			free (p, 0, MEM_RELEASE);
 			if (flags & Memory::EXACTLY)
 				return 0;
 			throw;
@@ -457,7 +562,7 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 		return;
 
 	Address const begin = (Address)round_down ((Size)dst, (Size)ALLOCATION_GRANULARITY);
-	Address const end = (Address)round_up (dst + size, (Size)ALLOCATION_GRANULARITY);
+	Address const end = (Address)round_up ((Size)(dst + size), (Size)ALLOCATION_GRANULARITY);
 
 	// Check allocation and exclusive lock all released blocks.
 	HANDLE begin_handle, end_handle;
@@ -480,7 +585,7 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 	}
 
 	{ // Define allocation margins if memory is reserved.
-		MEMORY_BASIC_INFORMATION begin_mbi = {0}, end_mbi = {0};
+		MBI begin_mbi = {0}, end_mbi = {0};
 		if (INVALID_HANDLE_VALUE == begin_handle) {
 			query (begin, begin_mbi);
 			assert (MEM_RESERVE == begin_mbi.State);
@@ -500,13 +605,13 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 		if (begin_mbi.BaseAddress) {
 			SSize realloc = begin - (Address)(uintptr_t)begin_mbi.AllocationBase;
 			if (realloc > 0)
-				verify (VirtualFreeEx (process_, begin_mbi.AllocationBase, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
+				verify (free ((Address)(uintptr_t)begin_mbi.AllocationBase, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 
 		if (end_mbi.BaseAddress) {
 			SSize realloc = (SSize )((Address)(uintptr_t)end_mbi.BaseAddress + end_mbi.RegionSize - end);
 			if (realloc > 0)
-				verify (VirtualFreeEx (process_, (void*)(uintptr_t)end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
+				verify (free (end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 	}
 
@@ -516,10 +621,10 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 		HANDLE mapping = block->mapping.reset_and_unlock ();
 		assert (mapping);
 		if (INVALID_HANDLE_VALUE == mapping) {
-			MEMORY_BASIC_INFORMATION mbi;
+			MBI mbi;
 			query (p, mbi);
 			assert (mbi.State == MEM_RESERVE);
-			verify (VirtualFreeEx (process_, (void*)(uintptr_t)p, 0, MEM_RELEASE));
+			verify (free (p, 0, MEM_RELEASE));
 			Address region_end = (Address)((uintptr_t)mbi.BaseAddress + mbi.RegionSize);
 			if (region_end > end)
 				region_end = end;
@@ -530,7 +635,7 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 				p += ALLOCATION_GRANULARITY;
 			}
 		} else {
-			verify (UnmapViewOfFile2 (process_, (void*)(uintptr_t)p, 0));
+			verify (unmap (p, 0));
 			verify (CloseHandle (mapping));
 			p += ALLOCATION_GRANULARITY;
 		}

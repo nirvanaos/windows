@@ -6,9 +6,31 @@ namespace ESIOP {
 
 namespace Windows {
 
-Mailslot::Mailslot (ProtDomainId domain_id)
+OtherDomainBase::OtherDomainBase (ProtDomainId domain_id) :
+	process_ (::OpenProcess (PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION, FALSE, domain_id))
 {
-	open (Nirvana::Core::Windows::MailslotName (domain_id));
+	if (!process_ || !open (Nirvana::Core::Windows::MailslotName (domain_id)))
+		Nirvana::throw_COMM_FAILURE ();
+}
+
+OtherDomainBase::~OtherDomainBase ()
+{
+	if (process_)
+		CloseHandle (process_);
+}
+
+inline bool OtherDomainBase::is_64_bit () const NIRVANA_NOEXCEPT
+{
+	bool x64 =
+#ifdef _WIN64
+	true;
+#else
+	false;
+#endif
+	USHORT process_machine;
+	if (::IsWow64Process2 (process_, &process_machine, nullptr) && IMAGE_FILE_MACHINE_I386 == process_machine)
+		x64 = false;
+	return x64;
 }
 
 }
@@ -16,8 +38,8 @@ Mailslot::Mailslot (ProtDomainId domain_id)
 #ifdef NIRVANA_SINGLE_PLATFORM
 
 OtherDomain::OtherDomain (ProtDomainId domain_id) :
-	Windows::Mailslot (domain_id),
-	Space (domain_id, ::OpenProcess (PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION, FALSE, domain_id))
+	Windows::OtherDomainBase (domain_id),
+	Space (domain_id, process ())
 {}
 
 SharedMemPtr OtherDomain::reserve (size_t size)
@@ -85,23 +107,13 @@ public:
 }
 
 OtherDomain::OtherDomain (ProtDomainId domain_id) :
-	Windows::Mailslot (domain_id),
+	Windows::OtherDomainBase (domain_id),
 	implementation_ (nullptr)
 {
-	HANDLE process = ::OpenProcess (PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION, FALSE, domain_id);
-	bool x64 =
-#ifdef _WIN64
-		true;
-#else
-		false;
-#endif
-	USHORT process_machine;
-	if (::IsWow64Process2 (process, &process_machine, nullptr) && IMAGE_FILE_MACHINE_I386 == process_machine)
-		x64 = false;
-	if (x64)
-		implementation_ = new Windows::OtherDomainImpl <true> (domain_id, process);
+	if (is_64_bit ())
+		implementation_ = new Windows::OtherDomainImpl <true> (domain_id, process ());
 	else
-		implementation_ = new Windows::OtherDomainImpl <false> (domain_id, process);
+		implementation_ = new Windows::OtherDomainImpl <false> (domain_id, process ());
 }
 
 #endif
