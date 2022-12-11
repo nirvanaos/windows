@@ -2,8 +2,9 @@
 #include "OtherSpace.inl"
 #include "MailslotName.h"
 
-namespace ESIOP {
+using namespace Nirvana::Core::Windows;
 
+namespace ESIOP {
 namespace Windows {
 
 OtherDomainBase::OtherDomainBase (ProtDomainId domain_id) :
@@ -17,6 +18,19 @@ OtherDomainBase::~OtherDomainBase ()
 {
 	if (process_)
 		CloseHandle (process_);
+}
+
+void OtherDomainBase::initialize ()
+{
+#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
+	DWORD64 ntdll = getNTDLL64 ();
+	wow64_NtQueryVirtualMemory = GetProcAddress64 (ntdll, "NtQueryVirtualMemory");
+	wow64_NtProtectVirtualMemory = GetProcAddress64 (ntdll, "NtProtectVirtualMemory");
+	wow64_NtAllocateVirtualMemoryEx = GetProcAddress64 (ntdll, "NtAllocateVirtualMemoryEx");
+	wow64_NtFreeVirtualMemory = GetProcAddress64 (ntdll, "NtFreeVirtualMemory");
+	wow64_NtMapViewOfSectionEx = GetProcAddress64 (ntdll, "NtMapViewOfSectionEx");
+	wow64_NtUnmapViewOfSectionEx = GetProcAddress64 (ntdll, "NtUnmapViewOfSectionEx");
+#endif
 }
 
 inline bool OtherDomainBase::is_64_bit () const NIRVANA_NOEXCEPT

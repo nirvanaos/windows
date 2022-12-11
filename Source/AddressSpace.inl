@@ -51,15 +51,6 @@ extern DWORD64 wow64_NtUnmapViewOfSectionEx;
 inline void address_space_init ()
 {
 	local_address_space.construct (GetCurrentProcessId (), GetCurrentProcess ());
-#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
-	DWORD64 ntdll = getNTDLL64 ();
-	wow64_NtQueryVirtualMemory = GetProcAddress64 (ntdll, "NtQueryVirtualMemory");
-	wow64_NtProtectVirtualMemory = GetProcAddress64 (ntdll, "NtProtectVirtualMemory");
-	wow64_NtAllocateVirtualMemoryEx = GetProcAddress64 (ntdll, "NtAllocateVirtualMemoryEx");
-	wow64_NtFreeVirtualMemory = GetProcAddress64 (ntdll, "NtFreeVirtualMemory");
-	wow64_NtMapViewOfSectionEx = GetProcAddress64 (ntdll, "NtMapViewOfSectionEx");
-	wow64_NtUnmapViewOfSectionEx = GetProcAddress64 (ntdll, "NtUnmapViewOfSectionEx");
-#endif
 }
 
 inline void address_space_term () NIRVANA_NOEXCEPT

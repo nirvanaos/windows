@@ -20,11 +20,22 @@
  *
  */
 
+#include <Nirvana/c_heap.h>
 #include <Windows.h>
 #include <cstddef>
 #include "internal.h"
 #include "wow64ext.h"
 #include "CMemPtr.h"
+
+static void* malloc (size_t size)
+{
+  return Nirvana::c_malloc <Nirvana::HeapBlockHdr> (size);
+}
+
+static void free (void* ptr)
+{
+  Nirvana::c_free <Nirvana::HeapBlockHdr> (ptr);
+}
 
 static int _wcsicmp(const wchar_t *string1, const wchar_t *string2)
 {
