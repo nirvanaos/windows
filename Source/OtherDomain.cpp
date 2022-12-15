@@ -23,7 +23,7 @@ OtherDomainBase::~OtherDomainBase ()
 void OtherDomainBase::initialize ()
 {
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
-	DWORD64 ntdll = getNTDLL64 ();
+	DWORD64 ntdll = GetModuleHandle64 (L"ntdll.dll");
 	wow64_NtQueryVirtualMemory = GetProcAddress64 (ntdll, "NtQueryVirtualMemory");
 	wow64_NtProtectVirtualMemory = GetProcAddress64 (ntdll, "NtProtectVirtualMemory");
 	wow64_NtAllocateVirtualMemoryEx = GetProcAddress64 (ntdll, "NtAllocateVirtualMemoryEx");

@@ -28,6 +28,7 @@
 #include <ExecDomain.h>
 #include <signal.h>
 #include "ex2signal.h"
+#include <winternl.h>
 
 #pragma comment (lib, "OneCore.lib")
 #pragma comment (lib, "ntdll.lib")
@@ -50,7 +51,14 @@ DWORD64 wow64_NtMapViewOfSectionEx;
 DWORD64 wow64_NtUnmapViewOfSectionEx;
 #endif
 
-extern ULONG handle_count (HANDLE h);
+inline ULONG handle_count (HANDLE h)
+{
+	PUBLIC_OBJECT_BASIC_INFORMATION info;
+	if (!NtQueryObject (h, ObjectBasicInformation, &info, sizeof (info), nullptr))
+		return info.HandleCount;
+	assert (false);
+	return 0;
+}
 
 void BlockState::query (HANDLE process)
 {

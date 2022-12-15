@@ -30,8 +30,24 @@
 #include "Memory.inl"
 
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
-#include "rewolf-wow64ext/src/wow64ext.h"
-extern DWORD64 getNTDLL64 ();
+
+extern "C" {
+	DWORD64 __cdecl X64Call (DWORD64 func, int argC, ...);
+	DWORD64 __cdecl GetModuleHandle64 (const wchar_t* lpModuleName);
+	DWORD64 __cdecl GetProcAddress64 (DWORD64 hModule, const char* funcName);
+}
+
+// Without the double casting, the pointer is sign extended, not zero extended,
+// which leads to invalid addresses with /LARGEADDRESSAWARE.
+#define PTR_TO_DWORD64(p) ((DWORD64)(ULONG_PTR)(p))
+
+// Sign-extension is required for pseudo handles such as the handle returned
+// from GetCurrentProcess().
+// "64-bit versions of Windows use 32-bit handles for interoperability [...] it
+// is safe to [...] sign-extend the handle (when passing it from 32-bit to
+// 64-bit)."
+// https://docs.microsoft.com/en-us/windows/win32/winprog64/interprocess-communication
+#define HANDLE_TO_DWORD64(p) ((DWORD64)(LONG_PTR)(p))
 
 #endif
 
