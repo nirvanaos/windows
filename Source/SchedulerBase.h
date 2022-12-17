@@ -30,6 +30,7 @@
 
 #include "../Port/Scheduler.h"
 #include "MessageBroker.h"
+#include "AddressSpace.inl"
 
 namespace Nirvana {
 namespace Core {
@@ -43,6 +44,7 @@ public:
 	SchedulerBase ()
 	{
 		singleton_ = this;
+		other_space_init ();
 	}
 
 	~SchedulerBase ()

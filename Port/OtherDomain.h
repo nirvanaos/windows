@@ -43,10 +43,6 @@ class OtherDomainBase : public Nirvana::Core::Windows::Mailslot
 	typedef Nirvana::Core::Windows::Mailslot Base;
 
 public:
-	static void initialize ();
-	static void terminate () NIRVANA_NOEXCEPT
-	{}
-
 	void send_message (const void* msg, size_t size)
 	{
 		Base::send (msg, (uint32_t)size);

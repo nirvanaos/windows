@@ -20,19 +20,6 @@ OtherDomainBase::~OtherDomainBase ()
 		CloseHandle (process_);
 }
 
-void OtherDomainBase::initialize ()
-{
-#if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
-	DWORD64 ntdll = GetModuleHandle64 (L"ntdll.dll");
-	wow64_NtQueryVirtualMemory = GetProcAddress64 (ntdll, "NtQueryVirtualMemory");
-	wow64_NtProtectVirtualMemory = GetProcAddress64 (ntdll, "NtProtectVirtualMemory");
-	wow64_NtAllocateVirtualMemoryEx = GetProcAddress64 (ntdll, "NtAllocateVirtualMemoryEx");
-	wow64_NtFreeVirtualMemory = GetProcAddress64 (ntdll, "NtFreeVirtualMemory");
-	wow64_NtMapViewOfSectionEx = GetProcAddress64 (ntdll, "NtMapViewOfSectionEx");
-	wow64_NtUnmapViewOfSectionEx = GetProcAddress64 (ntdll, "NtUnmapViewOfSectionEx");
-#endif
-}
-
 inline bool OtherDomainBase::is_64_bit () const NIRVANA_NOEXCEPT
 {
 	bool x64 =
