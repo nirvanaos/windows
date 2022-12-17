@@ -30,6 +30,7 @@
 #pragma once
 
 #define SCHEDULER_MAILSLOT_NAME MAILSLOT_PREFIX L"scheduler"
+#define WATCHDOG_MAILSLOT_NAME MAILSLOT_PREFIX L"watchdog"
 
 #include <Nirvana/NirvanaBase.h>
 
@@ -86,6 +87,12 @@ struct SchedulerMessage
 		ReSchedule reschedule;
 		Tagged tagged;
 	};
+};
+
+struct ProcessStartMessage
+{
+	uint32_t process_id;
+	uint32_t executor_id;
 };
 
 #pragma pack (pop)

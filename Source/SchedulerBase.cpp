@@ -1,4 +1,3 @@
-/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -24,59 +23,32 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_SCHEDULERBASE_H_
-#define NIRVANA_CORE_WINDOWS_SCHEDULERBASE_H_
-#pragma once
-
-#include "../Port/Scheduler.h"
-#include "MessageBroker.h"
-#include "AddressSpace.inl"
+#include "SchedulerBase.h"
+#include <shlobj_core.h>
+#include <Shlwapi.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class NIRVANA_NOVTABLE SchedulerBase :
-	public SchedulerAbstract,
-	public Port::Scheduler
+uint32_t SchedulerBase::sys_process_id_;
+
+HANDLE SchedulerBase::open_sysdomainid (bool write) NIRVANA_NOEXCEPT
 {
-public:
-	SchedulerBase ()
-	{
-		singleton_ = this;
-		other_space_init ();
+	WCHAR path [MAX_PATH];
+	if (S_OK != SHGetFolderPathW (NULL, CSIDL_COMMON_APPDATA, NULL, 0, path))
+		return INVALID_HANDLE_VALUE;
+	for (size_t i = 0; i < 2; ++i) {
+		PathAppendW (path, L"\\Nirvana");
+		if (write && !CreateDirectoryW (path, nullptr))
+			return INVALID_HANDLE_VALUE;
 	}
-
-	~SchedulerBase ()
-	{
-		singleton_ = nullptr;
-	}
-
-	static SchedulerBase& singleton ()
-	{
-		assert (singleton_);
-		//assert (dynamic_cast <Impl*> (singleton_));
-		return static_cast <SchedulerBase&> (*singleton_);
-	}
-
-	virtual void worker_thread_proc () NIRVANA_NOEXCEPT = 0;
-
-	CompletionPort& completion_port ()
-	{
-		return message_broker_;
-	}
-
-protected:
-	HANDLE open_sysdomainid (bool write) NIRVANA_NOEXCEPT;
-
-protected:
-	MessageBroker message_broker_;
-
-	static uint32_t sys_process_id_;
-};
+	PathAppendW (path, L"\\sysdomainid");
+	return CreateFileW (path, write ? GENERIC_WRITE : GENERIC_READ, FILE_SHARE_READ, nullptr,
+		write ? CREATE_ALWAYS : OPEN_EXISTING,
+		write ? (FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE) : FILE_ATTRIBUTE_NORMAL, nullptr);
+}
 
 }
 }
 }
-
-#endif

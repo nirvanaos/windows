@@ -33,23 +33,41 @@ namespace Core {
 namespace Windows {
 
 SchedulerMaster::SchedulerMaster () :
-	error_ (CORBA::Exception::EC_NO_EXCEPTION)
+	error_ (CORBA::Exception::EC_NO_EXCEPTION),
+	sysdomainid_ (INVALID_HANDLE_VALUE),
+	watchdog_ (*this)
 {}
 
 void SchedulerMaster::terminate ()
 {
+	if (INVALID_HANDLE_VALUE != sysdomainid_)
+		CloseHandle (sysdomainid_);
 	Office::terminate ();
 	message_broker_.terminate ();
 	worker_threads_.terminate ();
+	watchdog_.terminate ();
 }
 
 bool SchedulerMaster::run (StartupSys& startup)
 {
+	sys_process_id_ = GetCurrentProcessId ();
+	HANDLE sysdomainid = open_sysdomainid (true);
+	if (INVALID_HANDLE_VALUE == sysdomainid)
+		return false;
+	{
+		DWORD written;
+		if (!WriteFile (sysdomainid, &sys_process_id_, sizeof (DWORD), &written, nullptr))
+			throw_INITIALIZE ();
+	}
+
 	if (!(
 		Office::create_mailslot (SCHEDULER_MAILSLOT_NAME)
 		&&
-		message_broker_.create_mailslot (MailslotName (0))
+		message_broker_.create_mailslot (MailslotName (sys_process_id_))
 		))
+		return false;
+
+	if (!watchdog_.start ())
 		return false;
 
 	try {

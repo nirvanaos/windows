@@ -56,7 +56,7 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 							return startup.ret ();
 						}
 					}
-
+/*
 					case 'p': {
 						uint32_t sys_process_id = 0;
 						uint32_t semaphore = 0;
@@ -91,7 +91,7 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 						}
 						break;
 					}
-
+*/
 					case 'd':
 						if (shutdown ())
 							return 0;

@@ -42,93 +42,10 @@ SchedulerSlave::SchedulerSlave () :
 	queue_ (Port::SystemInfo::hardware_concurrency ())
 {}
 
-SchedulerSlave::SchedulerSlave (uint32_t sys_process_id, uint32_t sys_semaphore) :
-	SchedulerSlave ()
-{
-	initialize (sys_process_id, sys_semaphore);
-}
-
-void SchedulerSlave::initialize (uint32_t sys_process_id, uint32_t sys_semaphore)
-{
-	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
-		throw_INITIALIZE ();
-
-	HANDLE sem;
-	if (!DuplicateHandle (sys_process_, (HANDLE)(uintptr_t)sys_semaphore, GetCurrentProcess (), &sem, 0, FALSE, DUPLICATE_SAME_ACCESS))
-		throw_INTERNAL ();
-	worker_threads_.semaphore (sem);
-	executor_id_ = sys_semaphore;
-}
-
-inline
-bool SchedulerSlave::initialize ()
-{
-	error_ = CORBA::Exception::EC_NO_EXCEPTION;
-
-	DWORD process_id = GetCurrentProcessId ();
-	message_broker_.create_mailslot (MailslotName (process_id));
-
-	if (!(
-		sys_mailslot_.open (MailslotName (0))
-		&&
-		scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME)
-	))
-		return false; // System domain is not running
-
-	try {
-		sys_mailslot_.send (Message::ProcessStart (process_id));
-	} catch (...) {
-		return false; // System domain has just down
-	}
-
-	if (!sys_process_) {
-		HANDLE hevent = CreateEventW (nullptr, FALSE, FALSE, nullptr);
-		assert (hevent);
-		bool success = false;
-		OVERLAPPED ovl;
-		memset (&ovl, 0, sizeof (ovl));
-		ovl.hEvent = (HANDLE)((LONG_PTR)hevent | 1); // Avoid passing result to the completion port.
-
-		BYTE buf [sizeof (Message::Buffer)];
-		if (!ReadFile (message_broker_.mailslot_handle (), buf, sizeof (buf), nullptr, &ovl)) {
-			assert (ERROR_IO_PENDING == GetLastError ());
-
-			if (WAIT_OBJECT_0 != WaitForSingleObject (hevent, PROCESS_START_ACK_TIMEOUT))
-				CancelIoEx (message_broker_.mailslot_handle (), &ovl);
-			else
-				success = true;
-
-			ovl.hEvent = hevent;
-		} else
-			success = true;
-
-		DWORD size;
-		GetOverlappedResult (message_broker_.mailslot_handle (), &ovl, &size, TRUE);
-		CloseHandle (hevent);
-
-		if (success) {
-			Message::ProcessStartResponse* ack = (Message::ProcessStartResponse*)buf;
-			if (sizeof (*ack) != size || ack->message_type != Message::Type::PROCESS_START_RESPONSE || !ack->sys_process_id || !ack->executor_id)
-				throw_INTERNAL ();
-
-			initialize (ack->sys_process_id, ack->executor_id);
-		} else
-			return false;
-	}
-	return true;
-}
-
 void SchedulerSlave::terminate ()
 {
 	message_broker_.terminate ();
 	scheduler_mailslot_.close ();
-	if (sys_mailslot_.is_open ()) {
-		try {
-			sys_mailslot_.send (Message::ProcessStop (GetCurrentProcessId ()));
-		} catch (...) {
-		}
-		sys_mailslot_.close ();
-	}
 	worker_threads_.terminate ();
 	if (sys_process_)
 		CloseHandle (sys_process_);
@@ -136,9 +53,39 @@ void SchedulerSlave::terminate ()
 
 bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 {
-	if (!initialize ())
-		return false;
+	DWORD process_id = GetCurrentProcessId ();
+	message_broker_.create_mailslot (MailslotName (process_id));
+
+	HANDLE sysdomainid = open_sysdomainid (false);
+	if (INVALID_HANDLE_VALUE == sysdomainid)
+		return false; // System domain is not running
+
+	DWORD readed = 0;
+	BOOL ok = ReadFile (sysdomainid, &sys_process_id_, sizeof (DWORD), &readed, nullptr);
+	CloseHandle (sysdomainid);
+	if (!ok || readed != 4)
+		return false; // System domain is not running
+
+	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id_)))
+		return false; // System domain is not running
+
+	if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))
+		return false; // System domain is not running
+
+	Mailslot watchdog_mailslot;
+	if (!watchdog_mailslot.open (WATCHDOG_MAILSLOT_NAME))
+		return false; // System domain is not running
+
+	HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (), nullptr);
+	worker_threads_.semaphore (sem);
+	HANDLE executor;
+	if (!DuplicateHandle (GetCurrentProcess (), sem, sys_process_, &executor, 0, FALSE, DUPLICATE_SAME_ACCESS))
+		throw_INITIALIZE ();
+	executor_id_ = (uint32_t)executor;
+
 	try {
+		ProcessStartMessage process_start{ GetCurrentProcessId (), executor_id_ };
+		watchdog_mailslot.send (process_start);
 		message_broker_.start ();
 		worker_threads_.run (startup, startup_deadline);
 	} catch (...) {

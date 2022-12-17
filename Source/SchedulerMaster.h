@@ -32,7 +32,7 @@
 #include <SchedulerImpl.h>
 #include "PostOffice.h"
 #include "WorkerThreads.h"
-#include "SchedulerMessage.h"
+#include "ProcessWatchdog.h"
 
 namespace Nirvana {
 namespace Core {
@@ -124,15 +124,20 @@ public:
 	/// Called by SchedulerImpl
 	void execute (SchedulerItem& item) NIRVANA_NOEXCEPT
 	{
-		if (item.is_semaphore ())
-			ReleaseSemaphore (item.semaphore (), 1, nullptr);
-		else
+		if (item.is_semaphore ()) {
+			if (!ReleaseSemaphore (item.semaphore (), 1, nullptr)) {
+				// Semaphore handle may be closed by the ProcessWatchdog.
+				assert (ERROR_INVALID_HANDLE == GetLastError ());
+				core_free ();
+			}
+		} else
 			worker_threads_.execute (item.executor ());
 	}
 
+	void on_error (int err) NIRVANA_NOEXCEPT;
+
 private:
 	void terminate ();
-	void on_error (int err) NIRVANA_NOEXCEPT;
 
 private:
 	/// Helper class for executing in the current process.
@@ -152,6 +157,8 @@ private:
 	}
 	worker_threads_;
 
+	HANDLE sysdomainid_;
+	ProcessWatchdog watchdog_;
 	std::atomic <int> error_;
 };
 

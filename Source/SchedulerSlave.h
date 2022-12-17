@@ -47,10 +47,6 @@ class SchedulerSlave :
 	public SchedulerBase
 {
 public:
-	/// Used when process started by the system domain.
-	SchedulerSlave (uint32_t sys_process_id, uint32_t sys_semaphore);
-
-	/// Used when process started by user.
 	SchedulerSlave ();
 
 	~SchedulerSlave ()
@@ -79,8 +75,6 @@ public:
 	void execute () NIRVANA_NOEXCEPT;
 
 private:
-	bool initialize ();
-	void initialize (uint32_t sys_process_id, uint32_t sys_semaphore);
 	void terminate ();
 	void core_free () NIRVANA_NOEXCEPT;
 	void on_error (int err) NIRVANA_NOEXCEPT;
@@ -88,7 +82,6 @@ private:
 private:
 	HANDLE sys_process_;
 	Mailslot scheduler_mailslot_;
-	Mailslot sys_mailslot_;
 	uint32_t executor_id_;
 	std::atomic <int> error_;
 	SkipListWithPool <PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;
