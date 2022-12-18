@@ -71,7 +71,7 @@ protected:
 
 	OVERLAPPED* next (OVERLAPPED* ovl) const NIRVANA_NOEXCEPT
 	{
-		return (OVERLAPPED*)(((BYTE*)(ovl + 1)) + buffer_size_);
+		return (OVERLAPPED*)((BYTE*)data (ovl) + buffer_size_);
 	}
 
 private:
