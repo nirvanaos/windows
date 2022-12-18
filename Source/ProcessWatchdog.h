@@ -44,9 +44,9 @@ public:
 	ProcessWatchdog (SchedulerMaster& scheduler) :
 		scheduler_ (scheduler),
 		mailslot_ (INVALID_HANDLE_VALUE),
-		terminate_event_ (nullptr),
-		thread_ (nullptr)
-	{	}
+		thread_ (nullptr),
+		terminate_event_ (nullptr)
+	{}
 
 	~ProcessWatchdog ()
 	{}

@@ -34,8 +34,8 @@ namespace Core {
 namespace Windows {
 
 SchedulerMaster::SchedulerMaster () :
-	error_ (CORBA::Exception::EC_NO_EXCEPTION),
 	sysdomainid_ (INVALID_HANDLE_VALUE),
+	error_ (CORBA::Exception::EC_NO_EXCEPTION),
 	watchdog_ (*this)
 {}
 
