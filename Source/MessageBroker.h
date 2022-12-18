@@ -29,16 +29,16 @@
 #pragma once
 
 #include "PostOffice.h"
-#include "Message.h"
+#include <ORB/ESIOP.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
 class MessageBroker :
-	public PostOffice <MessageBroker, sizeof (Message::Buffer), POSTMAN_THREAD_PRIORITY>
+	public PostOffice <MessageBroker, sizeof (ESIOP::MessageBuffer), POSTMAN_THREAD_PRIORITY>
 {
-	typedef PostOffice <MessageBroker, sizeof (Message::Buffer), POSTMAN_THREAD_PRIORITY> Base;
+	typedef PostOffice <MessageBroker, sizeof (ESIOP::MessageBuffer), POSTMAN_THREAD_PRIORITY> Base;
 public:
 	virtual void received (void* message, DWORD size) NIRVANA_NOEXCEPT;
 };

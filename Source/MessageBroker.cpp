@@ -32,15 +32,7 @@ namespace Windows {
 
 void MessageBroker::received (void* message, DWORD size) NIRVANA_NOEXCEPT
 {
-	Message::Header* hdr = (Message::Header*)message;
-	if (hdr->message_type < ESIOP::MessageType::MESSAGES_CNT)
-		ESIOP::dispatch_message (*hdr);
-	else
-		switch (hdr->message_type) {
-			case Message::Type::SHUTDOWN:
-				Scheduler::shutdown ();
-				break;
-		}
+	ESIOP::dispatch_message (*(ESIOP::MessageHeader*)message);
 }
 
 }

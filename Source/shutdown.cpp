@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "shutdown.h"
-#include "Message.h"
+#include <ORB/ESIOP.h>
 #include "Mailslot.h"
 #include "MailslotName.h"
 #include "sysdomainid.h"
@@ -39,7 +39,7 @@ bool shutdown ()
 		Mailslot ms;
 		if (ms.open (MailslotName (sys_process_id))) {
 			try {
-				ms.send (Message::Shutdown ());
+				ms.send (ESIOP::Shutdown ());
 				return true;
 			} catch (...) {
 			}

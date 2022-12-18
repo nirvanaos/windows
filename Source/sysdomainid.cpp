@@ -44,9 +44,19 @@ HANDLE open_sysdomainid (bool write) NIRVANA_NOEXCEPT
 			return INVALID_HANDLE_VALUE;
 	}
 	PathAppendW (path, L"\\sysdomainid");
-	return CreateFileW (path, write ? GENERIC_WRITE : GENERIC_READ, FILE_SHARE_READ, nullptr,
-		write ? CREATE_ALWAYS : OPEN_EXISTING,
-		write ? (FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE) : FILE_ATTRIBUTE_NORMAL, nullptr);
+	DWORD access, share, disposition, flags;
+	if (write) {
+		access = GENERIC_WRITE;
+		share = FILE_SHARE_READ;
+		disposition = CREATE_ALWAYS;
+		flags = FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
+	} else {
+		access = GENERIC_READ;
+		share = FILE_SHARE_READ | FILE_SHARE_DELETE | FILE_SHARE_WRITE;
+		disposition = OPEN_EXISTING;
+		flags = FILE_ATTRIBUTE_NORMAL;
+	}
+	return CreateFileW (path, access, share, nullptr, disposition, flags, nullptr);
 }
 
 bool get_sys_process_id () NIRVANA_NOEXCEPT

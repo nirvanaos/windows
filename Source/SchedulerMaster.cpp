@@ -88,7 +88,7 @@ void SchedulerMaster::on_error (int err) NIRVANA_NOEXCEPT
 {
 	int zero = CORBA::Exception::EC_NO_EXCEPTION;
 	if (error_.compare_exchange_strong (zero, err))
-		abort (); // TODO: Send SystemError message to all domains.
+		ExitProcess (err);
 }
 
 void SchedulerMaster::create_item ()

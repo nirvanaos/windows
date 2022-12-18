@@ -47,14 +47,15 @@ inline void ProcessWatchdog::process_stop (size_t idx)
 	HANDLE sem0 = semaphore_handles_ [idx];
 	// Duplicate and close semaphore to cause Scheduler failure on ReleaseSemaphore.
 	HANDLE sem1;
-	DuplicateHandle (GetCurrentProcess (), sem0, nullptr, &sem1, 0, FALSE, DUPLICATE_CLOSE_SOURCE | DUPLICATE_SAME_ACCESS);
-	assert (sem0 != sem1);
+	HANDLE proc = GetCurrentProcess ();
+	verify (DuplicateHandle (proc, sem0, proc, &sem1, 0, FALSE, DUPLICATE_SAME_ACCESS));
+	verify (CloseHandle (sem0));
 	// Release all processor cores owned by the dead process.
 	while (WAIT_OBJECT_0 == WaitForSingleObject (sem1, 0)) {
 		scheduler_.core_free ();
 	}
-	CloseHandle (sem1);
-	CloseHandle (wait_handles_ [idx + 2]);
+	verify (CloseHandle (sem1));
+	verify (CloseHandle (wait_handles_ [idx + 2]));
 	semaphore_handles_.erase (semaphore_handles_.begin () + idx);
 	wait_handles_.erase (wait_handles_.begin () + idx + 2);
 }
@@ -73,7 +74,8 @@ inline void ProcessWatchdog::thread_proc ()
 			w -= WAIT_OBJECT_0;
 			switch (w) {
 				case MAILSLOT_EVENT:
-					process_start (msg);
+					if (GetOverlappedResult (mailslot_, &ovl, &cb_read, FALSE) && sizeof (ProcessStartMessage) == cb_read)
+						process_start (msg);
 					ReadFile (mailslot_, &msg, sizeof (msg), &cb_read, &ovl);
 					break;
 

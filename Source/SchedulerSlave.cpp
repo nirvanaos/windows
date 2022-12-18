@@ -75,7 +75,7 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	HANDLE executor;
 	if (!DuplicateHandle (GetCurrentProcess (), sem, sys_process_, &executor, 0, FALSE, DUPLICATE_SAME_ACCESS))
 		throw_INITIALIZE ();
-	executor_id_ = (uint32_t)executor;
+	executor_id_ = (uint32_t)(uintptr_t)executor;
 
 	try {
 		ProcessStartMessage process_start{ GetCurrentProcessId (), executor_id_ };
