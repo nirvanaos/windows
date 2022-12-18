@@ -34,7 +34,7 @@ inline void ProcessWatchdog::process_start (ProcessStartMessage& msg)
 	HANDLE process = OpenProcess (SYNCHRONIZE, FALSE, msg.process_id);
 	if (process) {
 		try {
-			semaphore_handles_.push_back ((HANDLE)msg.executor_id);
+			semaphore_handles_.push_back ((HANDLE)(uintptr_t)msg.executor_id);
 			wait_handles_.push_back (process);
 		} catch (...) {
 			scheduler_.on_error (CORBA::SystemException::EC_NO_MEMORY);
