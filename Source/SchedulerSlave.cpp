@@ -188,7 +188,7 @@ void SchedulerSlave::execute () NIRVANA_NOEXCEPT
 {
 	Executor* executor;
 	if (queue_.delete_min (executor))
-		executor->execute (error_);
+		ThreadWorker::execute (*executor, error_);
 	core_free ();
 }
 
