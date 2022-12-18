@@ -30,6 +30,7 @@
 #pragma once
 
 #include <Nirvana/NirvanaBase.h>
+#include "../Source/sysdomainid.h"
 
 extern "C" __declspec (dllimport)
 unsigned long __stdcall GetCurrentProcessId (void);
@@ -46,6 +47,12 @@ typedef uint32_t ProtDomainId;
 inline ProtDomainId current_domain_id (void) NIRVANA_NOEXCEPT
 {
 	return GetCurrentProcessId ();
+}
+
+/// \returns System protection domain id.
+inline ProtDomainId sys_domain_id (void) NIRVANA_NOEXCEPT
+{
+	return Nirvana::Core::Windows::sys_process_id;
 }
 
 /// SharedMemPtr points to the message recipient protection domain memory.

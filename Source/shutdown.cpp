@@ -27,6 +27,7 @@
 #include "Message.h"
 #include "Mailslot.h"
 #include "MailslotName.h"
+#include "sysdomainid.h"
 
 namespace Nirvana {
 namespace Core {
@@ -34,12 +35,14 @@ namespace Windows {
 
 bool shutdown ()
 {
-	Mailslot ms;
-	if (ms.open (MailslotName (0))) {
-		try {
-			ms.send (Message::Shutdown ());
-			return true;
-		} catch (...) {
+	if (get_sys_process_id ()) {
+		Mailslot ms;
+		if (ms.open (MailslotName (sys_process_id))) {
+			try {
+				ms.send (Message::Shutdown ());
+				return true;
+			} catch (...) {
+			}
 		}
 	}
 	return false;

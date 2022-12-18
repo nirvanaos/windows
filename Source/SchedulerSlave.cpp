@@ -30,6 +30,7 @@
 #include <Executor.h>
 #include "MailslotName.h"
 #include "SchedulerMessage.h"
+#include "sysdomainid.h"
 
 namespace Nirvana {
 namespace Core {
@@ -56,17 +57,10 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	DWORD process_id = GetCurrentProcessId ();
 	message_broker_.create_mailslot (MailslotName (process_id));
 
-	HANDLE sysdomainid = open_sysdomainid (false);
-	if (INVALID_HANDLE_VALUE == sysdomainid)
+	if (!get_sys_process_id ())
 		return false; // System domain is not running
 
-	DWORD readed = 0;
-	BOOL ok = ReadFile (sysdomainid, &sys_process_id_, sizeof (DWORD), &readed, nullptr);
-	CloseHandle (sysdomainid);
-	if (!ok || readed != 4)
-		return false; // System domain is not running
-
-	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id_)))
+	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
 		return false; // System domain is not running
 
 	if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))

@@ -26,6 +26,7 @@
 #include "SchedulerMaster.h"
 #include "../Port/Scheduler.h"
 #include "MailslotName.h"
+#include "sysdomainid.h"
 #include <StartupSys.h>
 
 namespace Nirvana {
@@ -50,20 +51,20 @@ void SchedulerMaster::terminate ()
 
 bool SchedulerMaster::run (StartupSys& startup)
 {
-	sys_process_id_ = GetCurrentProcessId ();
+	sys_process_id = GetCurrentProcessId ();
 	HANDLE sysdomainid = open_sysdomainid (true);
 	if (INVALID_HANDLE_VALUE == sysdomainid)
 		return false;
 	{
 		DWORD written;
-		if (!WriteFile (sysdomainid, &sys_process_id_, sizeof (DWORD), &written, nullptr))
+		if (!WriteFile (sysdomainid, &sys_process_id, sizeof (DWORD), &written, nullptr))
 			throw_INITIALIZE ();
 	}
 
 	if (!(
 		Office::create_mailslot (SCHEDULER_MAILSLOT_NAME)
 		&&
-		message_broker_.create_mailslot (MailslotName (sys_process_id_))
+		message_broker_.create_mailslot (MailslotName (sys_process_id))
 		))
 		return false;
 

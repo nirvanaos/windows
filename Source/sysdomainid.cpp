@@ -31,22 +31,33 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-uint32_t SchedulerBase::sys_process_id_;
+uint32_t sys_process_id;
 
-HANDLE SchedulerBase::open_sysdomainid (bool write) NIRVANA_NOEXCEPT
+HANDLE open_sysdomainid (bool write) NIRVANA_NOEXCEPT
 {
 	WCHAR path [MAX_PATH];
 	if (S_OK != SHGetFolderPathW (NULL, CSIDL_COMMON_APPDATA, NULL, 0, path))
 		return INVALID_HANDLE_VALUE;
 	for (size_t i = 0; i < 2; ++i) {
 		PathAppendW (path, L"\\Nirvana");
-		if (write && !CreateDirectoryW (path, nullptr))
+		if (write && !CreateDirectoryW (path, nullptr) && ERROR_ALREADY_EXISTS != GetLastError ())
 			return INVALID_HANDLE_VALUE;
 	}
 	PathAppendW (path, L"\\sysdomainid");
 	return CreateFileW (path, write ? GENERIC_WRITE : GENERIC_READ, FILE_SHARE_READ, nullptr,
 		write ? CREATE_ALWAYS : OPEN_EXISTING,
 		write ? (FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE) : FILE_ATTRIBUTE_NORMAL, nullptr);
+}
+
+bool get_sys_process_id () NIRVANA_NOEXCEPT
+{
+	HANDLE sysdomainid = open_sysdomainid (false);
+	if (INVALID_HANDLE_VALUE == sysdomainid)
+		return false;
+	DWORD cbread = 0;
+	BOOL OK = ReadFile (sysdomainid, &sys_process_id, sizeof (DWORD), &cbread, nullptr);
+	CloseHandle (sysdomainid);
+	return OK && sizeof (DWORD) == cbread;
 }
 
 }

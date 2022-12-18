@@ -24,51 +24,22 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_SCHEDULERBASE_H_
-#define NIRVANA_CORE_WINDOWS_SCHEDULERBASE_H_
+#ifndef NIRVANA_CORE_WINDOWS_SYSDOMAINID_H_
+#define NIRVANA_CORE_WINDOWS_SYSDOMAINID_H_
 #pragma once
 
-#include "../Port/Scheduler.h"
-#include "MessageBroker.h"
-#include "AddressSpace.inl"
+#include <Nirvana/NirvanaBase.h>
+
+typedef void* HANDLE;
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class NIRVANA_NOVTABLE SchedulerBase :
-	public SchedulerAbstract,
-	public Port::Scheduler
-{
-public:
-	SchedulerBase ()
-	{
-		singleton_ = this;
-		other_space_init ();
-	}
+extern uint32_t sys_process_id;
 
-	~SchedulerBase ()
-	{
-		singleton_ = nullptr;
-	}
-
-	static SchedulerBase& singleton ()
-	{
-		assert (singleton_);
-		//assert (dynamic_cast <Impl*> (singleton_));
-		return static_cast <SchedulerBase&> (*singleton_);
-	}
-
-	virtual void worker_thread_proc () NIRVANA_NOEXCEPT = 0;
-
-	CompletionPort& completion_port ()
-	{
-		return message_broker_;
-	}
-
-protected:
-	MessageBroker message_broker_;
-};
+HANDLE open_sysdomainid (bool write) NIRVANA_NOEXCEPT;
+bool get_sys_process_id () NIRVANA_NOEXCEPT;
 
 }
 }
