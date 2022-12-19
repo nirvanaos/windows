@@ -79,8 +79,12 @@ private:
 	void core_free () NIRVANA_NOEXCEPT;
 	void on_error (int err) NIRVANA_NOEXCEPT;
 
+	static DWORD WINAPI s_watchdog_thread_proc (void* _this);
+
 private:
 	HANDLE sys_process_;
+	HANDLE terminate_event_;
+	HANDLE watchdog_thread_;
 	Mailslot scheduler_mailslot_;
 	uint32_t executor_id_;
 	std::atomic <int> error_;

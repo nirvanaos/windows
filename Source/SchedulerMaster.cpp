@@ -41,8 +41,10 @@ SchedulerMaster::SchedulerMaster () :
 
 void SchedulerMaster::terminate ()
 {
-	if (INVALID_HANDLE_VALUE != sysdomainid_)
+	if (INVALID_HANDLE_VALUE != sysdomainid_) {
 		CloseHandle (sysdomainid_);
+		sysdomainid_ = INVALID_HANDLE_VALUE;
+	}
 	Office::terminate ();
 	message_broker_.terminate ();
 	worker_threads_.terminate ();

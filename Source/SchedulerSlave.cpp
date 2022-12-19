@@ -1,4 +1,3 @@
-// TODO: Create watchdog thread which will wait for system domain process termination.
 /*
 * Nirvana Core. Windows port library.
 *
@@ -38,6 +37,8 @@ namespace Windows {
 
 SchedulerSlave::SchedulerSlave () :
 	sys_process_ (nullptr),
+	terminate_event_ (nullptr),
+	watchdog_thread_ (nullptr),
 	executor_id_ (0),
 	error_ (CORBA::Exception::EC_NO_EXCEPTION),
 	queue_ (Port::SystemInfo::hardware_concurrency ())
@@ -45,11 +46,23 @@ SchedulerSlave::SchedulerSlave () :
 
 void SchedulerSlave::terminate ()
 {
+	if (watchdog_thread_) {
+		SetEvent (terminate_event_);
+		WaitForSingleObject (watchdog_thread_, INFINITE);
+		CloseHandle (watchdog_thread_);
+		watchdog_thread_ = nullptr;
+	}
 	message_broker_.terminate ();
 	scheduler_mailslot_.close ();
 	worker_threads_.terminate ();
-	if (sys_process_)
+	if (sys_process_) {
 		CloseHandle (sys_process_);
+		sys_process_ = nullptr;
+	}
+	if (terminate_event_) {
+		CloseHandle (terminate_event_);
+		terminate_event_ = nullptr;
+	}
 }
 
 bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
@@ -77,6 +90,12 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 		throw_INITIALIZE ();
 	executor_id_ = (uint32_t)(uintptr_t)executor;
 
+	if (!(terminate_event_ = CreateEventW (nullptr, TRUE, FALSE, nullptr)))
+		throw_INITIALIZE ();
+
+	if (!(watchdog_thread_ = CreateThread (nullptr, 0x10000, s_watchdog_thread_proc, this, 0, nullptr)))
+		throw_INITIALIZE ();
+
 	try {
 		ProcessStartMessage process_start{ GetCurrentProcessId (), executor_id_ };
 		watchdog_mailslot.send (process_start);
@@ -95,7 +114,7 @@ void SchedulerSlave::on_error (int err) NIRVANA_NOEXCEPT
 {
 	int zero = CORBA::Exception::EC_NO_EXCEPTION;
 	if (error_.compare_exchange_strong (zero, err))
-		Core::Scheduler::shutdown ();
+		ExitProcess (err);
 }
 
 void SchedulerSlave::create_item ()
@@ -190,6 +209,19 @@ void SchedulerSlave::execute () NIRVANA_NOEXCEPT
 	if (queue_.delete_min (executor))
 		ThreadWorker::execute (*executor, error_);
 	core_free ();
+}
+
+DWORD WINAPI SchedulerSlave::s_watchdog_thread_proc (void* _this)
+{
+	SchedulerSlave* p = (SchedulerSlave*)_this;
+	HANDLE wait_handles [2] = { p->terminate_event_, p->sys_process_ };
+	if ((WAIT_OBJECT_0 + 1) == WaitForMultipleObjects (2, wait_handles, FALSE, INFINITE)) {
+		// System process was terminated unexpectedly.
+		DWORD exit_code = -1;
+		GetExitCodeProcess (wait_handles [1], &exit_code);
+		ExitProcess (exit_code);
+	}
+	return 0;
 }
 
 }
