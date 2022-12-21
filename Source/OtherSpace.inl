@@ -31,6 +31,7 @@
 #include "AddressSpace.inl"
 
 using Nirvana::Core::Port::Memory;
+using Nirvana::Core::Windows::PageState;
 
 namespace ESIOP {
 namespace Windows {
@@ -52,8 +53,15 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 			Nirvana::throw_IMP_LIMIT ();
 	}
 
-	unsigned flags = release_src ? Nirvana::Memory::SRC_RELEASE : 0;
-	Memory::prepare_to_share (src, size, flags);
+	unsigned flags;
+	DWORD copied_pages_state;
+	if (release_src) {
+		flags = Nirvana::Memory::SRC_RELEASE;
+		copied_pages_state = PageState::READ_WRITE_PRIVATE;
+	} else {
+		flags = 0;
+		copied_pages_state = PageState::READ_WRITE_SHARED;
+	}
 
 	Address dst = (Address)reserved;
 	size_t src_align = (uintptr_t)src % Memory::ALLOCATION_UNIT;
@@ -75,8 +83,10 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 		while (d_p < d_end) {
 			size_t cb = (size_t)(std::min ((Address)(Nirvana::round_down (d_p, (Size)ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY), d_end) - d_p);
 			Memory::Block src_block (s_p, cb == ALLOCATION_GRANULARITY);
+			size_t offset = (size_t)(s_p - src_block.address ());
+			src_block.prepare_to_share (offset, cb, flags);
 			typename Base::Block dst_block (*this, d_p, cb == ALLOCATION_GRANULARITY);
-			dst_block.copy (src_block, (size_t)(s_p - src_block.address ()), cb, flags);
+			dst_block.copy (src_block, offset, cb, copied_pages_state);
 			d_p += (Size)cb;
 			s_p += (Size)cb;
 		}

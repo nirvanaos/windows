@@ -8,7 +8,8 @@ namespace ESIOP {
 namespace Windows {
 
 OtherDomainBase::OtherDomainBase (ProtDomainId domain_id) :
-	process_ (::OpenProcess (PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION, FALSE, domain_id))
+	process_ (::OpenProcess (PROCESS_QUERY_INFORMATION
+		| PROCESS_VM_OPERATION | PROCESS_DUP_HANDLE , FALSE, domain_id))
 {
 	if (!process_ || !open (Nirvana::Core::Windows::MailslotName (domain_id)))
 		Nirvana::throw_COMM_FAILURE ();
