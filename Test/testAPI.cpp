@@ -914,9 +914,9 @@ TEST_F (TestAPI, Exception)
 TEST_F (TestAPI, OtherProcess)
 {
 	// Create mapping
-	//HANDLE hm = new_mapping ();
-	HANDLE hm = CreateFileMapping2 (INVALID_HANDLE_VALUE, nullptr, FILE_MAP_ALL_ACCESS, PAGE_READWRITE, SEC_RESERVE,
-		ALLOCATION_GRANULARITY, nullptr, nullptr, 0);
+	HANDLE hm = new_mapping ();
+	//HANDLE hm = CreateFileMapping2 (INVALID_HANDLE_VALUE, nullptr, FILE_MAP_ALL_ACCESS, PAGE_EXECUTE_READWRITE, SEC_RESERVE,
+	//	ALLOCATION_GRANULARITY, nullptr, nullptr, 0);
 	ASSERT_TRUE (hm);
 	char* p = (char*)MapViewOfFile (hm, FILE_MAP_ALL_ACCESS, 0, 0, ALLOCATION_GRANULARITY);
 	EXPECT_TRUE (p);
@@ -953,16 +953,21 @@ TEST_F (TestAPI, OtherProcess)
 
 	// Duplicate and map
 	OtherProcessMsg msg;
-	EXPECT_TRUE (DuplicateHandle (GetCurrentProcess (), hm, process, &msg.mapping, 0, FALSE, DUPLICATE_SAME_ACCESS));
+	msg.mapping = nullptr;
+	msg.address = nullptr;
+	EXPECT_TRUE (DuplicateHandle (GetCurrentProcess (), hm, process, &msg.mapping, FILE_MAP_ALL_ACCESS, TRUE, DUPLICATE_SAME_ACCESS));
 
-	msg.address = (char*)MapViewOfFile2 (msg.mapping, process, 0, nullptr, ALLOCATION_GRANULARITY, 0, PAGE_READONLY);
-	//	void* pv = MapViewOfFile3 (hm1, process, nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READWRITE, nullptr, 0);
+	// We have to map source handle hm, which belongs to the current process, not msg.mapping which belongs to the target process.
+	if (msg.mapping)
+		msg.address = (char*)MapViewOfFile3 (hm, process, nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_EXECUTE_READWRITE, nullptr, 0);
 	EXPECT_TRUE (msg.address);
-	UnmapViewOfFile (p);
-	CloseHandle (hm);
+	EXPECT_TRUE (UnmapViewOfFile (p));
+	EXPECT_TRUE (CloseHandle (hm));
+	EXPECT_TRUE (CloseHandle (process));
 
 	DWORD cbw;
-	EXPECT_TRUE (WriteFile (mailslot, &msg, sizeof (msg), &cbw, nullptr));
+	if (msg.address)
+		EXPECT_TRUE (WriteFile (mailslot, &msg, sizeof (msg), &cbw, nullptr));
 	EXPECT_TRUE (WriteFile (mailslot, &msg, 1, &cbw, nullptr));
 	CloseHandle (mailslot);
 
