@@ -231,15 +231,24 @@ bool AddressSpace <x64>::Block::exclusive_lock ()
 	return false;
 }
 
-template <bool x64>
-void AddressSpace <x64>::Block::map (HANDLE hm, uint32_t protection)
+template <bool x64> inline
+void AddressSpace <x64>::close_mapping (HANDLE hm) const
 {
-	assert (hm);
+	verify (DuplicateHandle (process_, hm, nullptr, nullptr, 0, FALSE, DUPLICATE_CLOSE_SOURCE));
+}
+
+template <bool x64>
+void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store, uint32_t protection)
+{
+	assert (mapping_map);
+	assert (mapping_store);
+	assert (INVALID_HANDLE_VALUE != mapping_map);
+	assert (INVALID_HANDLE_VALUE != mapping_store);
 	assert (exclusive_);
 
 	HANDLE old = mapping ();
 	assert (old);
-	mapping (hm);
+	mapping (mapping_store);
 
 	invalidate_state ();
 	if (old == INVALID_HANDLE_VALUE) {
@@ -265,10 +274,10 @@ void AddressSpace <x64>::Block::map (HANDLE hm, uint32_t protection)
 		}
 #endif
 		verify (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
-		verify (CloseHandle (old));
+		space_.close_mapping (old);
 	}
 
-	verify (space_.map (hm, address (), ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection));
+	verify (space_.map (mapping_map, address (), ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection));
 }
 
 template <bool x64>
@@ -283,7 +292,7 @@ void AddressSpace <x64>::Block::unmap ()
 	assert (hm);
 	if (INVALID_HANDLE_VALUE != hm) {
 		verify (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
-		verify (CloseHandle (hm));
+		space_.close_mapping (hm);
 		mapping (INVALID_HANDLE_VALUE);
 	}
 }
@@ -299,9 +308,9 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 	if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), space_.process (), &hm, 0, FALSE, DUPLICATE_SAME_ACCESS))
 		throw_NO_MEMORY ();
 	try {
-		map (hm, copied_pages_state);
+		map (src.mapping (), hm, copied_pages_state);
 	} catch (...) {
-		CloseHandle (hm);
+		space_.close_mapping (hm);
 		throw;
 	}
 
@@ -656,7 +665,7 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 			}
 		} else {
 			verify (unmap (p, 0));
-			verify (CloseHandle (mapping));
+			close_mapping (mapping);
 			p += ALLOCATION_GRANULARITY;
 		}
 	}

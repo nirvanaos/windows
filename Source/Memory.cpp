@@ -144,7 +144,7 @@ restart:
 	if (INVALID_HANDLE_VALUE == mapping ()) {
 		HANDLE hm = new_mapping ();
 		try {
-			map (hm, PageState::READ_WRITE_PRIVATE);
+			map (hm, hm, PageState::READ_WRITE_PRIVATE);
 		} catch (...) {
 			CloseHandle (hm);
 			throw;
@@ -352,7 +352,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 		verify (UnmapViewOfFile (ptmp));
 
 		// Change this block mapping to the new.
-		map (hm, PageState::READ_WRITE_PRIVATE);
+		map (hm, hm, PageState::READ_WRITE_PRIVATE);
 
 		// Change protection for read-only pages.
 		DWORD* region_begin = page_protection;

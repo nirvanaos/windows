@@ -126,7 +126,7 @@ public:
 			state_ = State::PAGE_STATE_UNKNOWN;
 		}
 
-		void map (HANDLE mapping, uint32_t protection);
+		void map (HANDLE mapping_map, HANDLE mapping_store, uint32_t protection);
 
 	private:
 		static BlockInfo& check_block (BlockInfo* info)
@@ -165,6 +165,8 @@ public:
 	void query (Address address, MBI& mbi) const;
 
 	void check_allocated (Address ptr, size_t size);
+
+	void close_mapping (HANDLE hm) const;
 
 private:
 	friend class Port::Memory;
