@@ -1,11 +1,12 @@
 // Testing Windows API memory management functions
 #define PSAPI_VERSION 2
 #include <gtest/gtest.h>
-#include <windows.h>
+#include <Windows.h>
 #include <Psapi.h>
 #include <string>
 #include <set>
 #include <winternl.h>
+#include "OtherProcess.h"
 
 #define PAGE_SIZE 4096
 #define ALLOCATION_GRANULARITY (16 * PAGE_SIZE)
@@ -912,9 +913,20 @@ TEST_F (TestAPI, Exception)
 
 TEST_F (TestAPI, OtherProcess)
 {
-	HANDLE event = CreateEventW (nullptr, TRUE, FALSE, L"WindowsTestOtherDomain");
-	ASSERT_TRUE (event);
+	// Create mapping
+	//HANDLE hm = new_mapping ();
+	HANDLE hm = CreateFileMapping2 (INVALID_HANDLE_VALUE, nullptr, FILE_MAP_ALL_ACCESS, PAGE_READWRITE, SEC_RESERVE,
+		ALLOCATION_GRANULARITY, nullptr, nullptr, 0);
+	ASSERT_TRUE (hm);
+	char* p = (char*)MapViewOfFile (hm, FILE_MAP_ALL_ACCESS, 0, 0, ALLOCATION_GRANULARITY);
+	EXPECT_TRUE (p);
 
+	// Commit 1 page.
+	EXPECT_TRUE (VirtualAlloc (p, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
+	if (p)
+		strcpy (p, "Test");
+
+	// Create other process
 	wstring cmd = L"OtherProcess.exe";
 
 	STARTUPINFOW si;
@@ -924,31 +936,41 @@ TEST_F (TestAPI, OtherProcess)
 	BOOL ok = CreateProcessW (nullptr, (WCHAR*)cmd.c_str (), nullptr, nullptr, FALSE, NORMAL_PRIORITY_CLASS, nullptr, nullptr, &si, &pi);
 	ASSERT_TRUE (ok);
 	EXPECT_TRUE (CloseHandle (pi.hThread));
+	HANDLE mailslot;
+	for (int i = 0; i < 3; ++i) {
+		mailslot = CreateFileW (TEST_MAILSLOT_NAME, GENERIC_WRITE, FILE_SHARE_WRITE, nullptr,
+			OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (INVALID_HANDLE_VALUE == mailslot)
+			Sleep (1000);
+		else
+			break;
+	}
+	EXPECT_NE (INVALID_HANDLE_VALUE, mailslot);
 
 	HANDLE process = OpenProcess (PROCESS_QUERY_INFORMATION
 		| PROCESS_VM_OPERATION | PROCESS_DUP_HANDLE, FALSE, pi.dwProcessId);
 	ASSERT_TRUE (process);
 
-	// Create mapping
-	HANDLE hm = new_mapping ();
-	char* p = (char*)MapViewOfFile (hm, FILE_MAP_ALL_ACCESS, 0, 0, ALLOCATION_GRANULARITY);
-	EXPECT_TRUE (p);
+	// Duplicate and map
+	OtherProcessMsg msg;
+	EXPECT_TRUE (DuplicateHandle (GetCurrentProcess (), hm, process, &msg.mapping, 0, FALSE, DUPLICATE_SAME_ACCESS));
 
-	// Commit 1 page.
-	EXPECT_TRUE (VirtualAlloc (p, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
-	strcpy (p, "Test");
+	msg.address = (char*)MapViewOfFile2 (msg.mapping, process, 0, nullptr, ALLOCATION_GRANULARITY, 0, PAGE_READONLY);
+	//	void* pv = MapViewOfFile3 (hm1, process, nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READWRITE, nullptr, 0);
+	EXPECT_TRUE (msg.address);
+	UnmapViewOfFile (p);
+	CloseHandle (hm);
 
-	HANDLE hm1 = nullptr;
-	EXPECT_TRUE (DuplicateHandle (GetCurrentProcess (), hm, process, &hm1, 0, FALSE, DUPLICATE_SAME_ACCESS));
-
-	void* pv = MapViewOfFile3 (hm1, process, nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READWRITE, nullptr, 0);
-	EXPECT_TRUE (pv);
-
-	SetEvent (event);
-	CloseHandle (event);
+	DWORD cbw;
+	EXPECT_TRUE (WriteFile (mailslot, &msg, sizeof (msg), &cbw, nullptr));
+	EXPECT_TRUE (WriteFile (mailslot, &msg, 1, &cbw, nullptr));
+	CloseHandle (mailslot);
 
 	WaitForSingleObject (pi.hProcess, INFINITE);
+	DWORD ec = -1;
+	EXPECT_TRUE (GetExitCodeProcess (pi.hProcess, &ec));
 	CloseHandle (pi.hProcess);
+	EXPECT_EQ (ec, 0);
 }
 
 }
