@@ -45,11 +45,12 @@ SharedMemPtr OtherSpace <x64>::reserve (size_t size)
 template <bool x64> inline
 SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src)
 {
-	if (!src || !size)
+	size_t size_in = size;
+	if (!src || !size_in)
 		Nirvana::throw_BAD_PARAM ();
 
 	if (sizeof (size_t) > sizeof (Size)) {
-		if (size > std::numeric_limits <Size>::max ())
+		if (size_in > std::numeric_limits <Size>::max ())
 			Nirvana::throw_IMP_LIMIT ();
 	}
 
@@ -70,14 +71,14 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 	if (dst) {
 		if (src_align != (Size)dst % Memory::ALLOCATION_UNIT)
 			Nirvana::throw_BAD_PARAM ();
-		Base::check_allocated (dst, size);
+		Base::check_allocated (dst, size_in);
 	} else {
-		alloc_size = src_align + size;
+		alloc_size = src_align + size_in;
 		alloc_ptr = Base::reserve (0, alloc_size, 0);
 		dst = alloc_ptr + (Size)src_align;
 	}
 	try {
-		Address d_p = dst, d_end = (Address)(d_p + size);
+		Address d_p = dst, d_end = (Address)(d_p + size_in);
 		size = (size_t)(Nirvana::round_up (d_end, (Size)ALLOCATION_GRANULARITY) - d_p);
 		BYTE* s_p = (BYTE*)src;
 		while (d_p < d_end) {
@@ -90,6 +91,8 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 			d_p += (Size)cb;
 			s_p += (Size)cb;
 		}
+		if (release_src)
+			Memory::release (src, size_in);
 	} catch (...) {
 		if (alloc_size)
 			Base::release (alloc_ptr, alloc_size);
