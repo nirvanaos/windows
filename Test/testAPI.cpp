@@ -876,6 +876,7 @@ TEST_F (TestAPI, Semaphore)
 	DWORD ret;
 	EXPECT_TRUE (GetExitCodeProcess (pi.hProcess, &ret));
 	EXPECT_EQ (ret, 0);
+	CloseHandle (pi.hProcess);
 
 	EXPECT_EQ (WaitForSingleObject (hsem, 0), WAIT_OBJECT_0);
 
@@ -907,6 +908,47 @@ TEST_F (TestAPI, Exception)
 	}
 	RemoveVectoredExceptionHandler (h);
 	EXPECT_TRUE (ok);
+}
+
+TEST_F (TestAPI, OtherProcess)
+{
+	HANDLE event = CreateEventW (nullptr, TRUE, FALSE, L"WindowsTestOtherDomain");
+	ASSERT_TRUE (event);
+
+	wstring cmd = L"OtherProcess.exe";
+
+	STARTUPINFOW si;
+	memset (&si, 0, sizeof (si));
+	si.cb = sizeof (si);
+	PROCESS_INFORMATION pi;
+	BOOL ok = CreateProcessW (nullptr, (WCHAR*)cmd.c_str (), nullptr, nullptr, FALSE, NORMAL_PRIORITY_CLASS, nullptr, nullptr, &si, &pi);
+	ASSERT_TRUE (ok);
+	EXPECT_TRUE (CloseHandle (pi.hThread));
+
+	HANDLE process = OpenProcess (PROCESS_QUERY_INFORMATION
+		| PROCESS_VM_OPERATION | PROCESS_DUP_HANDLE, FALSE, pi.dwProcessId);
+	ASSERT_TRUE (process);
+
+	// Create mapping
+	HANDLE hm = new_mapping ();
+	char* p = (char*)MapViewOfFile (hm, FILE_MAP_ALL_ACCESS, 0, 0, ALLOCATION_GRANULARITY);
+	EXPECT_TRUE (p);
+
+	// Commit 1 page.
+	EXPECT_TRUE (VirtualAlloc (p, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
+	strcpy (p, "Test");
+
+	HANDLE hm1 = nullptr;
+	EXPECT_TRUE (DuplicateHandle (GetCurrentProcess (), hm, process, &hm1, 0, FALSE, DUPLICATE_SAME_ACCESS));
+
+	void* pv = MapViewOfFile3 (hm1, process, nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READWRITE, nullptr, 0);
+	EXPECT_TRUE (pv);
+
+	SetEvent (event);
+	CloseHandle (event);
+
+	WaitForSingleObject (pi.hProcess, INFINITE);
+	CloseHandle (pi.hProcess);
 }
 
 }
