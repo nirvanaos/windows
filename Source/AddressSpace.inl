@@ -112,6 +112,7 @@ void AddressSpace <x64>::protect (Address address, size_t size, uint32_t protect
 		DWORD64 old;
 		DWORD64 status = X64Call (wow64_NtProtectVirtualMemory, 5, HANDLE_TO_DWORD64 (process_),
 			PTR_TO_DWORD64 (&address), PTR_TO_DWORD64 (&tmp_size), (DWORD64)protection, PTR_TO_DWORD64 (&old));
+		assert (!status);
 	} else
 #endif
 	{
