@@ -35,8 +35,8 @@ namespace Windows {
 
 SchedulerMaster::SchedulerMaster () :
 	sysdomainid_ (INVALID_HANDLE_VALUE),
-	error_ (CORBA::Exception::EC_NO_EXCEPTION),
-	watchdog_ (*this)
+	watchdog_ (*this),
+	error_ (CORBA::Exception::EC_NO_EXCEPTION)
 {}
 
 void SchedulerMaster::terminate ()

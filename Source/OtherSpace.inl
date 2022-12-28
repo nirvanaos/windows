@@ -97,7 +97,7 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 			Memory::Block src_block (s_p, cb == ALLOCATION_GRANULARITY);
 			size_t offset = (size_t)(s_p - src_block.address ());
 			src_block.prepare_to_share (offset, cb, flags);
-			typename Base::Block dst_block (*this, d_p, cb == ALLOCATION_GRANULARITY);
+			typename Base::Block dst_block (*this, d_p, true);
 			dst_block.copy (src_block, offset, cb, copied_pages_state);
 			d_p += (Size)cb;
 			s_p += (Size)cb;
