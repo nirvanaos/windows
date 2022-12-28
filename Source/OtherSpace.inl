@@ -54,6 +54,17 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 			Nirvana::throw_IMP_LIMIT ();
 	}
 
+	void* tmp = nullptr;
+	size_t tmp_size = 0;
+	if (!Nirvana::Core::Windows::local_address_space->allocated_block ((uint8_t*)src)) {
+		if (release_src)
+			Nirvana::throw_BAD_PARAM ();
+		tmp_size = size;
+		tmp = Memory::copy (nullptr, src, tmp_size, 0);
+		src = tmp;
+		release_src = true;
+	}
+
 	unsigned flags;
 	DWORD copied_pages_state;
 	if (release_src) {
@@ -96,6 +107,8 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 	} catch (...) {
 		if (alloc_size)
 			Base::release (alloc_ptr, alloc_size);
+		if (tmp)
+			Memory::release (tmp, tmp_size);
 		throw;
 	}
 
