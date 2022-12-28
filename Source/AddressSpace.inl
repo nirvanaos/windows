@@ -92,8 +92,9 @@ void AddressSpace <x64>::query (Address address, MBI& mbi) const
 {
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
 	if (x64) {
+		DWORD64 ret = 0;
 		DWORD64 status = X64Call (wow64_NtQueryVirtualMemory, 6, HANDLE_TO_DWORD64 (process_), address,
-			PTR_TO_DWORD64 (&mbi), (DWORD64)sizeof (mbi), (DWORD64)0);
+			(DWORD64)0, PTR_TO_DWORD64 (&mbi), (DWORD64)sizeof (mbi), PTR_TO_DWORD64 (&ret));
 		assert (!status);
 	} else
 #endif
@@ -129,8 +130,9 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::alloc (Address address,
 	if (x64) {
 		DWORD64 tmp_addr = (uintptr_t)address;
 		DWORD64 tmp_size = size;
-		DWORD64 status = X64Call (wow64_NtAllocateVirtualMemoryEx, 6, PTR_TO_DWORD64 (&tmp_addr),
-			(DWORD64)0, PTR_TO_DWORD64 (&tmp_size), (DWORD64)flags, (DWORD64)protection);
+		DWORD64 status = X64Call (wow64_NtAllocateVirtualMemoryEx, 7, HANDLE_TO_DWORD64 (process_),
+			PTR_TO_DWORD64 (&tmp_addr), PTR_TO_DWORD64 (&tmp_size), (DWORD64)flags, (DWORD64)protection,
+			PTR_TO_DWORD64 (nullptr), (DWORD64)0);
 		if (!status)
 			return (Address)tmp_addr;
 		else
@@ -146,7 +148,7 @@ bool AddressSpace <x64>::free (Address address, Size size, uint32_t flags) const
 {
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
 	if (x64) {
-		DWORD64 status = X64Call (wow64_NtFreeVirtualMemory, 5, HANDLE_TO_DWORD64 (process_),
+		DWORD64 status = X64Call (wow64_NtFreeVirtualMemory, 4, HANDLE_TO_DWORD64 (process_),
 			(DWORD64)address, (DWORD64)size, (DWORD64)flags);
 		return !status;
 	} else
@@ -180,7 +182,8 @@ bool AddressSpace <x64>::unmap (Address address, uint32_t flags) const
 {
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
 	if (x64) {
-		DWORD64 status = X64Call (wow64_NtUnmapViewOfSectionEx, 3, HANDLE_TO_DWORD64 (process_), (DWORD64)address, (DWORD64)flags);
+		DWORD64 status = X64Call (wow64_NtUnmapViewOfSectionEx, 3, HANDLE_TO_DWORD64 (process_),
+			(DWORD64)address, (DWORD64)flags);
 		return !status;
 	} else
 #endif
@@ -374,7 +377,8 @@ AddressSpace <x64>::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 	WCHAR name [_countof (fmt) + 8 - 3];
 	wsprintfW (name, fmt, process_id);
 
-	if (GetCurrentProcessId () == process_id) {
+	bool local = GetCurrentProcessId () == process_id;
+	if (local) {
 		LARGE_INTEGER size;
 		size.QuadPart = (LONGLONG)(DIRECTORY_SIZE * sizeof (BlockInfo));
 		mapping_ = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_READWRITE | SEC_RESERVE, size.HighPart, size.LowPart, name);
@@ -383,7 +387,7 @@ AddressSpace <x64>::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 	} else {
 		mapping_ = OpenFileMappingW (FILE_MAP_ALL_ACCESS, FALSE, name);
 		if (!mapping_)
-			throw_INITIALIZE ();
+			throw_COMM_FAILURE ();
 	}
 
 	if (x64)
@@ -394,7 +398,10 @@ AddressSpace <x64>::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 	if (!directory_) {
 		verify (CloseHandle (mapping_));
 		mapping_ = nullptr;
-		throw_INITIALIZE ();
+		if (local)
+			throw_INITIALIZE ();
+		else
+			throw_COMM_FAILURE ();
 	}
 }
 

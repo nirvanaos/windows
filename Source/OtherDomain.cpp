@@ -29,9 +29,11 @@ inline bool OtherDomainBase::is_64_bit () const NIRVANA_NOEXCEPT
 #else
 	false;
 #endif
-	USHORT process_machine;
-	if (::IsWow64Process2 (process_, &process_machine, nullptr) && IMAGE_FILE_MACHINE_I386 == process_machine)
-		x64 = false;
+	USHORT process_machine, host_machine;
+	if (::IsWow64Process2 (process_, &process_machine, &host_machine)) {
+		USHORT machine = (IMAGE_FILE_MACHINE_UNKNOWN == process_machine) ? host_machine : process_machine;
+		x64 = IMAGE_FILE_MACHINE_I386 != machine;
+	}
 	return x64;
 }
 
