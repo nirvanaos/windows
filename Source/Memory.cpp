@@ -1200,14 +1200,14 @@ long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 void Memory::initialize ()
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
-	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
 	address_space_init ();
+	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
-	address_space_term ();
 	RemoveVectoredExceptionHandler (handler_);
+	address_space_term ();
 }
 
 }

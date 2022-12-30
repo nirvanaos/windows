@@ -49,11 +49,11 @@ int start ()
   _asm { fnclex }
 #endif
 
-  if (!initialize ())
-    return -1;
-
   if (!__scrt_initialize_crt (__scrt_module_type::exe))
     __scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
+
+  if (!initialize ())
+    return -1;
 
   if (!__scrt_initialize_onexit_tables (__scrt_module_type::exe))
     __scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
