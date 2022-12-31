@@ -37,7 +37,7 @@ void SystemInfo::initialize ()
 {
 	::SYSTEM_INFO si;
 	::GetSystemInfo (&si);
-	hardware_concurrency_ = si.dwNumberOfProcessors;
+	hardware_concurrency_ = 1; // TODO: Enable si.dwNumberOfProcessors;
 }
 
 bool SystemInfo::get_OLF_section (Section& section) NIRVANA_NOEXCEPT
