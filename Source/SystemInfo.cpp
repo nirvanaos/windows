@@ -33,7 +33,7 @@ namespace Port {
 
 unsigned int SystemInfo::hardware_concurrency_;
 
-void SystemInfo::initialize ()
+void SystemInfo::initialize () NIRVANA_NOEXCEPT
 {
 	::SYSTEM_INFO si;
 	::GetSystemInfo (&si);

@@ -41,13 +41,11 @@ namespace Windows {
 inline
 bool initialize (void)
 {
-  try {
-    Port::SystemInfo::initialize ();
-    Port::Chrono::initialize ();
-    initialize0 ();
-    Port::Thread::initialize ();
-  } catch (const std::exception& ex) {
-    ErrConsole () << ex.what () << '\n';
+  Port::SystemInfo::initialize ();
+  Port::Chrono::initialize ();
+  if (!(initialize0 ()
+    && Port::Thread::initialize ())) {
+    ErrConsole () << "INITIALIZE" << '\n';
     return false;
   }
   return true;

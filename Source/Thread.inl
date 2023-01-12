@@ -36,14 +36,14 @@ namespace Core {
 namespace Port {
 
 inline
-void Thread::initialize ()
+bool Thread::initialize () NIRVANA_NOEXCEPT
 {
 	current_ = TlsAlloc ();
-	ExecContext::initialize ();
+	return ExecContext::initialize ();
 }
 
 inline
-void Thread::terminate ()
+void Thread::terminate () NIRVANA_NOEXCEPT
 {
 	ExecContext::terminate ();
 	TlsFree (current_);

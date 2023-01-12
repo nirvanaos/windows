@@ -47,7 +47,7 @@ class Memory
 	static const size_t ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
 
 public:
-	static void initialize ();
+	static bool initialize () NIRVANA_NOEXCEPT;
 	static void terminate () NIRVANA_NOEXCEPT;
 
 	static const size_t ALLOCATION_UNIT = ALLOCATION_GRANULARITY;

@@ -55,6 +55,9 @@ class AddressSpace
 	AddressSpace& operator = (const AddressSpace&) = delete;
 public:
 	AddressSpace (uint32_t process_id, HANDLE process_handle);
+	AddressSpace () NIRVANA_NOEXCEPT;
+	bool initialize (uint32_t process_id, HANDLE process_handle) NIRVANA_NOEXCEPT;
+
 	~AddressSpace () NIRVANA_NOEXCEPT;
 
 	HANDLE process () const

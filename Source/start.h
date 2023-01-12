@@ -39,6 +39,9 @@ namespace Windows {
 template <int (*mainfn) (int, char**, char**)> inline
 int start ()
 {
+  if (!initialize ())
+    return -1;
+
   // The /GS security cookie must be initialized before any exception handling
   // targeting the current image is registered.  No function using exception
   // handling can be called in the current image until after this call:
@@ -51,9 +54,6 @@ int start ()
 
   if (!__scrt_initialize_crt (__scrt_module_type::exe))
     __scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
-
-  if (!initialize ())
-    return -1;
 
   if (!__scrt_initialize_onexit_tables (__scrt_module_type::exe))
     __scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);

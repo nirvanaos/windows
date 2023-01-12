@@ -64,9 +64,10 @@ extern DWORD64 wow64_NtMapViewOfSectionEx;
 extern DWORD64 wow64_NtUnmapViewOfSectionEx;
 #endif
 
-inline void address_space_init ()
+inline bool address_space_init () NIRVANA_NOEXCEPT
 {
-	local_address_space.construct (GetCurrentProcessId (), GetCurrentProcess ());
+	local_address_space.construct ();
+	return local_address_space->initialize (GetCurrentProcessId (), GetCurrentProcess ());
 }
 
 inline void address_space_term () NIRVANA_NOEXCEPT
@@ -367,12 +368,27 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 	}
 }
 
-template <bool x64>
+template <bool x64> inline
+AddressSpace <x64>::AddressSpace () NIRVANA_NOEXCEPT :
+process_ (nullptr),
+mapping_ (nullptr),
+directory_ (nullptr)
+{}
+
+template <bool x64> inline
 AddressSpace <x64>::AddressSpace (uint32_t process_id, HANDLE process_handle) :
-	process_ (process_handle),
-	mapping_ (nullptr),
-	directory_ (nullptr)
+	AddressSpace ()
 {
+	assert (GetCurrentProcessId () != process_id);
+	if (!initialize (process_id, process_handle))
+		throw_COMM_FAILURE ();
+}
+
+template <bool x64>
+bool AddressSpace <x64>::initialize (uint32_t process_id, HANDLE process_handle) NIRVANA_NOEXCEPT
+{
+	process_ = process_handle;
+
 	static const WCHAR fmt [] = OBJ_NAME_PREFIX WINWCS (".mmap.%08X");
 	WCHAR name [_countof (fmt) + 8 - 3];
 	wsprintfW (name, fmt, process_id);
@@ -382,13 +398,11 @@ AddressSpace <x64>::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 		LARGE_INTEGER size;
 		size.QuadPart = (LONGLONG)(DIRECTORY_SIZE * sizeof (BlockInfo));
 		mapping_ = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_READWRITE | SEC_RESERVE, size.HighPart, size.LowPart, name);
-		if (!mapping_)
-			throw_INITIALIZE ();
-	} else {
+	} else
 		mapping_ = OpenFileMappingW (FILE_MAP_ALL_ACCESS, FALSE, name);
-		if (!mapping_)
-			throw_COMM_FAILURE ();
-	}
+
+	if (!mapping_)
+		return false;
 
 	if (x64)
 		directory64_ = (BlockInfo**)VirtualAlloc (nullptr, (DIRECTORY_SIZE + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK * sizeof (BlockInfo*), MEM_RESERVE, PAGE_READWRITE);
@@ -398,11 +412,10 @@ AddressSpace <x64>::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 	if (!directory_) {
 		verify (CloseHandle (mapping_));
 		mapping_ = nullptr;
-		if (local)
-			throw_INITIALIZE ();
-		else
-			throw_COMM_FAILURE ();
+		return false;
 	}
+
+	return true;
 }
 
 template <bool x64>

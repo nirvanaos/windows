@@ -36,15 +36,14 @@ namespace Core {
 namespace Port {
 
 inline
-void ExecContext::initialize ()
+bool ExecContext::initialize () NIRVANA_NOEXCEPT
 {
 #ifdef _DEBUG
 	dbg_main_thread_id_ = GetCurrentThreadId ();
 #endif
 	current_ = FlsAlloc (nullptr);
 	main_fiber_ = ConvertThreadToFiber (nullptr);
-	if (!main_fiber_)
-		throw_NO_MEMORY ();
+	return main_fiber_ != nullptr;
 }
 
 inline

@@ -39,7 +39,7 @@ namespace Port {
 class SystemInfo
 {
 public:
-	static void initialize ();
+	static void initialize () NIRVANA_NOEXCEPT;
 
 	static unsigned int hardware_concurrency () NIRVANA_NOEXCEPT
 	{

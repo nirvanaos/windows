@@ -1197,11 +1197,13 @@ long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-void Memory::initialize ()
+bool Memory::initialize () NIRVANA_NOEXCEPT
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
-	address_space_init ();
+	if (!address_space_init ())
+		return false;
 	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
+	return true;
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT

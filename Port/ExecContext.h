@@ -99,7 +99,7 @@ public:
 		return f;
 	}
 
-	static void initialize ();
+	static bool initialize () NIRVANA_NOEXCEPT;
 	static void terminate () NIRVANA_NOEXCEPT;
 
 	static void current (Core::ExecContext* context) NIRVANA_NOEXCEPT;

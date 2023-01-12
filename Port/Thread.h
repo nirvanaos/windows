@@ -73,8 +73,8 @@ public:
 	///@}
 
 public:
-	static void initialize ();
-	static void terminate ();
+	static bool initialize () NIRVANA_NOEXCEPT;
+	static void terminate () NIRVANA_NOEXCEPT;
 
 	static void current (Core::Thread* core_thread);
 
