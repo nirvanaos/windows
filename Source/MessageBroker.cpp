@@ -30,6 +30,8 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+StaticallyAllocated <MessageBroker> MessageBroker::singleton_;
+
 void MessageBroker::received (void* message, DWORD size) NIRVANA_NOEXCEPT
 {
 	ESIOP::dispatch_message (*(ESIOP::MessageHeader*)message);

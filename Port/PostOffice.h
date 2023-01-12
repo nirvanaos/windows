@@ -24,58 +24,29 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_MODULE_H_
-#define NIRVANA_CORE_PORT_MODULE_H_
+#ifndef NIRVANA_CORE_PORT_POSTOFFICE_H_
+#define NIRVANA_CORE_PORT_POSTOFFICE_H_
 #pragma once
 
-#include <Nirvana/Nirvana.h>
-#include <Nirvana/ModuleInit.h>
-#include <Section.h>
 #include <StringView.h>
-#include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-/// Loadable module
-class Module
+/// Receive messages from other domains.
+class PostOffice
 {
 public:
-	void* address () const NIRVANA_NOEXCEPT
-	{
-		return module_;
-	}
-
-	const Section& metadata () const NIRVANA_NOEXCEPT
-	{
-		return metadata_;
-	}
-
-protected:
-	/// <summary>
+	/// Start receiving incoming messages.
 	/// 
-	/// </summary>
-	/// <param name="file"></param>
-	Module (const StringView& file);
+	/// \param host Host name.
+	/// \param port Port number.
+	static void initialize (const StringView& host, uint16_t port);
 
-	~Module ()
-	{
-		unload ();
-	}
-
-	/// \brief Return all read/write data sections
-	/// 
-	/// \param sections List of r/w data sections
-	void get_data_sections (DataSections& sections);
-
-private:
-	void unload ();
-
-private:
-	void* module_;
-	Section metadata_;
-	Nirvana::Core::Windows::SharedStringW temp_path_;
+	/// Stop receiving incoming messages.
+	/// Sending the response messages is still available.
+	static void terminate () NIRVANA_NOEXCEPT;
 };
 
 }

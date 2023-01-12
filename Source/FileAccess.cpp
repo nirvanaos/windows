@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/FileAccess.h"
-#include "SchedulerBase.h"
+#include "MessageBroker.h"
 #include "error2errno.h"
 #include <Nirvana/RuntimeError.h>
 #include <Nirvana/fnctl.h>
@@ -41,7 +41,7 @@ void FileAccess::open (const StringView& path, uint32_t access, uint32_t share_m
 	handle_ = CreateFileW (wpath.c_str (), access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
 	if (INVALID_HANDLE_VALUE == handle_)
 		throw RuntimeError (error2errno (GetLastError ()));
-	SchedulerBase::singleton ().completion_port ().add_receiver (handle_, *this);
+	MessageBroker::completion_port ().add_receiver (handle_, *this);
 }
 
 FileAccess::~FileAccess ()
@@ -119,7 +119,7 @@ void FileAccessDirect::issue_request (Request& rq) NIRVANA_NOEXCEPT
 {
 	switch (rq.operation ()) {
 		case IO_Request::OP_SET_SIZE:
-			SchedulerBase::singleton ().completion_port ().post (*this, rq, 0);
+			MessageBroker::completion_port ().post (*this, rq, 0);
 			return;
 		case IO_Request::OP_WRITE:
 			// We have to ensure that copying from this block in read() operation

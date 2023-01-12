@@ -29,8 +29,6 @@
 #pragma once
 
 #include "../Port/Scheduler.h"
-#include "MessageBroker.h"
-#include "AddressSpace.inl"
 
 namespace Nirvana {
 namespace Core {
@@ -44,7 +42,6 @@ public:
 	SchedulerBase ()
 	{
 		singleton_ = this;
-		other_space_init ();
 	}
 
 	~SchedulerBase ()
@@ -60,14 +57,6 @@ public:
 	}
 
 	virtual void worker_thread_proc () NIRVANA_NOEXCEPT = 0;
-
-	CompletionPort& completion_port ()
-	{
-		return message_broker_;
-	}
-
-protected:
-	MessageBroker message_broker_;
 };
 
 }

@@ -25,7 +25,6 @@
 */
 #include "SchedulerMaster.h"
 #include "../Port/Scheduler.h"
-#include "MailslotName.h"
 #include "sysdomainid.h"
 #include <StartupSys.h>
 
@@ -46,7 +45,6 @@ void SchedulerMaster::terminate ()
 		sysdomainid_ = INVALID_HANDLE_VALUE;
 	}
 	Office::terminate ();
-	message_broker_.terminate ();
 	worker_threads_.terminate ();
 	watchdog_.terminate ();
 }
@@ -63,11 +61,7 @@ bool SchedulerMaster::run (StartupSys& startup)
 			throw_INITIALIZE ();
 	}
 
-	if (!(
-		Office::create_mailslot (SCHEDULER_MAILSLOT_NAME)
-		&&
-		message_broker_.create_mailslot (MailslotName (sys_process_id))
-		))
+	if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))
 		return false;
 
 	if (!watchdog_.start ())
@@ -75,7 +69,6 @@ bool SchedulerMaster::run (StartupSys& startup)
 
 	try {
 		Office::start ();
-		message_broker_.start ();
 		worker_threads_.run (startup, INFINITE_DEADLINE);
 	} catch (...) {
 		terminate ();

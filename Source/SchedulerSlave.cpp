@@ -27,7 +27,6 @@
 #include <Scheduler.h>
 #include <StartupProt.h>
 #include <Executor.h>
-#include "MailslotName.h"
 #include "SchedulerMessage.h"
 #include "sysdomainid.h"
 
@@ -52,7 +51,6 @@ void SchedulerSlave::terminate ()
 		CloseHandle (watchdog_thread_);
 		watchdog_thread_ = nullptr;
 	}
-	message_broker_.terminate ();
 	scheduler_mailslot_.close ();
 	worker_threads_.terminate ();
 	if (sys_process_) {
@@ -68,7 +66,6 @@ void SchedulerSlave::terminate ()
 bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 {
 	DWORD process_id = GetCurrentProcessId ();
-	message_broker_.create_mailslot (MailslotName (process_id));
 
 	if (!get_sys_process_id ())
 		return false; // System domain is not running
@@ -99,7 +96,6 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	try {
 		ProcessStartMessage process_start{ GetCurrentProcessId (), executor_id_ };
 		watchdog_mailslot.send (process_start);
-		message_broker_.start ();
 		worker_threads_.run (startup, startup_deadline);
 	} catch (...) {
 		terminate ();

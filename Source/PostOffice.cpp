@@ -1,4 +1,3 @@
-/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -24,62 +23,25 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_MODULE_H_
-#define NIRVANA_CORE_PORT_MODULE_H_
-#pragma once
-
-#include <Nirvana/Nirvana.h>
-#include <Nirvana/ModuleInit.h>
-#include <Section.h>
-#include <StringView.h>
-#include "../Windows/Source/WinWChar.h"
+#include "../Port/PostOffice.h"
+#include "MessageBroker.h"
+#include "AddressSpace.inl"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-/// Loadable module
-class Module
+void PostOffice::initialize (const StringView& host, uint16_t port)
 {
-public:
-	void* address () const NIRVANA_NOEXCEPT
-	{
-		return module_;
-	}
+	Windows::other_space_init ();
+	Windows::MessageBroker::initialize ();
+}
 
-	const Section& metadata () const NIRVANA_NOEXCEPT
-	{
-		return metadata_;
-	}
-
-protected:
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <param name="file"></param>
-	Module (const StringView& file);
-
-	~Module ()
-	{
-		unload ();
-	}
-
-	/// \brief Return all read/write data sections
-	/// 
-	/// \param sections List of r/w data sections
-	void get_data_sections (DataSections& sections);
-
-private:
-	void unload ();
-
-private:
-	void* module_;
-	Section metadata_;
-	Nirvana::Core::Windows::SharedStringW temp_path_;
-};
+void PostOffice::terminate () NIRVANA_NOEXCEPT
+{
+	Windows::MessageBroker::terminate ();
+}
 
 }
 }
 }
-
-#endif

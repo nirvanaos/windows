@@ -29,7 +29,9 @@
 #pragma once
 
 #include "PostOffice.h"
+#include "MailslotName.h"
 #include <ORB/ESIOP.h>
+#include <StaticallyAllocated.h>
 
 namespace Nirvana {
 namespace Core {
@@ -40,7 +42,28 @@ class MessageBroker :
 {
 	typedef PostOffice <MessageBroker, sizeof (ESIOP::MessageBuffer), POSTMAN_THREAD_PRIORITY> Base;
 public:
+	static void initialize ()
+	{
+		singleton_.construct ();
+		singleton_->create_mailslot (Windows::MailslotName (GetCurrentProcessId ()));
+		singleton_->start ();
+	}
+
+	static void terminate () NIRVANA_NOEXCEPT
+	{
+		static_cast <Base&> (singleton_).terminate ();
+		singleton_.destruct ();
+	}
+
+	static CompletionPort& completion_port () NIRVANA_NOEXCEPT
+	{
+		return singleton_;
+	}
+
 	virtual void received (void* message, DWORD size) NIRVANA_NOEXCEPT;
+
+private:
+	static StaticallyAllocated <MessageBroker> singleton_;
 };
 
 }
