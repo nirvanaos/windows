@@ -65,8 +65,6 @@ void SchedulerSlave::terminate ()
 
 bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 {
-	DWORD process_id = GetCurrentProcessId ();
-
 	if (!get_sys_process_id ())
 		return false; // System domain is not running
 
