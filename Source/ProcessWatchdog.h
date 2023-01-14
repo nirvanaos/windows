@@ -94,8 +94,8 @@ private:
 	HANDLE mailslot_;
 	HANDLE thread_;
 	HANDLE terminate_event_;
-	std::vector <HANDLE> wait_handles_;
-	std::vector <HANDLE> semaphore_handles_;
+	std::vector <HANDLE, SharedAllocator <HANDLE> > wait_handles_;
+	std::vector <HANDLE, SharedAllocator <HANDLE> > semaphore_handles_;
 };
 
 }

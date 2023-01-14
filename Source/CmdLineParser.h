@@ -58,7 +58,7 @@ public:
 		int ptr_cnt = argc_ + env_cnt + 1;
 		cb_ = ptr_cnt * sizeof (char*) + ccnt;
 		try {
-			char** uarg = argv_ = (char**)g_core_heap->allocate (nullptr, cb_, 0);
+			char** uarg = argv_ = (char**)Heap::shared_heap ().allocate (nullptr, cb_, 0);
 			char* buf = (char*)(uarg + ptr_cnt);
 			for (LPWSTR* arg = argv, *end = argv + argc_; arg != end; ++arg, ++uarg) {
 				*uarg = buf;
@@ -84,7 +84,7 @@ public:
 
 	~CmdLineParser ()
 	{
-		g_core_heap->release (argv_, cb_);
+		Heap::shared_heap ().release (argv_, cb_);
 	}
 
 	char** argv () const

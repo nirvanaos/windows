@@ -127,8 +127,4 @@ const TimeBase::TimeT CANCEL_REQUEST_DEADLINE = 1 * TimeBase::SECOND;
 }
 }
 
-// The Binder is high-loaded system service and should have own heap.
-// Use BINDER_USE_SHARED_MEMORY only on systems with low resources.
-//#define BINDER_USE_SHARED_MEMORY
-
 #endif

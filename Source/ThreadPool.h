@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_WINDOWS_THREADPOOL_H_
 #pragma once
 
-#include <Heap.h>
+#include <SharedAllocator.h>
 #include "../Port/SystemInfo.h"
 
 namespace Nirvana {
@@ -44,7 +44,7 @@ template <class Master, class Worker>
 class ThreadPool :
 	public Master
 {
-	typedef CoreAllocator <Worker> Allocator;
+	typedef SharedAllocator <Worker> Allocator;
 
 public:
 	static unsigned int thread_count () NIRVANA_NOEXCEPT
