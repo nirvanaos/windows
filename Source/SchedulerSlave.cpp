@@ -75,17 +75,15 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 		return false; // System domain is not running
 
 	try {
-		throw_INITIALIZE ();
-
 		if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
-			throw_INITIALIZE ();
+			throw_COMM_FAILURE ();
 
 		if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))
-			throw_INITIALIZE ();
+			throw_COMM_FAILURE ();
 
 		Mailslot watchdog_mailslot;
 		if (!watchdog_mailslot.open (WATCHDOG_MAILSLOT_NAME))
-			throw_INITIALIZE ();
+			throw_COMM_FAILURE ();
 
 		HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (), nullptr);
 		worker_threads_.semaphore (sem);
