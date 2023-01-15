@@ -54,20 +54,21 @@ bool SchedulerMaster::run (StartupSys& startup)
 	sys_process_id = GetCurrentProcessId ();
 	HANDLE sysdomainid = open_sysdomainid (true);
 	if (INVALID_HANDLE_VALUE == sysdomainid)
-		return false;
-	{
-		DWORD written;
-		if (!WriteFile (sysdomainid, &sys_process_id, sizeof (DWORD), &written, nullptr))
-			throw_INITIALIZE ();
-	}
-
-	if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))
-		return false;
-
-	if (!watchdog_.start ())
-		return false;
+		return false; // System domain is already running
 
 	try {
+		{
+			DWORD written;
+			if (!WriteFile (sysdomainid, &sys_process_id, sizeof (DWORD), &written, nullptr))
+				throw_INITIALIZE ();
+		}
+
+		if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))
+			throw_INITIALIZE ();
+
+		if (!watchdog_.start ())
+			throw_INITIALIZE ();
+
 		Office::start ();
 		worker_threads_.run (startup, INFINITE_DEADLINE);
 	} catch (...) {

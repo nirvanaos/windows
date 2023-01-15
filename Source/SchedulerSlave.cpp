@@ -74,30 +74,32 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	if (!get_sys_process_id ())
 		return false; // System domain is not running
 
-	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
-		return false; // System domain is not running
-
-	if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))
-		return false; // System domain is not running
-
-	Mailslot watchdog_mailslot;
-	if (!watchdog_mailslot.open (WATCHDOG_MAILSLOT_NAME))
-		return false; // System domain is not running
-
-	HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (), nullptr);
-	worker_threads_.semaphore (sem);
-	HANDLE executor;
-	if (!DuplicateHandle (GetCurrentProcess (), sem, sys_process_, &executor, 0, FALSE, DUPLICATE_SAME_ACCESS))
-		throw_INITIALIZE ();
-	executor_id_ = (uint32_t)(uintptr_t)executor;
-
-	if (!(terminate_event_ = CreateEventW (nullptr, TRUE, FALSE, nullptr)))
-		throw_INITIALIZE ();
-
-	if (!(watchdog_thread_ = CreateThread (nullptr, 0x10000, s_watchdog_thread_proc, this, 0, nullptr)))
-		throw_INITIALIZE ();
-
 	try {
+		throw_INITIALIZE ();
+
+		if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
+			throw_INITIALIZE ();
+
+		if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))
+			throw_INITIALIZE ();
+
+		Mailslot watchdog_mailslot;
+		if (!watchdog_mailslot.open (WATCHDOG_MAILSLOT_NAME))
+			throw_INITIALIZE ();
+
+		HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (), nullptr);
+		worker_threads_.semaphore (sem);
+		HANDLE executor;
+		if (!DuplicateHandle (GetCurrentProcess (), sem, sys_process_, &executor, 0, FALSE, DUPLICATE_SAME_ACCESS))
+			throw_INITIALIZE ();
+		executor_id_ = (uint32_t)(uintptr_t)executor;
+
+		if (!(terminate_event_ = CreateEventW (nullptr, TRUE, FALSE, nullptr)))
+			throw_INITIALIZE ();
+
+		if (!(watchdog_thread_ = CreateThread (nullptr, 0x10000, s_watchdog_thread_proc, this, 0, nullptr)))
+			throw_INITIALIZE ();
+
 		ProcessStartMessage process_start{ GetCurrentProcessId (), executor_id_ };
 		watchdog_mailslot.send (process_start);
 		worker_threads_.run (startup, startup_deadline);
