@@ -38,8 +38,9 @@ namespace Windows {
 
 extern uint32_t sys_process_id;
 
-HANDLE open_sysdomainid (bool write) NIRVANA_NOEXCEPT;
-bool get_sys_process_id () NIRVANA_NOEXCEPT;
+HANDLE open_sysdomainid (bool write);
+bool get_sys_process_id ();
+long get_app_data_path (WCHAR* path, bool create) NIRVANA_NOEXCEPT;
 
 }
 }

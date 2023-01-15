@@ -30,10 +30,19 @@
 #pragma once
 
 #include <Nirvana/NirvanaBase.h>
-#include "../Source/sysdomainid.h"
 
 extern "C" __declspec (dllimport)
 unsigned long __stdcall GetCurrentProcessId (void);
+
+namespace Nirvana {
+namespace Core {
+namespace Windows {
+
+extern uint32_t sys_process_id;
+
+}
+}
+}
 
 namespace ESIOP {
 

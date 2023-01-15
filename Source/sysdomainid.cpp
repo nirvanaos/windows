@@ -26,6 +26,7 @@
 #include "SchedulerBase.h"
 #include <shlobj_core.h>
 #include <Shlwapi.h>
+#include <algorithm>
 
 namespace Nirvana {
 namespace Core {
@@ -33,17 +34,34 @@ namespace Windows {
 
 uint32_t sys_process_id;
 
-HANDLE open_sysdomainid (bool write) NIRVANA_NOEXCEPT
+long get_app_data_path (WCHAR* path, bool create) NIRVANA_NOEXCEPT
+{
+	HRESULT hr = SHGetFolderPathW (NULL, CSIDL_COMMON_APPDATA, NULL, 0, path);
+	if (S_OK != hr)
+		return hr;
+	WCHAR* p = path + wcslen (path);
+	static const WCHAR nirvana [] = L"\\Nirvana";
+	for (size_t i = 0; i < 2; ++i) {
+		p = std::copy (nirvana, nirvana + std::size (nirvana), p) - 1;
+		if (create && !CreateDirectoryW (path, nullptr)) {
+			DWORD err = GetLastError ();
+			if (ERROR_ALREADY_EXISTS != err)
+				return HRESULT_FROM_WIN32 (err);
+		}
+	}
+	static const WCHAR term [] = L"\\";
+	std::copy (term, term + 2, p);
+	return 0;
+}
+
+HANDLE open_sysdomainid (bool write)
 {
 	WCHAR path [MAX_PATH];
-	if (S_OK != SHGetFolderPathW (NULL, CSIDL_COMMON_APPDATA, NULL, 0, path))
-		return INVALID_HANDLE_VALUE;
-	for (size_t i = 0; i < 2; ++i) {
-		PathAppendW (path, L"\\Nirvana");
-		if (write && !CreateDirectoryW (path, nullptr) && ERROR_ALREADY_EXISTS != GetLastError ())
-			return INVALID_HANDLE_VALUE;
-	}
-	PathAppendW (path, L"\\sysdomainid");
+	HRESULT hr = get_app_data_path (path, write);
+	if (S_OK != hr)
+		throw_INITIALIZE (hr);
+	static const WCHAR sysdomainid [] = L"sysdomainid";
+	std::copy (sysdomainid, sysdomainid + std::size (sysdomainid), path + wcslen (path));
 	DWORD access, share, disposition, flags;
 	if (write) {
 		access = GENERIC_WRITE;
@@ -56,18 +74,34 @@ HANDLE open_sysdomainid (bool write) NIRVANA_NOEXCEPT
 		disposition = OPEN_EXISTING;
 		flags = FILE_ATTRIBUTE_NORMAL;
 	}
-	return CreateFileW (path, access, share, nullptr, disposition, flags, nullptr);
+	HANDLE hf = CreateFileW (path, access, share, nullptr, disposition, flags, nullptr);
+	if (INVALID_HANDLE_VALUE == hf) {
+		DWORD err = GetLastError ();
+		if (write) {
+			if (ERROR_SHARING_VIOLATION == err)
+				return hf;
+		} else if (ERROR_FILE_NOT_FOUND == err)
+			return hf;
+
+		throw_INITIALIZE (HRESULT_FROM_WIN32 (err));
+	}
+	return hf;
 }
 
-bool get_sys_process_id () NIRVANA_NOEXCEPT
+bool get_sys_process_id ()
 {
 	HANDLE sysdomainid = open_sysdomainid (false);
 	if (INVALID_HANDLE_VALUE == sysdomainid)
 		return false;
 	DWORD cbread = 0;
-	BOOL OK = ReadFile (sysdomainid, &sys_process_id, sizeof (DWORD), &cbread, nullptr);
+	DWORD err = 0;
+	if (!ReadFile (sysdomainid, &sys_process_id, sizeof (DWORD), &cbread, nullptr)
+		|| sizeof (DWORD) != cbread)
+		err = GetLastError ();
 	CloseHandle (sysdomainid);
-	return OK && sizeof (DWORD) == cbread;
+	if (err)
+		throw_INITIALIZE (HRESULT_FROM_WIN32 (err));
+	return true;
 }
 
 }

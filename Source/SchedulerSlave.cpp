@@ -98,7 +98,7 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 		if (!(watchdog_thread_ = CreateThread (nullptr, 0x10000, s_watchdog_thread_proc, this, 0, nullptr)))
 			throw_INITIALIZE ();
 
-		ProcessStartMessage process_start{ GetCurrentProcessId (), executor_id_ };
+		ProcessStartMessage process_start { GetCurrentProcessId (), executor_id_ };
 		watchdog_mailslot.send (process_start);
 		worker_threads_.run (startup, startup_deadline);
 	} catch (...) {

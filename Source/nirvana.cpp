@@ -30,6 +30,7 @@
 #include <StartupProt.h>
 #include <StartupSys.h>
 #include "start.h"
+#include <Nirvana/Formatter.h>
 
 namespace Nirvana {
 namespace Core {
@@ -111,10 +112,14 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 			startup.check ();
 			return startup.ret ();
 		}
+	} catch (const CORBA::SystemException& ex) {
+		std::basic_string <char, std::char_traits <char>, SharedAllocator <char> > str;
+		append_format (str, "%s(0x%X)\n", ex._name (), ex.minor ());
+		ErrConsole () << str.c_str ();
 	} catch (const std::exception& ex) {
 		ErrConsole () << ex.what () << '\n';
-		return -1;
 	}
+	return -1;
 }
 
 }
