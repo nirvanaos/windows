@@ -25,7 +25,7 @@
 */
 #include "SchedulerMaster.h"
 #include "../Port/Scheduler.h"
-#include "sysdomainid.h"
+#include "app_data.h"
 #include <StartupSys.h>
 
 namespace Nirvana {

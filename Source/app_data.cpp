@@ -23,7 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "SchedulerBase.h"
+#include "app_data.h"
 #include <shlobj_core.h>
 #include <Shlwapi.h>
 #include <algorithm>
@@ -94,14 +94,10 @@ bool get_sys_process_id ()
 	if (INVALID_HANDLE_VALUE == sysdomainid)
 		return false;
 	DWORD cbread = 0;
-	DWORD err = 0;
-	if (!ReadFile (sysdomainid, &sys_process_id, sizeof (DWORD), &cbread, nullptr)
-		|| sizeof (DWORD) != cbread)
-		err = GetLastError ();
+	bool OK = ReadFile (sysdomainid, &sys_process_id, sizeof (DWORD), &cbread, nullptr)
+		&& sizeof (DWORD) == cbread;
 	CloseHandle (sysdomainid);
-	if (err)
-		throw_INITIALIZE (HRESULT_FROM_WIN32 (err));
-	return true;
+	return OK;
 }
 
 }

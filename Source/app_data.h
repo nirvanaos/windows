@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_WINDOWS_SYSDOMAINID_H_
 #pragma once
 
-#include <Nirvana/NirvanaBase.h>
+#include "win32.h"
 
 typedef void* HANDLE;
 

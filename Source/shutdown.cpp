@@ -27,7 +27,7 @@
 #include <ORB/ESIOP.h>
 #include "Mailslot.h"
 #include "MailslotName.h"
-#include "sysdomainid.h"
+#include "app_data.h"
 
 namespace Nirvana {
 namespace Core {

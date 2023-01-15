@@ -28,7 +28,7 @@
 #include <StartupProt.h>
 #include <Executor.h>
 #include "SchedulerMessage.h"
-#include "sysdomainid.h"
+#include "app_data.h"
 
 #define DEBUG_SHUTDOWN
 
