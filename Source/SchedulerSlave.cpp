@@ -30,6 +30,12 @@
 #include "SchedulerMessage.h"
 #include "sysdomainid.h"
 
+#define DEBUG_SHUTDOWN
+
+#ifdef DEBUG_SHUTDOWN
+#include "../Port/Debugger.h"
+#endif
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {
@@ -172,6 +178,9 @@ bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, Dead
 
 void SchedulerSlave::shutdown () NIRVANA_NOEXCEPT
 {
+#ifdef DEBUG_SHUTDOWN
+	Port::Debugger::output_debug_string ("Shutdown 2\n");
+#endif
 	worker_threads_.shutdown ();
 }
 

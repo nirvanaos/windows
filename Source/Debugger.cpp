@@ -33,7 +33,8 @@ namespace Port {
 
 void Debugger::output_debug_string (const char* msg)
 {
-	Windows::StringW ws;
+	// Use shared string to avoid possible infinite recursion in assertions.
+	Windows::SharedStringW ws;
 	utf8_to_wide (msg, ws);
 	if (IsDebuggerPresent ())
 		OutputDebugStringW (ws.c_str ());
