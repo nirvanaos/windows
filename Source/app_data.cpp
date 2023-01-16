@@ -40,7 +40,7 @@ long get_app_data_path (WCHAR* path, bool create) NIRVANA_NOEXCEPT
 	if (S_OK != hr)
 		return hr;
 	WCHAR* p = path + wcslen (path);
-	static const WCHAR nirvana [] = L"\\Nirvana";
+	static const WCHAR nirvana [] = WINWCS ("\\Nirvana");
 	for (size_t i = 0; i < 2; ++i) {
 		p = std::copy (nirvana, nirvana + std::size (nirvana), p) - 1;
 		if (create && !CreateDirectoryW (path, nullptr)) {
@@ -56,11 +56,11 @@ long get_app_data_path (WCHAR* path, bool create) NIRVANA_NOEXCEPT
 
 HANDLE open_sysdomainid (bool write)
 {
-	WCHAR path [MAX_PATH];
+	WCHAR path [MAX_PATH + 1];
 	HRESULT hr = get_app_data_path (path, write);
 	if (S_OK != hr)
 		throw_INITIALIZE (hr);
-	static const WCHAR sysdomainid [] = L"sysdomainid";
+	static const WCHAR sysdomainid [] = WINWCS ("sysdomainid");
 	std::copy (sysdomainid, sysdomainid + std::size (sysdomainid), path + wcslen (path));
 	DWORD access, share, disposition, flags;
 	if (write) {
@@ -72,7 +72,7 @@ HANDLE open_sysdomainid (bool write)
 		access = GENERIC_READ;
 		share = FILE_SHARE_READ | FILE_SHARE_DELETE | FILE_SHARE_WRITE;
 		disposition = OPEN_EXISTING;
-		flags = FILE_ATTRIBUTE_NORMAL;
+		flags = FILE_ATTRIBUTE_TEMPORARY;
 	}
 	HANDLE hf = CreateFileW (path, access, share, nullptr, disposition, flags, nullptr);
 	if (INVALID_HANDLE_VALUE == hf) {

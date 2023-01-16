@@ -28,6 +28,8 @@
 #pragma once
 
 #include "Memory.inl"
+#include "app_data.h"
+#include <winioctl.h>
 
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
 
@@ -370,9 +372,10 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 
 template <bool x64> inline
 AddressSpace <x64>::AddressSpace () NIRVANA_NOEXCEPT :
-process_ (nullptr),
-mapping_ (nullptr),
-directory_ (nullptr)
+	process_ (nullptr),
+	file_ (INVALID_HANDLE_VALUE),
+	mapping_ (nullptr),
+	directory_ (nullptr)
 {}
 
 template <bool x64> inline
@@ -389,29 +392,96 @@ bool AddressSpace <x64>::initialize (uint32_t process_id, HANDLE process_handle)
 {
 	process_ = process_handle;
 
-	static const WCHAR fmt [] = OBJ_NAME_PREFIX WINWCS (".mmap.%08X");
-	WCHAR name [_countof (fmt) + 8 - 3];
-	wsprintfW (name, fmt, process_id);
+	static const WCHAR fmt [] = WINWCS ("mmap.%08X");
 
 	bool local = GetCurrentProcessId () == process_id;
-	if (local) {
-		LARGE_INTEGER size;
-		size.QuadPart = (LONGLONG)(DIRECTORY_SIZE * sizeof (BlockInfo));
-		mapping_ = CreateFileMappingW (INVALID_HANDLE_VALUE, 0, PAGE_READWRITE | SEC_RESERVE, size.HighPart, size.LowPart, name);
-	} else
-		mapping_ = OpenFileMappingW (FILE_MAP_ALL_ACCESS, FALSE, name);
-
-	if (!mapping_)
+	WCHAR path [MAX_PATH + 1];
+	HRESULT hr = get_app_data_path (path, local);
+	if (S_OK != hr)
 		return false;
 
+	wsprintfW (path + wcslen (path), fmt, process_id);
+
+	DWORD share, disposition, flags;
+	if (local) {
+		share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+		disposition = CREATE_ALWAYS;
+		flags = FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
+	} else {
+		share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+		disposition = OPEN_EXISTING;
+		flags = FILE_ATTRIBUTE_TEMPORARY;
+	}
+
+	file_ = CreateFileW (path, GENERIC_READ | GENERIC_WRITE, share, nullptr,
+		disposition, flags, 0);
+
+	if (INVALID_HANDLE_VALUE == file_)
+		return false;
+
+	LARGE_INTEGER file_size;
+
+	if (local) {
+
+		SYSTEM_INFO si;
+		GetSystemInfo (&si);
+		directory_size_ = (Size)((size_t)si.lpMaximumApplicationAddress + ALLOCATION_GRANULARITY - 1)
+			/ ALLOCATION_GRANULARITY;
+		file_size.QuadPart = (LONGLONG)(directory_size_ * sizeof (BlockInfo));
+
+		if (x64) {
+			FILE_SET_SPARSE_BUFFER sb;
+			sb.SetSparse = TRUE;
+			DWORD cb;
+			if (!DeviceIoControl (file_, FSCTL_SET_SPARSE, &sb, sizeof (sb), 0, 0, &cb, 0))
+				return false;
+
+			FILE_ZERO_DATA_INFORMATION zdi;
+			zdi.FileOffset.QuadPart = 0;
+			zdi.BeyondFinalZero = file_size;
+			if (!DeviceIoControl (file_, FSCTL_SET_ZERO_DATA, &zdi, sizeof (zdi), 0, 0, &cb, 0))
+				return false;
+		} else {
+			if (!(
+				SetFilePointerEx (file_, file_size, nullptr, FILE_BEGIN)
+				&&
+				SetEndOfFile (file_)
+			)) {
+				CloseHandle (file_);
+				file_ = INVALID_HANDLE_VALUE;
+				return false;
+			}
+		}
+	} else {
+		if (!GetFileSizeEx (file_, &file_size)) {
+			CloseHandle (file_);
+			file_ = INVALID_HANDLE_VALUE;
+			return false;
+		}
+		directory_size_ = (Size)(file_size.QuadPart / sizeof (BlockInfo));
+	}
+
+	mapping_ = CreateFileMappingW (file_, nullptr, PAGE_READWRITE,
+		file_size.HighPart, file_size.LowPart, nullptr);
+
+	if (!mapping_) {
+		CloseHandle (file_);
+		file_ = INVALID_HANDLE_VALUE;
+		return false;
+	}
+
 	if (x64)
-		directory64_ = (BlockInfo**)VirtualAlloc (nullptr, (DIRECTORY_SIZE + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK * sizeof (BlockInfo*), MEM_RESERVE, PAGE_READWRITE);
+		directory64_ = (BlockInfo**)VirtualAlloc (nullptr,
+			(size_t)(directory_size_ + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK * sizeof (BlockInfo*),
+			MEM_RESERVE, PAGE_READWRITE);
 	else
 		directory32_ = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 
 	if (!directory_) {
-		verify (CloseHandle (mapping_));
+		CloseHandle (mapping_);
 		mapping_ = nullptr;
+		CloseHandle (file_);
+		file_ = INVALID_HANDLE_VALUE;
 		return false;
 	}
 
@@ -423,7 +493,7 @@ AddressSpace <x64>::~AddressSpace () NIRVANA_NOEXCEPT
 {
 	if (directory_) {
 		if (x64) {
-			BlockInfo** end = directory64_ + (DIRECTORY_SIZE + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK;
+			BlockInfo** end = directory64_ + (directory_size_ + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK;
 			for (BlockInfo** page = directory64_; page < end; page += PAGE_SIZE / sizeof (BlockInfo**)) {
 				MEMORY_BASIC_INFORMATION mbi;
 				verify (VirtualQuery (page, &mbi, sizeof (mbi)));
@@ -464,7 +534,7 @@ AddressSpace <x64>::~AddressSpace () NIRVANA_NOEXCEPT
 #ifdef _DEBUG
 			if (GetCurrentProcess () == process_) {
 				BYTE* address = 0;
-				for (BlockInfo* page = directory32_, *end = directory32_ + DIRECTORY_SIZE; page < end; page += PAGE_SIZE / sizeof (BlockInfo)) {
+				for (BlockInfo* page = directory32_, *end = directory32_ + directory_size_; page < end; page += PAGE_SIZE / sizeof (BlockInfo)) {
 					MEMORY_BASIC_INFORMATION mbi;
 					verify (VirtualQuery (page, &mbi, sizeof (mbi)));
 					if (mbi.State == MEM_COMMIT) {
@@ -486,11 +556,8 @@ AddressSpace <x64>::~AddressSpace () NIRVANA_NOEXCEPT
 #endif
 			verify (UnmapViewOfFile (directory32_));
 		}
-		directory_ = nullptr;
-	}
-	if (mapping_) {
-		verify (CloseHandle (mapping_));
-		mapping_ = nullptr;
+		CloseHandle (mapping_);
+		CloseHandle (file_);
 	}
 }
 
@@ -498,7 +565,7 @@ template <bool x64>
 BlockInfo* AddressSpace <x64>::block_no_commit (Address address)
 {
 	Size idx = (Size)address / ALLOCATION_GRANULARITY;
-	assert (idx < DIRECTORY_SIZE);
+	assert (idx < directory_size_);
 	BlockInfo* p;
 	if (x64) {
 		Size i0 = idx / SECOND_LEVEL_BLOCK;
@@ -510,7 +577,10 @@ BlockInfo* AddressSpace <x64>::block_no_commit (Address address)
 		if (!p) {
 			LARGE_INTEGER offset;
 			offset.QuadPart = ALLOCATION_GRANULARITY * i0;
-			p = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, offset.HighPart, offset.LowPart, ALLOCATION_GRANULARITY);
+			Size blocks = directory_size_ - idx;
+			if (blocks > SECOND_LEVEL_BLOCK)
+				blocks = SECOND_LEVEL_BLOCK;
+			p = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, offset.HighPart, offset.LowPart, (size_t)blocks * sizeof (BlockInfo));
 			if (!p)
 				throw_NO_MEMORY ();
 			BlockInfo* cur = (BlockInfo*)InterlockedCompareExchangePointer ((void* volatile*)pp, p, 0);
@@ -530,8 +600,8 @@ template <bool x64>
 BlockInfo& AddressSpace <x64>::block (Address address)
 {
 	BlockInfo* p = block_no_commit (address);
-	if (!VirtualAlloc (p, sizeof (BlockInfo), MEM_COMMIT, PAGE_READWRITE))
-		throw_NO_MEMORY ();
+//	if (!VirtualAlloc (p, sizeof (BlockInfo), MEM_COMMIT, PAGE_READWRITE))
+//		throw_NO_MEMORY ();
 	return *p;
 }
 
@@ -540,7 +610,7 @@ BlockInfo* AddressSpace <x64>::allocated_block (Address address)
 {
 	BlockInfo* p = nullptr;
 	Size idx = (Size)address / ALLOCATION_GRANULARITY;
-	if (idx < DIRECTORY_SIZE) {
+	if (idx < directory_size_) {
 		p = block_no_commit (address);
 		MEMORY_BASIC_INFORMATION mbi;
 		verify (VirtualQuery (p, &mbi, sizeof (mbi)));

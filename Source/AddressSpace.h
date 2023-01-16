@@ -70,9 +70,9 @@ public:
 	typedef std::conditional_t <x64, int64_t, int32_t> SSize;
 	typedef std::conditional_t <sizeof (void*) == ADDRESS_SIZE, uint8_t*, Size> Address;
 
-	static Address end () NIRVANA_NOEXCEPT
+	Address end () const NIRVANA_NOEXCEPT
 	{
-		return (Address)(DIRECTORY_SIZE * (Size)Port::Memory::ALLOCATION_UNIT);
+		return (Address)(directory_size_ * (Size)Port::Memory::ALLOCATION_UNIT);
 	}
 
 	BlockInfo& block (Address address);
@@ -184,14 +184,15 @@ private:
 
 private:
 	HANDLE process_;
+	HANDLE file_;
 	HANDLE mapping_;
+	Size directory_size_;
 	union {
 		BlockInfo* directory32_;
 		BlockInfo** directory64_;
 		void* directory_;
 	};
 	static const uint32_t SECOND_LEVEL_BLOCK = Port::Memory::ALLOCATION_UNIT / sizeof (BlockInfo);
-	static const Size DIRECTORY_SIZE = x64 ? 0x7FFFFFFF : 0x00007FFF;
 };
 
 extern StaticallyAllocated <AddressSpace <sizeof (void*) == 8> > local_address_space;
