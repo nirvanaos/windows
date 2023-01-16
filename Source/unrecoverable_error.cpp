@@ -31,11 +31,12 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-NIRVANA_NORETURN void _unrecoverable_error (const char* file, unsigned line)
+NIRVANA_NORETURN void _unrecoverable_error (int code, const char* file, unsigned line)
 {
-	char buf [16];
-	wsprintfA (buf, "%d", line);
-	Windows::ErrConsole () << file << '(' << buf << "): Unrecoverable error\n";
+	char scode [16], sline [16];
+	wsprintfA (scode, "%d", code);
+	wsprintfA (sline, "%d", line);
+	Windows::ErrConsole () << file << '(' << sline << "): Unrecoverable error " << scode << "\n";
 	ExitProcess (-1);
 }
 

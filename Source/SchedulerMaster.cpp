@@ -27,6 +27,7 @@
 #include "../Port/Scheduler.h"
 #include "app_data.h"
 #include <StartupSys.h>
+#include <unrecoverable_error.h>
 
 namespace Nirvana {
 namespace Core {
@@ -84,7 +85,7 @@ void SchedulerMaster::on_error (int err) NIRVANA_NOEXCEPT
 {
 	int zero = CORBA::Exception::EC_NO_EXCEPTION;
 	if (error_.compare_exchange_strong (zero, err))
-		ExitProcess (err);
+		unrecoverable_error (err);
 }
 
 void SchedulerMaster::create_item ()

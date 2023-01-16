@@ -29,6 +29,7 @@
 #include <Executor.h>
 #include "SchedulerMessage.h"
 #include "app_data.h"
+#include <unrecoverable_error.h>
 
 #define DEBUG_SHUTDOWN
 
@@ -114,7 +115,7 @@ void SchedulerSlave::on_error (int err) NIRVANA_NOEXCEPT
 {
 	int zero = CORBA::Exception::EC_NO_EXCEPTION;
 	if (error_.compare_exchange_strong (zero, err))
-		ExitProcess (err);
+		unrecoverable_error (err);
 }
 
 void SchedulerSlave::create_item ()
