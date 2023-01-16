@@ -24,17 +24,21 @@
 *  popov.nirvana@gmail.com
 */
 #include <unrecoverable_error.h>
-#include <assert.h>
+#include "ErrConsole.h"
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
-/* Unused
+
 NIRVANA_NORETURN void _unrecoverable_error (const char* file, unsigned line)
 {
-	assert (false);
+	char buf [16];
+	wsprintfA (buf, "%d", line);
+	Windows::ErrConsole () << file << '(' << buf << "): Unrecoverable error\n";
+	ExitProcess (-1);
 }
-*/
+
 }
 }
 }
