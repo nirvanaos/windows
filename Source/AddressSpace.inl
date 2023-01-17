@@ -429,29 +429,18 @@ bool AddressSpace <x64>::initialize (uint32_t process_id, HANDLE process_handle)
 			/ ALLOCATION_GRANULARITY;
 		file_size.QuadPart = (LONGLONG)(directory_size_ * sizeof (BlockInfo));
 
-		if (x64) {
-			FILE_SET_SPARSE_BUFFER sb;
-			sb.SetSparse = TRUE;
-			DWORD cb;
-			if (!DeviceIoControl (file_, FSCTL_SET_SPARSE, &sb, sizeof (sb), 0, 0, &cb, 0))
-				return false;
+		FILE_SET_SPARSE_BUFFER sb;
+		sb.SetSparse = TRUE;
+		DWORD cb;
+		if (!DeviceIoControl (file_, FSCTL_SET_SPARSE, &sb, sizeof (sb), 0, 0, &cb, 0))
+			return false;
 
-			FILE_ZERO_DATA_INFORMATION zdi;
-			zdi.FileOffset.QuadPart = 0;
-			zdi.BeyondFinalZero = file_size;
-			if (!DeviceIoControl (file_, FSCTL_SET_ZERO_DATA, &zdi, sizeof (zdi), 0, 0, &cb, 0))
-				return false;
-		} else {
-			if (!(
-				SetFilePointerEx (file_, file_size, nullptr, FILE_BEGIN)
-				&&
-				SetEndOfFile (file_)
-			)) {
-				CloseHandle (file_);
-				file_ = INVALID_HANDLE_VALUE;
-				return false;
-			}
-		}
+		FILE_ZERO_DATA_INFORMATION zdi;
+		zdi.FileOffset.QuadPart = 0;
+		zdi.BeyondFinalZero = file_size;
+		if (!DeviceIoControl (file_, FSCTL_SET_ZERO_DATA, &zdi, sizeof (zdi), 0, 0, &cb, 0))
+			return false;
+
 	} else {
 		if (!GetFileSizeEx (file_, &file_size)) {
 			CloseHandle (file_);
