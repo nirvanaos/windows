@@ -50,7 +50,7 @@ SchedulerSlave::SchedulerSlave () :
 	queue_ (Port::SystemInfo::hardware_concurrency ())
 {}
 
-void SchedulerSlave::terminate ()
+SchedulerSlave::~SchedulerSlave ()
 {
 	if (watchdog_thread_) {
 		SetEvent (terminate_event_);
@@ -75,37 +75,33 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	if (!get_sys_process_id ())
 		return false; // System domain is not running
 
-	try {
-		if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
-			throw_COMM_FAILURE ();
+	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
+		throw_COMM_FAILURE ();
 
-		if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))
-			throw_COMM_FAILURE ();
+	if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))
+		throw_COMM_FAILURE ();
 
-		Mailslot watchdog_mailslot;
-		if (!watchdog_mailslot.open (WATCHDOG_MAILSLOT_NAME))
-			throw_COMM_FAILURE ();
+	Mailslot watchdog_mailslot;
+	if (!watchdog_mailslot.open (WATCHDOG_MAILSLOT_NAME))
+		throw_COMM_FAILURE ();
 
-		HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (), nullptr);
-		worker_threads_.semaphore (sem);
-		HANDLE executor;
-		if (!DuplicateHandle (GetCurrentProcess (), sem, sys_process_, &executor, 0, FALSE, DUPLICATE_SAME_ACCESS))
-			throw_INITIALIZE ();
-		executor_id_ = (uint32_t)(uintptr_t)executor;
+	HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (), nullptr);
+	worker_threads_.semaphore (sem);
+	HANDLE executor;
+	if (!DuplicateHandle (GetCurrentProcess (), sem, sys_process_, &executor, 0, FALSE, DUPLICATE_SAME_ACCESS))
+		throw_INITIALIZE ();
+	executor_id_ = (uint32_t)(uintptr_t)executor;
 
-		if (!(terminate_event_ = CreateEventW (nullptr, TRUE, FALSE, nullptr)))
-			throw_INITIALIZE ();
+	if (!(terminate_event_ = CreateEventW (nullptr, TRUE, FALSE, nullptr)))
+		throw_INITIALIZE ();
 
-		if (!(watchdog_thread_ = CreateThread (nullptr, 0x10000, s_watchdog_thread_proc, this, 0, nullptr)))
-			throw_INITIALIZE ();
+	if (!(watchdog_thread_ = CreateThread (nullptr, 0x10000, s_watchdog_thread_proc, this, 0, nullptr)))
+		throw_INITIALIZE ();
 
-		ProcessStartMessage process_start { GetCurrentProcessId (), executor_id_ };
-		watchdog_mailslot.send (process_start);
-		worker_threads_.run (startup, startup_deadline);
-	} catch (...) {
-		terminate ();
-		throw;
-	}
+	ProcessStartMessage process_start { GetCurrentProcessId (), executor_id_ };
+	watchdog_mailslot.send (process_start);
+	worker_threads_.run (startup, startup_deadline);
+
 	if (error_ >= 0)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;

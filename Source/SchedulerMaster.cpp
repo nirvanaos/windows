@@ -39,7 +39,7 @@ SchedulerMaster::SchedulerMaster () :
 	error_ (CORBA::Exception::EC_NO_EXCEPTION)
 {}
 
-void SchedulerMaster::terminate ()
+SchedulerMaster::~SchedulerMaster ()
 {
 	if (INVALID_HANDLE_VALUE != sysdomainid_) {
 		CloseHandle (sysdomainid_);
@@ -53,29 +53,27 @@ void SchedulerMaster::terminate ()
 bool SchedulerMaster::run (StartupSys& startup)
 {
 	sys_process_id = GetCurrentProcessId ();
-	HANDLE sysdomainid = open_sysdomainid (true);
-	if (INVALID_HANDLE_VALUE == sysdomainid)
+
+	if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))
 		return false; // System domain is already running
 
-	try {
-		{
-			DWORD written;
-			if (!WriteFile (sysdomainid, &sys_process_id, sizeof (DWORD), &written, nullptr))
-				throw_INITIALIZE ();
-		}
+	if (!watchdog_.start ())
+		throw_INITIALIZE ();
 
-		if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))
+	Office::start ();
+
+	sysdomainid_ = open_sysdomainid (true);
+	if (INVALID_HANDLE_VALUE == sysdomainid_)
+		throw_INITIALIZE ();
+
+	{
+		DWORD written;
+		if (!WriteFile (sysdomainid_, &sys_process_id, sizeof (DWORD), &written, nullptr))
 			throw_INITIALIZE ();
-
-		if (!watchdog_.start ())
-			throw_INITIALIZE ();
-
-		Office::start ();
-		worker_threads_.run (startup, INFINITE_DEADLINE);
-	} catch (...) {
-		terminate ();
-		throw;
 	}
+
+	worker_threads_.run (startup, INFINITE_DEADLINE);
+
 	if (error_ >= 0)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;

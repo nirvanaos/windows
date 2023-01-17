@@ -48,11 +48,7 @@ class SchedulerSlave :
 {
 public:
 	SchedulerSlave ();
-
-	~SchedulerSlave ()
-	{
-		terminate ();
-	}
+	~SchedulerSlave ();
 
 	/// Main loop.
 	/// 
@@ -75,7 +71,6 @@ public:
 	void execute () NIRVANA_NOEXCEPT;
 
 private:
-	void terminate ();
 	void core_free () NIRVANA_NOEXCEPT;
 	void on_error (int err) NIRVANA_NOEXCEPT;
 

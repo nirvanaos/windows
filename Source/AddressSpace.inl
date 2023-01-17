@@ -392,7 +392,7 @@ bool AddressSpace <x64>::initialize (uint32_t process_id, HANDLE process_handle)
 {
 	process_ = process_handle;
 
-	static const WCHAR fmt [] = WINWCS ("mmap.%08X");
+	static const WCHAR fmt [] = WINWCS ("mmap%08X");
 
 	bool local = GetCurrentProcessId () == process_id;
 	WCHAR path [MAX_PATH + 1];

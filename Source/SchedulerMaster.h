@@ -93,10 +93,7 @@ class SchedulerMaster :
 	typedef PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY> Office;
 public:
 	SchedulerMaster ();
-	~SchedulerMaster ()
-	{
-		terminate ();
-	}
+	~SchedulerMaster ();
 
 	static SchedulerMaster& singleton ()
 	{
@@ -135,9 +132,6 @@ public:
 	}
 
 	void on_error (int err) NIRVANA_NOEXCEPT;
-
-private:
-	void terminate ();
 
 private:
 	/// Helper class for executing in the current process.
