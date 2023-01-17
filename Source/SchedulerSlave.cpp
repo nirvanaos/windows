@@ -112,8 +112,6 @@ void SchedulerSlave::create_item ()
 		scheduler_mailslot_.send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CREATE_ITEM));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
-		queue_.delete_item ();
-		throw;
 	}
 }
 
@@ -144,22 +142,17 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) NIRVAN
 
 bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT
 {
-	if (error_ >= 0)
-		return false;
-
 	try {
 		if (!queue_.reorder (deadline, &executor, old))
 			return false;
 	} catch (...) {
 		on_error (CORBA::SystemException::EC_NO_MEMORY);
-		return false;
 	}
 
 	try {
 		scheduler_mailslot_.send (SchedulerMessage::ReSchedule (deadline, executor_id_, old));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
-		return false;
 	}
 	return true;
 }

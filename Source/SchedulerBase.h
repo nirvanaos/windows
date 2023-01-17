@@ -60,7 +60,7 @@ public:
 
 	virtual void worker_thread_proc () NIRVANA_NOEXCEPT = 0;
 
-	void on_error (int err) NIRVANA_NOEXCEPT;
+	NIRVANA_NORETURN void on_error (int err);
 
 protected:
 	std::atomic <int> error_;

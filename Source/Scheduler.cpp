@@ -26,6 +26,7 @@
 #include "../Port/Scheduler.h"
 #include "SchedulerMaster.h"
 #include "SchedulerSlave.h"
+#include "unrecoverable_error.h"
 #include <iostream>
 
 namespace Nirvana {
@@ -33,11 +34,11 @@ namespace Core {
 
 namespace Windows {
 
-void SchedulerBase::on_error (int err) NIRVANA_NOEXCEPT
+NIRVANA_NORETURN void SchedulerBase::on_error (int err)
 {
 	int zero = CORBA::Exception::EC_NO_EXCEPTION;
 	if (error_.compare_exchange_strong (zero, err))
-		Nirvana::Core::Scheduler::shutdown ();
+		unrecoverable_error (err);
 }
 
 }

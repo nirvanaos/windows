@@ -98,17 +98,13 @@ void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) NIRVA
 
 bool SchedulerMaster::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT
 {
-	if (error_ >= 0)
-		return false;
-
 	try {
-		if (!Base::reschedule (deadline, executor, old))
-			return false;
+		if (Base::reschedule (deadline, executor, old))
+			return true;
 	} catch (...) {
 		on_error (CORBA::SystemException::EC_NO_MEMORY);
-		return false;
 	}
-	return true;
+	return false;
 }
 
 void SchedulerMaster::shutdown () NIRVANA_NOEXCEPT

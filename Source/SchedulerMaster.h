@@ -163,7 +163,7 @@ void SchedulerMaster::received (void* data, DWORD size) NIRVANA_NOEXCEPT
 					try {
 						Base::create_item ();
 					} catch (...) {
-						on_error (CORBA::SystemException::EC_NO_MEMORY);
+						// TODO: Log
 					}
 					break;
 				case SchedulerMessage::Tagged::DELETE_ITEM:
@@ -190,7 +190,7 @@ void SchedulerMaster::received (void* data, DWORD size) NIRVANA_NOEXCEPT
 			try {
 				Base::reschedule (msg->deadline, msg->executor_id, msg->deadline_prev);
 			} catch (...) {
-				on_error (CORBA::SystemException::EC_NO_MEMORY);
+				// TODO: Log
 			}
 		}
 		break;
