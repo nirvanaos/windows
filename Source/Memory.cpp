@@ -1162,6 +1162,40 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
+inline void __stdcall report_unhandled_exception (DWORD exc)
+{
+	ErrConsole con;
+
+	char buf [_MAX_ITOSTR_BASE10_COUNT];
+	_itoa (GetCurrentProcessId (), buf, 10);
+	con << "Process " << buf;
+	_itoa (exc, buf, 16);
+	con << " Exception 0x" << buf << '\n';
+
+#ifdef _DEBUG
+	void* stack [63];
+	HANDLE process = GetCurrentProcess ();
+	SymInitialize (process, NULL, TRUE);
+	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
+	IMAGEHLP_LINE64 line;
+	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
+	DWORD displacement;
+
+	for (int i = 0; i < frame_cnt; ++i) {
+		if (SymGetLineFromAddr64 (process, (DWORD64)(stack [i]), &displacement, &line)) {
+			_itoa (line.LineNumber, buf, 10);
+			con << line.FileName << '(' << buf << ")\n";
+		} else {
+			con << "Line not found\n";
+		}
+	}
+
+	SymCleanup (process);
+#endif
+
+	ExitProcess (exc);
+}
+
 long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
@@ -1191,46 +1225,17 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 		}
 	}
 
-	Core::Thread* th = Core::Thread::current_ptr ();
-	if (th) {
-		ExecDomain* ed = th->exec_domain ();
-		if (ed) {
-			siginfo_t siginfo;
-			if (ex2signal (pex, siginfo) && ed->on_signal (siginfo))
+	siginfo_t siginfo;
+	if (ex2signal (pex, siginfo)) {
+		Core::Thread* th = Core::Thread::current_ptr ();
+		if (th) {
+			ExecDomain* ed = th->exec_domain ();
+			if (ed && ed->on_signal (siginfo))
 				return EXCEPTION_CONTINUE_EXECUTION;
 		}
+		report_unhandled_exception (exc);
 	}
 
-	ErrConsole con;
-
-	char buf [_MAX_ITOSTR_BASE10_COUNT];
-	_itoa (GetCurrentProcessId (), buf, 10);
-	con << "Process " << buf;
-	_itoa (exc, buf, 16);
-	con << " Exception 0x" << buf << '\n';
-
-#ifdef _DEBUG
-	void* stack [63];
-	HANDLE process = GetCurrentProcess ();
-	SymInitialize (process, NULL, TRUE);
-	int frame_cnt = CaptureStackBackTrace (1, std::size (stack), stack, nullptr);
-	IMAGEHLP_LINE64 line;
-	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
-	DWORD displacement;
-
-	for (int i = 0; i < frame_cnt; ++i) {
-		if (SymGetLineFromAddr64 (process, (DWORD64)(stack [i]), &displacement, &line)) {
-			_itoa (line.LineNumber, buf, 10);
-			con << line.FileName << '(' << buf << ")\n";
-		} else {
-			con << "Line not found\n";
-		}
-	}
-
-	SymCleanup (process);
-#endif
-
-	ExitProcess (exc);
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
@@ -1240,11 +1245,13 @@ bool Memory::initialize () NIRVANA_NOEXCEPT
 	if (!address_space_init ())
 		return false;
 	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
+//	final_handler_ = AddVectoredExceptionHandler (FALSE, &final_exception_filter);
 	return true;
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
+//	RemoveVectoredExceptionHandler (final_handler_);
 	RemoveVectoredExceptionHandler (handler_);
 	address_space_term ();
 }
