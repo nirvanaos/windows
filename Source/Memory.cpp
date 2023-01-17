@@ -29,6 +29,12 @@
 #include <signal.h>
 #include "ex2signal.h"
 #include <winternl.h>
+#include "ErrConsole.h"
+
+#ifdef _DEBUG
+#include <DbgHelp.h>
+#pragma comment (lib, "Dbghelp.lib")
+#endif
 
 #pragma comment (lib, "OneCore.lib")
 #pragma comment (lib, "ntdll.lib")
@@ -1156,7 +1162,7 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
-long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
+long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 	if (
@@ -1185,15 +1191,46 @@ long __stdcall Memory::exception_filter (_EXCEPTION_POINTERS* pex)
 		}
 	}
 
-	siginfo_t siginfo;
-	if (ex2signal (pex, siginfo)) {
-		Core::Thread* th = Core::Thread::current_ptr ();
-		if (th) {
-			ExecDomain* ed = th->exec_domain ();
-			if (ed && ed->on_signal (siginfo))
+	Core::Thread* th = Core::Thread::current_ptr ();
+	if (th) {
+		ExecDomain* ed = th->exec_domain ();
+		if (ed) {
+			siginfo_t siginfo;
+			if (ex2signal (pex, siginfo) && ed->on_signal (siginfo))
 				return EXCEPTION_CONTINUE_EXECUTION;
 		}
 	}
+
+	ErrConsole con;
+
+	char buf [_MAX_ITOSTR_BASE10_COUNT];
+	_itoa (GetCurrentProcessId (), buf, 10);
+	con << "Process " << buf;
+	_itoa (exc, buf, 16);
+	con << " Exception 0x" << buf << '\n';
+
+#ifdef _DEBUG
+	void* stack [63];
+	HANDLE process = GetCurrentProcess ();
+	SymInitialize (process, NULL, TRUE);
+	int frame_cnt = CaptureStackBackTrace (1, std::size (stack), stack, nullptr);
+	IMAGEHLP_LINE64 line;
+	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
+	DWORD displacement;
+
+	for (int i = 0; i < frame_cnt; ++i) {
+		if (SymGetLineFromAddr64 (process, (DWORD64)(stack [i]), &displacement, &line)) {
+			_itoa (line.LineNumber, buf, 10);
+			con << line.FileName << '(' << buf << ")\n";
+		} else {
+			con << "Line not found\n";
+		}
+	}
+
+	SymCleanup (process);
+#endif
+
+	ExitProcess (exc);
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 

@@ -112,9 +112,9 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 			return startup.ret ();
 		}
 	} catch (const CORBA::SystemException& ex) {
-		char buf [64];
-		wsprintfA (buf, "%s(0x%X)\n", ex._name (), ex.minor ());
-		ErrConsole () << buf;
+		char buf [_MAX_ITOSTR_BASE16_COUNT];
+		_itoa (ex.minor (), buf, 16);
+		ErrConsole () << ex._name () << "(0x" << buf << ")\n";
 	} catch (const std::exception& ex) {
 		ErrConsole () << ex.what () << '\n';
 	}

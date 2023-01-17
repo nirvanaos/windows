@@ -32,7 +32,6 @@
 #include <CORBA/CORBA.h>
 #include <Nirvana/Memory.h>
 
-struct _EXCEPTION_POINTERS;
 typedef void *HANDLE;
 typedef struct _MEMORY_BASIC_INFORMATION MEMORY_BASIC_INFORMATION;
 
@@ -125,8 +124,6 @@ private:
 
 	// Create new mapping
 	static HANDLE new_mapping ();
-
-	static long __stdcall exception_filter (_EXCEPTION_POINTERS* pex);
 
 private:
 	static void* handler_;

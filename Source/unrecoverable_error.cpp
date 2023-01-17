@@ -33,9 +33,9 @@ namespace Port {
 
 NIRVANA_NORETURN void _unrecoverable_error (int code, const char* file, unsigned line)
 {
-	char scode [16], sline [16];
-	wsprintfA (scode, "%d", code);
-	wsprintfA (sline, "%d", line);
+	char scode [_MAX_ITOSTR_BASE10_COUNT], sline [_MAX_ITOSTR_BASE10_COUNT];
+	_itoa (code, scode, 10);
+	_itoa (line, sline, 10);
 	Windows::ErrConsole () << file << '(' << sline << "): Unrecoverable error " << scode << "\n";
 	ExitProcess (-1);
 }
