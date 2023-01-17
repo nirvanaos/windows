@@ -34,7 +34,6 @@
 #include "Mailslot.h"
 #include <PriorityQueue.h>
 #include <SkipListWithPool.h>
-#include <atomic>
 
 namespace Nirvana {
 namespace Core {
@@ -72,7 +71,6 @@ public:
 
 private:
 	void core_free () NIRVANA_NOEXCEPT;
-	void on_error (int err) NIRVANA_NOEXCEPT;
 
 	static DWORD WINAPI s_watchdog_thread_proc (void* _this);
 
@@ -82,7 +80,6 @@ private:
 	HANDLE watchdog_thread_;
 	Mailslot scheduler_mailslot_;
 	uint32_t executor_id_;
-	std::atomic <int> error_;
 	SkipListWithPool <PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;
 	WorkerThreads <WorkerSemaphore> worker_threads_;
 };

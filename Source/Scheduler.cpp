@@ -30,6 +30,18 @@
 
 namespace Nirvana {
 namespace Core {
+
+namespace Windows {
+
+void SchedulerBase::on_error (int err) NIRVANA_NOEXCEPT
+{
+	int zero = CORBA::Exception::EC_NO_EXCEPTION;
+	if (error_.compare_exchange_strong (zero, err))
+		Nirvana::Core::Scheduler::shutdown ();
+}
+
+}
+
 namespace Port {
 
 Windows::SchedulerAbstract* Scheduler::singleton_ = nullptr;

@@ -27,7 +27,6 @@
 #include "../Port/Scheduler.h"
 #include "app_data.h"
 #include <StartupSys.h>
-#include <unrecoverable_error.h>
 
 namespace Nirvana {
 namespace Core {
@@ -35,8 +34,7 @@ namespace Windows {
 
 SchedulerMaster::SchedulerMaster () :
 	sysdomainid_ (INVALID_HANDLE_VALUE),
-	watchdog_ (*this),
-	error_ (CORBA::Exception::EC_NO_EXCEPTION)
+	watchdog_ (*this)
 {}
 
 SchedulerMaster::~SchedulerMaster ()
@@ -77,13 +75,6 @@ bool SchedulerMaster::run (StartupSys& startup)
 	if (error_ >= 0)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;
-}
-
-void SchedulerMaster::on_error (int err) NIRVANA_NOEXCEPT
-{
-	int zero = CORBA::Exception::EC_NO_EXCEPTION;
-	if (error_.compare_exchange_strong (zero, err))
-		unrecoverable_error (err);
 }
 
 void SchedulerMaster::create_item ()

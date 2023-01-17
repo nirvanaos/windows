@@ -131,8 +131,6 @@ public:
 			worker_threads_.execute (item.executor ());
 	}
 
-	void on_error (int err) NIRVANA_NOEXCEPT;
-
 private:
 	/// Helper class for executing in the current process.
 	class WorkerThreads :
@@ -153,7 +151,6 @@ private:
 
 	HANDLE sysdomainid_;
 	ProcessWatchdog watchdog_;
-	std::atomic <int> error_;
 };
 
 inline

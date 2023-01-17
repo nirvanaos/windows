@@ -29,7 +29,6 @@
 #include <Executor.h>
 #include "SchedulerMessage.h"
 #include "app_data.h"
-#include <unrecoverable_error.h>
 
 #define DEBUG_SHUTDOWN
 
@@ -46,7 +45,6 @@ SchedulerSlave::SchedulerSlave () :
 	terminate_event_ (nullptr),
 	watchdog_thread_ (nullptr),
 	executor_id_ (0),
-	error_ (CORBA::Exception::EC_NO_EXCEPTION),
 	queue_ (Port::SystemInfo::hardware_concurrency ())
 {}
 
@@ -105,13 +103,6 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	if (error_ >= 0)
 		CORBA::SystemException::_raise_by_code (error_);
 	return true;
-}
-
-void SchedulerSlave::on_error (int err) NIRVANA_NOEXCEPT
-{
-	int zero = CORBA::Exception::EC_NO_EXCEPTION;
-	if (error_.compare_exchange_strong (zero, err))
-		unrecoverable_error (err);
 }
 
 void SchedulerSlave::create_item ()

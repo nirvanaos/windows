@@ -29,6 +29,7 @@
 #pragma once
 
 #include "../Port/Scheduler.h"
+#include <atomic>
 
 namespace Nirvana {
 namespace Core {
@@ -39,7 +40,8 @@ class NIRVANA_NOVTABLE SchedulerBase :
 	public Port::Scheduler
 {
 public:
-	SchedulerBase ()
+	SchedulerBase () :
+		error_ (CORBA::Exception::EC_NO_EXCEPTION)
 	{
 		singleton_ = this;
 	}
@@ -57,6 +59,11 @@ public:
 	}
 
 	virtual void worker_thread_proc () NIRVANA_NOEXCEPT = 0;
+
+	void on_error (int err) NIRVANA_NOEXCEPT;
+
+protected:
+	std::atomic <int> error_;
 };
 
 }
