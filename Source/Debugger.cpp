@@ -24,6 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/Debugger.h"
+#include "WinWChar.h"
 #include "win32.h"
 
 namespace Nirvana {
@@ -33,13 +34,15 @@ namespace Port {
 void Debugger::output_debug_string (const char* msg)
 {
 	// Use shared string to avoid possible infinite recursion in assertions.
+	Windows::SharedStringW ws;
+	utf8_to_wide (msg, ws);
 	if (IsDebuggerPresent ())
-		OutputDebugStringA (msg);
+		OutputDebugStringW (ws.c_str ());
 	else {
 		if (!AttachConsole (ATTACH_PARENT_PROCESS))
 			AllocConsole ();
 		DWORD written;
-		WriteFile (GetStdHandle (STD_ERROR_HANDLE), msg, (DWORD)strlen (msg), &written, nullptr);
+		WriteConsoleW (GetStdHandle (STD_ERROR_HANDLE), ws.data (), (DWORD)ws.size (), &written, nullptr);
 	}
 }
 

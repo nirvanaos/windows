@@ -30,7 +30,7 @@
 #include "SchedulerMessage.h"
 #include "app_data.h"
 
-#define DEBUG_SHUTDOWN
+//#define DEBUG_SHUTDOWN
 
 #ifdef DEBUG_SHUTDOWN
 #include "../Port/Debugger.h"
