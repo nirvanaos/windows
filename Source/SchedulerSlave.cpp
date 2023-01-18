@@ -98,10 +98,9 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 
 	ProcessStartMessage process_start { GetCurrentProcessId (), executor_id_ };
 	watchdog_mailslot.send (process_start);
+
 	worker_threads_.run (startup, startup_deadline);
 
-	if (error_ >= 0)
-		CORBA::SystemException::_raise_by_code (error_);
 	return true;
 }
 

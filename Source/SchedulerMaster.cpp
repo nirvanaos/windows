@@ -64,16 +64,12 @@ bool SchedulerMaster::run (StartupSys& startup)
 	if (INVALID_HANDLE_VALUE == sysdomainid_)
 		throw_INITIALIZE ();
 
-	{
-		DWORD written;
-		if (!WriteFile (sysdomainid_, &sys_process_id, sizeof (DWORD), &written, nullptr))
-			throw_INITIALIZE ();
-	}
+	DWORD written;
+	if (!WriteFile (sysdomainid_, &sys_process_id, sizeof (DWORD), &written, nullptr))
+		throw_INITIALIZE ();
 
 	worker_threads_.run (startup, INFINITE_DEADLINE);
 
-	if (error_ >= 0)
-		CORBA::SystemException::_raise_by_code (error_);
 	return true;
 }
 
