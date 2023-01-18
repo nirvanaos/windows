@@ -1184,7 +1184,10 @@ inline void __stdcall report_unhandled_exception (DWORD exc) NIRVANA_NOEXCEPT
 		}
 	}
 	void* stack [63];
-	int frame_cnt = CaptureStackBackTrace (0, (DWORD)std::size (stack), stack, nullptr);
+	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
+	if (frame_cnt <= 0)
+		con << "Stack trace is not available\n";
+
 	IMAGEHLP_LINE64 line;
 	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
 	DWORD displacement;
