@@ -32,7 +32,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo)
+bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo) NIRVANA_NOEXCEPT
 {
 	memset (&siginfo, 0, sizeof (siginfo_t));
 

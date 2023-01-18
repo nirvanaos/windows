@@ -1162,7 +1162,7 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
-inline void __stdcall report_unhandled_exception (DWORD exc)
+inline void __stdcall report_unhandled_exception (DWORD exc) NIRVANA_NOEXCEPT
 {
 	ErrConsole con;
 
@@ -1196,7 +1196,7 @@ inline void __stdcall report_unhandled_exception (DWORD exc)
 	ExitProcess (exc);
 }
 
-long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
+long __stdcall exception_filter (_EXCEPTION_POINTERS* pex) NIRVANA_NOEXCEPT
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 	if (

@@ -551,60 +551,45 @@ AddressSpace <x64>::~AddressSpace () NIRVANA_NOEXCEPT
 }
 
 template <bool x64>
-BlockInfo* AddressSpace <x64>::block_no_commit (Address address)
-{
-	Size idx = (Size)address / ALLOCATION_GRANULARITY;
-	assert (idx < directory_size_);
-	BlockInfo* p;
-	if (x64) {
-		Size i0 = idx / SECOND_LEVEL_BLOCK;
-		Size i1 = idx % SECOND_LEVEL_BLOCK;
-		if (!VirtualAlloc (directory64_ + i0, sizeof (BlockInfo*), MEM_COMMIT, PAGE_READWRITE))
-			throw_NO_MEMORY ();
-		BlockInfo** pp = directory64_ + i0;
-		p = *pp;
-		if (!p) {
-			LARGE_INTEGER offset;
-			offset.QuadPart = ALLOCATION_GRANULARITY * i0;
-			Size blocks = directory_size_ - idx;
-			if (blocks > SECOND_LEVEL_BLOCK)
-				blocks = SECOND_LEVEL_BLOCK;
-			p = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, offset.HighPart, offset.LowPart, (size_t)blocks * sizeof (BlockInfo));
-			if (!p)
-				throw_NO_MEMORY ();
-			BlockInfo* cur = (BlockInfo*)InterlockedCompareExchangePointer ((void* volatile*)pp, p, 0);
-			if (cur) {
-				UnmapViewOfFile (p);
-				p = cur;
-			}
-		}
-		p += i1;
-	} else
-		p = directory32_ + idx;
-
-	return p;
-}
-
-template <bool x64>
-BlockInfo& AddressSpace <x64>::block (Address address)
-{
-	BlockInfo* p = block_no_commit (address);
-//	if (!VirtualAlloc (p, sizeof (BlockInfo), MEM_COMMIT, PAGE_READWRITE))
-//		throw_NO_MEMORY ();
-	return *p;
-}
-
-template <bool x64>
-BlockInfo* AddressSpace <x64>::allocated_block (Address address)
+BlockInfo* AddressSpace <x64>::block_ptr (Address address, bool commit)
 {
 	BlockInfo* p = nullptr;
 	Size idx = (Size)address / ALLOCATION_GRANULARITY;
 	if (idx < directory_size_) {
-		p = block_no_commit (address);
-		MEMORY_BASIC_INFORMATION mbi;
-		verify (VirtualQuery (p, &mbi, sizeof (mbi)));
-		if (mbi.State != MEM_COMMIT || !p->mapping)
-			p = nullptr;
+		if (x64) {
+			Size i0 = idx / SECOND_LEVEL_BLOCK;
+			Size i1 = idx % SECOND_LEVEL_BLOCK;
+
+			BlockInfo** pp = directory64_ + i0;
+			if (commit) {
+				if (!VirtualAlloc (pp, sizeof (BlockInfo*), MEM_COMMIT, PAGE_READWRITE))
+					throw_NO_MEMORY ();
+			} else {
+				MEMORY_BASIC_INFORMATION mbi;
+				verify (VirtualQuery (pp, &mbi, sizeof (mbi)));
+				if (mbi.State != MEM_COMMIT)
+					return nullptr;
+			}
+			p = *pp;
+			if (!p && commit) {
+				LARGE_INTEGER offset;
+				offset.QuadPart = ALLOCATION_GRANULARITY * i0;
+				Size blocks = directory_size_ - idx;
+				if (blocks > SECOND_LEVEL_BLOCK)
+					blocks = SECOND_LEVEL_BLOCK;
+				p = (BlockInfo*)MapViewOfFile (mapping_, FILE_MAP_ALL_ACCESS, offset.HighPart, offset.LowPart, (size_t)blocks * sizeof (BlockInfo));
+				if (!p)
+					throw_NO_MEMORY ();
+				BlockInfo* cur = (BlockInfo*)InterlockedCompareExchangePointer ((void* volatile*)pp, p, 0);
+				if (cur) {
+					UnmapViewOfFile (p);
+					p = cur;
+				}
+			}
+			if (p)
+				p += i1;
+		} else
+			p = directory32_ + idx;
 	}
 	return p;
 }

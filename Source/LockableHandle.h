@@ -41,19 +41,19 @@ namespace Windows {
 class LockableHandle
 {
 public:
-	void init_invalid ()
+	void init_invalid () NIRVANA_NOEXCEPT
 	{
 		// Must be null and locked exclusively
 		assert (val_ == SPIN_MASK);
 		val_ = INVALID_VAL;
 	}
 
-	operator bool () const
+	operator bool () const NIRVANA_NOEXCEPT
 	{
 		return (val_ & ~SPIN_MASK) != 0;
 	}
 
-	void* lock ()
+	void* lock () NIRVANA_NOEXCEPT
 	{
 		for (BackOff bo; true; bo ()) {
 			uint32_t cur = val_.load ();
@@ -64,13 +64,13 @@ public:
 		}
 	}
 
-	void unlock ()
+	void unlock () NIRVANA_NOEXCEPT
 	{
 		assert (val_ & SPIN_MASK);
 		--val_;
 	}
 
-	void* exclusive_lock ()
+	void* exclusive_lock () NIRVANA_NOEXCEPT
 	{
 		for (BackOff bo; true; bo ()) {
 			uint32_t cur = val_.load ();
@@ -81,19 +81,19 @@ public:
 		}
 	}
 
-	void* handle () const
+	void* handle () const NIRVANA_NOEXCEPT
 	{
 		return val2handle (val_);
 	}
 
-	void set_and_unlock (void* handle)
+	void set_and_unlock (void* handle) NIRVANA_NOEXCEPT
 	{
 		// Must be exclusive locked
 		assert ((val_ & SPIN_MASK) == SPIN_MASK);
 		val_ = handle2val (handle);
 	}
 
-	HANDLE reset_and_unlock ()
+	HANDLE reset_and_unlock () NIRVANA_NOEXCEPT
 	{
 		// Must be exclusive locked
 		assert ((val_ & SPIN_MASK) == SPIN_MASK);
@@ -102,13 +102,13 @@ public:
 		return h;
 	}
 
-	void exclusive_unlock ()
+	void exclusive_unlock () NIRVANA_NOEXCEPT
 	{
 		assert ((val_ & SPIN_MASK) == SPIN_MASK);
 		val_.fetch_sub (SPIN_MASK, std::memory_order_release);
 	}
 
-	void reset_on_failure ()
+	void reset_on_failure () NIRVANA_NOEXCEPT
 	{
 		val_ = 0;
 	}
@@ -131,7 +131,7 @@ private:
 
 	static const uintptr_t INVALID_HANDLE = (uintptr_t)~0;
 
-	static uint32_t handle2val (void* handle)
+	static uint32_t handle2val (void* handle) NIRVANA_NOEXCEPT
 	{
 		if (INVALID_HANDLE == (uintptr_t)handle)
 			return INVALID_VAL;
@@ -142,7 +142,7 @@ private:
 		}
 	}
 
-	static void* val2handle (uint32_t val)
+	static void* val2handle (uint32_t val) NIRVANA_NOEXCEPT
 	{
 		return INVALID_VAL == val ? (void*)INVALID_HANDLE : (void*)(uintptr_t)(val >> SHIFT_BITS);
 	}

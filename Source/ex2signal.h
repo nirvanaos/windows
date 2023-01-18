@@ -41,7 +41,7 @@ namespace Windows {
 /// \param pex           Exception pointers
 /// \param [out] siginfo siginfo_t structure
 /// \returns `true` if siginfo was filled, `false` if not.
-bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo);
+bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo) NIRVANA_NOEXCEPT;
 
 }
 }

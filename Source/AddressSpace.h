@@ -75,8 +75,20 @@ public:
 		return (Address)(directory_size_ * (Size)Port::Memory::ALLOCATION_UNIT);
 	}
 
-	BlockInfo& block (Address address);
-	BlockInfo* allocated_block (Address address);
+	BlockInfo& block (Address address)
+	{
+		BlockInfo* p = block_ptr (address, true);
+		assert (p);
+		return *p;
+	}
+
+	BlockInfo* allocated_block (Address address) NIRVANA_NOEXCEPT
+	{
+		BlockInfo* p = block_ptr (address, false);
+		if (p && !p->mapping)
+			p = nullptr;
+		return p;
+	}
 
 	class Block
 	{
@@ -180,7 +192,7 @@ private:
 	Address map (HANDLE hm, Address address, size_t size, uint32_t flags, uint32_t protection) const;
 	bool unmap (Address address, uint32_t flags) const;
 
-	BlockInfo* block_no_commit (Address address);
+	BlockInfo* block_ptr (Address address, bool commit);
 
 private:
 	HANDLE process_;
