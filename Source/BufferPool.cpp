@@ -37,7 +37,7 @@ BufferPool::BufferPool (size_t buffer_count, size_t buffer_size) NIRVANA_NOEXCEP
 {
 	size_t size = buffer_count * (sizeof (OVERLAPPED) + buffer_size_);
 	size_t cb = size;
-	begin_ = (OVERLAPPED*)Heap::shared_heap ().allocate (nullptr, cb, Memory::ZERO_INIT);
+	begin_ = (OVERLAPPED*)Heap::shared_heap ().allocate (nullptr, cb, 0);
 	end_ = (OVERLAPPED*)(((BYTE*)begin_) + size);
 }
 

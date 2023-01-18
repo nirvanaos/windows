@@ -34,7 +34,7 @@ namespace Windows {
 
 bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo) NIRVANA_NOEXCEPT
 {
-	memset (&siginfo, 0, sizeof (siginfo_t));
+	zero (siginfo);
 
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 	switch (exc) {

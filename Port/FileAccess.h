@@ -61,7 +61,7 @@ protected:
 
 		Overlapped () NIRVANA_NOEXCEPT
 		{
-			memset (this, 0, sizeof (*this));
+			zero (*this);
 		}
 	};
 

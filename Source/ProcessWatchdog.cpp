@@ -63,7 +63,7 @@ inline void ProcessWatchdog::process_stop (size_t idx)
 inline void ProcessWatchdog::thread_proc ()
 {
 	OVERLAPPED ovl;
-	memset (&ovl, 0, sizeof (ovl));
+	zero (ovl);
 	ovl.hEvent = wait_handles_ [MAILSLOT_EVENT];
 	ProcessStartMessage msg;
 	DWORD cb_read;

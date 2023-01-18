@@ -34,6 +34,7 @@
 #include <Nirvana/real_copy.h>
 
 namespace Nirvana {
+
 namespace Core {
 namespace Windows {
 
@@ -70,6 +71,7 @@ protected:
 	/// Enqueue read request.
 	void enqueue_buffer (OVERLAPPED* ovl) NIRVANA_NOEXCEPT
 	{
+		zero (*ovl);
 		if (!ReadFile (handle_, data (ovl), (DWORD)buffer_size (), nullptr, ovl))
 			assert (ERROR_IO_PENDING == GetLastError ());
 	}
