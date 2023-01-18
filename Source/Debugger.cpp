@@ -25,6 +25,7 @@
 */
 #include "../Port/Debugger.h"
 #include "WinWChar.h"
+#include "ErrConsole.h"
 #include "win32.h"
 
 namespace Nirvana {
@@ -39,10 +40,11 @@ void Debugger::output_debug_string (const char* msg)
 	if (IsDebuggerPresent ())
 		OutputDebugStringW (ws.c_str ());
 	else {
-		if (!AttachConsole (ATTACH_PARENT_PROCESS))
-			AllocConsole ();
-		DWORD written;
-		WriteConsoleW (GetStdHandle (STD_ERROR_HANDLE), ws.data (), (DWORD)ws.size (), &written, nullptr);
+		HANDLE con = Windows::ErrConsole::attach ();
+		if (con) {
+			DWORD written;
+			WriteConsoleW (con, ws.data (), (DWORD)ws.size (), &written, nullptr);
+		}
 	}
 }
 

@@ -30,6 +30,8 @@
 
 #include <Nirvana/NirvanaBase.h>
 
+typedef void* HANDLE;
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {
@@ -39,6 +41,8 @@ class ErrConsole
 public:
 	ErrConsole ();
 	~ErrConsole ();
+
+	static HANDLE attach () NIRVANA_NOEXCEPT;
 
 	const ErrConsole& operator << (const char* text) const NIRVANA_NOEXCEPT;
 
@@ -52,8 +56,8 @@ private:
 	void write (const char* text, size_t len) const NIRVANA_NOEXCEPT;
 
 private:
-	void* handle_;
-	bool allocated_;
+	static HANDLE handle_;
+	static bool allocated_;
 };
 
 }
