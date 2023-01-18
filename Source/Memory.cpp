@@ -1178,7 +1178,10 @@ inline void __stdcall report_unhandled_exception (DWORD exc) NIRVANA_NOEXCEPT
 		char path [MAX_PATH + 1];
 		GetModuleFileNameA (nullptr, path, sizeof (path));
 		*strrchr (path, '\\') = '\0';
-		SymInitialize (process, path, TRUE);
+		if (!SymInitialize (process, path, TRUE)) {
+			_itoa (GetLastError (), buf, 16);
+			con << "SymInitialize failed, error 0x" << buf << '\n';
+		}
 	}
 	void* stack [63];
 	int frame_cnt = CaptureStackBackTrace (0, (DWORD)std::size (stack), stack, nullptr);
