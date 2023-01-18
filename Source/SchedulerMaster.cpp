@@ -27,6 +27,7 @@
 #include "../Port/Scheduler.h"
 #include "app_data.h"
 #include <StartupSys.h>
+#include "ErrConsole.h"
 
 #define DEBUG_SHUTDOWN
 
@@ -56,6 +57,8 @@ SchedulerMaster::~SchedulerMaster ()
 
 bool SchedulerMaster::run (StartupSys& startup)
 {
+	ErrConsole () << "Start\n";
+
 	sys_process_id = GetCurrentProcessId ();
 
 	if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))
