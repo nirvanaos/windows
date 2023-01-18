@@ -60,13 +60,15 @@ ErrConsole::ErrConsole ()
 ErrConsole::~ErrConsole ()
 {
 	if (handle_ && allocated_) {
-		operator << ("Press any key to close this window...\n");
 		HANDLE h = GetStdHandle (STD_INPUT_HANDLE);
-		INPUT_RECORD input;
-		DWORD cnt;
-		while (ReadConsoleInput (h, &input, 1, &cnt)) {
-			if (KEY_EVENT == input.EventType && input.Event.KeyEvent.uChar.UnicodeChar)
-				break;
+		if (h) {
+			operator << ("Press any key to close this window...\n");
+			INPUT_RECORD input;
+			DWORD cnt;
+			while (ReadConsoleInput (h, &input, 1, &cnt)) {
+				if (KEY_EVENT == input.EventType && input.Event.KeyEvent.uChar.UnicodeChar)
+					break;
+			}
 		}
 	}
 }
