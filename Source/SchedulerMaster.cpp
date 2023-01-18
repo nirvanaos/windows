@@ -28,6 +28,12 @@
 #include "app_data.h"
 #include <StartupSys.h>
 
+#define DEBUG_SHUTDOWN
+
+#ifdef DEBUG_SHUTDOWN
+#include "../Port/Debugger.h"
+#endif
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {
@@ -105,6 +111,9 @@ bool SchedulerMaster::reschedule (DeadlineTime deadline, Executor& executor, Dea
 
 void SchedulerMaster::shutdown () NIRVANA_NOEXCEPT
 {
+#ifdef DEBUG_SHUTDOWN
+	Port::Debugger::output_debug_string ("Shutdown 2\n");
+#endif
 	worker_threads_.shutdown ();
 }
 
