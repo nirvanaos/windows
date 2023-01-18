@@ -1173,9 +1173,14 @@ inline void __stdcall report_unhandled_exception (DWORD exc) NIRVANA_NOEXCEPT
 	con << " Exception 0x" << buf << '\n';
 
 #ifdef _DEBUG
-	void* stack [63];
 	HANDLE process = GetCurrentProcess ();
-	SymInitialize (process, NULL, TRUE);
+	{
+		char path [MAX_PATH + 1];
+		GetModuleFileNameExA (process, nullptr, path, sizeof (path));
+		*strrchr (path, '\\') = '\0';
+		SymInitialize (process, path, TRUE);
+	}
+	void* stack [63];
 	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
 	IMAGEHLP_LINE64 line;
 	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
