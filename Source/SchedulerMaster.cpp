@@ -28,7 +28,7 @@
 #include "app_data.h"
 #include <StartupSys.h>
 
-#define DEBUG_SHUTDOWN
+//#define DEBUG_SHUTDOWN
 
 #ifdef DEBUG_SHUTDOWN
 #include "../Port/Debugger.h"
@@ -56,10 +56,6 @@ SchedulerMaster::~SchedulerMaster ()
 
 bool SchedulerMaster::run (StartupSys& startup)
 {
-#ifdef DEBUG_SHUTDOWN
-	Port::Debugger::output_debug_string ("Start\n");
-#endif
-
 	sys_process_id = GetCurrentProcessId ();
 
 	if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))
