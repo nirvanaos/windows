@@ -29,7 +29,7 @@
 #include <signal.h>
 #include "ex2signal.h"
 #include <winternl.h>
-#include "ErrConsole.h"
+#include "CrashLog.h"
 
 #ifdef _DEBUG
 #include <DbgHelp.h>
@@ -1162,15 +1162,35 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
-inline void __stdcall report_unhandled_exception (DWORD exc) NIRVANA_NOEXCEPT
+inline void __stdcall report_unhandled_exception (_EXCEPTION_POINTERS* pex) NIRVANA_NOEXCEPT
 {
-	ErrConsole con;
+	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 
-	char buf [_MAX_ITOSTR_BASE10_COUNT];
+	CrashLog log;
+
+	char buf [_MAX_I64TOSTR_BASE16_COUNT];
 	_itoa (GetCurrentProcessId (), buf, 10);
-	con << "Process " << buf;
+	log << "Process " << buf;
 	_itoa (exc, buf, 16);
-	con << " Exception 0x" << buf << '\n';
+	log << " Exception 0x" << buf << '\n';
+	if (
+		EXCEPTION_ACCESS_VIOLATION == exc
+		&&
+		pex->ExceptionRecord->NumberParameters >= 2
+		) {
+		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
+		if (pex->ExceptionRecord->ExceptionInformation [0])
+			log << "Write to";
+		else
+			log << "Read from";
+		log << " address 0x";
+#ifdef _WIN64
+			_i64toa ((long long)address, buf, 16);
+#else
+			_itoa ((int)address, buf, 16);
+#endif
+		log << buf << '\n';
+	}
 
 #ifdef _DEBUG
 	HANDLE process = GetCurrentProcess ();
@@ -1180,13 +1200,13 @@ inline void __stdcall report_unhandled_exception (DWORD exc) NIRVANA_NOEXCEPT
 		*strrchr (path, '\\') = '\0';
 		if (!SymInitialize (process, path, TRUE)) {
 			_itoa (GetLastError (), buf, 16);
-			con << "SymInitialize failed, error 0x" << buf << '\n';
+			log << "SymInitialize failed, error 0x" << buf << '\n';
 		}
 	}
 	void* stack [63];
 	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
 	if (frame_cnt <= 0)
-		con << "Stack trace is not available\n";
+		log << "Stack trace is not available\n";
 
 	IMAGEHLP_LINE64 line;
 	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
@@ -1195,9 +1215,9 @@ inline void __stdcall report_unhandled_exception (DWORD exc) NIRVANA_NOEXCEPT
 	for (int i = 0; i < frame_cnt; ++i) {
 		if (SymGetLineFromAddr64 (process, (DWORD64)(stack [i]), &displacement, &line)) {
 			_itoa (line.LineNumber, buf, 10);
-			con << line.FileName << '(' << buf << ")\n";
+			log << line.FileName << '(' << buf << ")\n";
 		} else {
-			con << "Line not found\n";
+			log << "Line not found\n";
 		}
 	}
 
@@ -1244,7 +1264,7 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex) NIRVANA_NOEXCEPT
 			if (ed && ed->on_signal (siginfo))
 				return EXCEPTION_CONTINUE_EXECUTION;
 		}
-		report_unhandled_exception (exc);
+		report_unhandled_exception (pex);
 	}
 
 	return EXCEPTION_CONTINUE_SEARCH;

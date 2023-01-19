@@ -34,7 +34,7 @@ namespace Windows {
 HANDLE ErrConsole::handle_;
 bool ErrConsole::allocated_;
 
-HANDLE ErrConsole::attach () NIRVANA_NOEXCEPT
+HANDLE ErrConsole::attach () noexcept
 {
 	if (!handle_) {
 		if (!IsDebuggerPresent ()) {
@@ -73,13 +73,13 @@ ErrConsole::~ErrConsole ()
 	}
 }
 
-const ErrConsole& ErrConsole::operator << (const char* text) const NIRVANA_NOEXCEPT
+const ErrConsole& ErrConsole::operator << (const char* text) const noexcept
 {
 	write (text, strlen (text));
 	return *this;
 }
 
-void ErrConsole::write (const char* text, size_t len) const NIRVANA_NOEXCEPT
+void ErrConsole::write (const char* text, size_t len) const noexcept
 {
 	if (handle_) {
 		DWORD cb;

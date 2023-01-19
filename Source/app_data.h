@@ -40,7 +40,12 @@ extern uint32_t sys_process_id;
 
 HANDLE open_sysdomainid (bool write);
 bool get_sys_process_id ();
-long get_app_data_path (WCHAR* path, bool create) NIRVANA_NOEXCEPT;
+
+// Returns application data root folder, with trailing slash.
+long get_app_data_path (WCHAR* path, bool create) noexcept;
+
+// Returns application data folder, without trailing slash.
+long get_app_data_folder (const WCHAR* folder, WCHAR* path, bool create) noexcept;
 
 }
 }

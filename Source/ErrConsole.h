@@ -42,18 +42,18 @@ public:
 	ErrConsole ();
 	~ErrConsole ();
 
-	static HANDLE attach () NIRVANA_NOEXCEPT;
+	static HANDLE attach () noexcept;
 
-	const ErrConsole& operator << (const char* text) const NIRVANA_NOEXCEPT;
+	const ErrConsole& operator << (const char* text) const noexcept;
 
-	const ErrConsole& operator << (char c) const NIRVANA_NOEXCEPT
+	const ErrConsole& operator << (char c) const noexcept
 	{
 		write (&c, 1);
 		return *this;
 	}
 
 private:
-	void write (const char* text, size_t len) const NIRVANA_NOEXCEPT;
+	void write (const char* text, size_t len) const noexcept;
 
 private:
 	static HANDLE handle_;

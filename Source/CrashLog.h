@@ -1,3 +1,4 @@
+/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -23,22 +24,38 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include <unrecoverable_error.h>
-#include "CrashLog.h"
+#ifndef NIRVANA_CORE_WINDOWS_CRASHLOG_H_
+#define NIRVANA_CORE_WINDOWS_CRASHLOG_H_
+#pragma once
+
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
 
-NIRVANA_NORETURN void _unrecoverable_error (int code, const char* file, unsigned line)
+class CrashLog
 {
-	char scode [_MAX_ITOSTR_BASE10_COUNT], sline [_MAX_ITOSTR_BASE10_COUNT];
-	_itoa (code, scode, 10);
-	_itoa (line, sline, 10);
-	Windows::CrashLog () << file << '(' << sline << "): Unrecoverable error " << scode << "\n";
-	ExitProcess (-1);
-}
+public:
+	CrashLog ();
+	~CrashLog ();
+
+	const CrashLog& operator << (const char* text) const noexcept;
+	const CrashLog& operator << (char c) const noexcept
+	{
+		write (&c, 1);
+		return *this;
+	}
+
+private:
+	void write (const char* text, size_t len) const noexcept;
+
+private:
+	HANDLE handle_;
+};
 
 }
 }
 }
+
+#endif

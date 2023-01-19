@@ -34,7 +34,7 @@ namespace Windows {
 
 uint32_t sys_process_id;
 
-long get_app_data_path (WCHAR* path, bool create) NIRVANA_NOEXCEPT
+long get_app_data_path (WCHAR* path, bool create) noexcept
 {
 	HRESULT hr = SHGetFolderPathW (NULL, CSIDL_COMMON_APPDATA, NULL, 0, path);
 	if (S_OK != hr)
@@ -52,6 +52,35 @@ long get_app_data_path (WCHAR* path, bool create) NIRVANA_NOEXCEPT
 	static const WCHAR term [] = L"\\";
 	std::copy (term, term + 2, p);
 	return 0;
+}
+
+long get_app_data_folder (const WCHAR* folder, WCHAR* path, bool create) noexcept
+{
+	long hr = get_app_data_path (path, create);
+
+	if (S_OK == hr) {
+		WCHAR* end = path + wcslen (path);
+		for (const WCHAR* dir = folder;;) {
+			const WCHAR* slash = wcschr (dir, L'\\');
+			if (slash) {
+				end = std::copy (dir, slash, end);
+				*end = L'\0';
+			} else
+				wcscpy (end, dir);
+			if (create && !CreateDirectoryW (path, nullptr)) {
+				DWORD err = GetLastError ();
+				if (ERROR_ALREADY_EXISTS != err) {
+					hr = HRESULT_FROM_WIN32 (err);
+					break;
+				}
+			}
+			if (!slash)
+				break;
+			*(end++) = L'\\';
+			dir = slash + 1;
+		}
+	}
+	return hr;
 }
 
 HANDLE open_sysdomainid (bool write)
