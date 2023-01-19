@@ -42,10 +42,12 @@ HANDLE open_sysdomainid (bool write);
 bool get_sys_process_id ();
 
 // Returns application data root folder, with trailing slash.
-long get_app_data_path (WCHAR* path, bool create) noexcept;
+size_t get_app_data_path (WCHAR* path, size_t size, bool create) noexcept;
+
+size_t create_app_data_folder (const WCHAR* path, WCHAR* end, const WCHAR* folder) noexcept;
 
 // Returns application data folder, without trailing slash.
-long get_app_data_folder (const WCHAR* folder, WCHAR* path, bool create) noexcept;
+size_t get_app_data_folder (WCHAR* path, size_t size, const WCHAR* folder, bool create) noexcept;
 
 }
 }

@@ -28,6 +28,8 @@
 #include "app_data.h"
 #include <StartupSys.h>
 
+#include "CrashLog.h"
+
 //#define DEBUG_SHUTDOWN
 
 #ifdef DEBUG_SHUTDOWN
@@ -56,6 +58,8 @@ SchedulerMaster::~SchedulerMaster ()
 
 bool SchedulerMaster::run (StartupSys& startup)
 {
+	CrashLog () << "Test\n";
+
 	sys_process_id = GetCurrentProcessId ();
 
 	if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))

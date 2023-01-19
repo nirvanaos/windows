@@ -34,12 +34,13 @@ CrashLog::CrashLog () :
 	handle_ (INVALID_HANDLE_VALUE)
 {
 	WCHAR path [MAX_PATH + 1];
-	if (S_OK == get_app_data_folder (L"var\\log", path, true)) {
-		WCHAR* name = path + wcslen (path);
+	size_t cc = get_app_data_folder (path, std::size (path), WINWCS ("var\\log"), true);
+	if (cc) {
+		WCHAR* name = path + cc;
 		*(name++) = L'\\';
 		SYSTEMTIME t;
 		GetSystemTime (&t);
-		wsprintfW (name, L"crash%4u%02u%02u_%02u%02u%02u_%u.txt",
+		wsprintfW (name, WINWCS ("crash%4u%02u%02u_%02u%02u%02u_%u.txt"),
 			t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, GetCurrentProcessId ());
 		handle_ = CreateFileW (path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	}

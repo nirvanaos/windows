@@ -396,11 +396,11 @@ bool AddressSpace <x64>::initialize (uint32_t process_id, HANDLE process_handle)
 
 	bool local = GetCurrentProcessId () == process_id;
 	WCHAR path [MAX_PATH + 1];
-	HRESULT hr = get_app_data_path (path, local);
-	if (S_OK != hr)
+	size_t cc = get_app_data_path (path, std::size (path), local);
+	if (!cc)
 		return false;
 
-	wsprintfW (path + wcslen (path), fmt, process_id);
+	wsprintfW (path + cc, fmt, process_id);
 
 	DWORD share, disposition, flags;
 	if (local) {

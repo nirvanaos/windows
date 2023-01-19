@@ -24,8 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "app_data.h"
-#include <shlobj_core.h>
-#include <Shlwapi.h>
+#include <stdlib.h>
 #include <algorithm>
 
 namespace Nirvana {
@@ -34,63 +33,77 @@ namespace Windows {
 
 uint32_t sys_process_id;
 
-long get_app_data_path (WCHAR* path, bool create) noexcept
+size_t get_app_data_path (WCHAR* path, size_t size, bool create) noexcept
 {
-	HRESULT hr = SHGetFolderPathW (NULL, CSIDL_COMMON_APPDATA, NULL, 0, path);
-	if (S_OK != hr)
-		return hr;
-	WCHAR* p = path + wcslen (path);
+	size_t cc = GetEnvironmentVariableW (L"ProgramData", path, size);
+	if (!cc)
+		return 0;
+
+	WCHAR* end = path + cc;
+	while (end > path && *(end - 1) == L'\\')
+		--end;
+
 	static const WCHAR nirvana [] = WINWCS ("\\Nirvana");
 	for (size_t i = 0; i < 2; ++i) {
-		p = std::copy (nirvana, nirvana + std::size (nirvana), p) - 1;
+		end = std::copy (nirvana, nirvana + std::size (nirvana), end) - 1;
 		if (create && !CreateDirectoryW (path, nullptr)) {
 			DWORD err = GetLastError ();
 			if (ERROR_ALREADY_EXISTS != err)
-				return HRESULT_FROM_WIN32 (err);
+				return 0;
 		}
 	}
 	static const WCHAR term [] = L"\\";
-	std::copy (term, term + 2, p);
-	return 0;
+	end = std::copy (term, term + 2, end);
+	return end - path - 1;
 }
 
-long get_app_data_folder (const WCHAR* folder, WCHAR* path, bool create) noexcept
+size_t create_app_data_folder (const WCHAR* path, WCHAR* end, const WCHAR* folder) noexcept
 {
-	long hr = get_app_data_path (path, create);
-
-	if (S_OK == hr) {
-		WCHAR* end = path + wcslen (path);
-		for (const WCHAR* dir = folder;;) {
-			const WCHAR* slash = wcschr (dir, L'\\');
-			if (slash) {
-				end = std::copy (dir, slash, end);
-				*end = L'\0';
-			} else
-				wcscpy (end, dir);
-			if (create && !CreateDirectoryW (path, nullptr)) {
-				DWORD err = GetLastError ();
-				if (ERROR_ALREADY_EXISTS != err) {
-					hr = HRESULT_FROM_WIN32 (err);
-					break;
-				}
+	const WCHAR* folder_end = folder + wcslen (folder);
+	for (const WCHAR* dir = folder;;) {
+		const WCHAR* slash = std::find (dir, folder_end, L'\\');
+		end = std::copy (dir, slash, end);
+		*end = L'\0';
+		if (!CreateDirectoryW (path, nullptr)) {
+			DWORD err = GetLastError ();
+			if (ERROR_ALREADY_EXISTS != err) {
+				return 0;
 			}
-			if (!slash)
-				break;
-			*(end++) = L'\\';
-			dir = slash + 1;
+		}
+		if (slash == folder_end)
+			break;
+		*(end++) = L'\\';
+		dir = slash + 1;
+	}
+	return end - path;
+}
+
+size_t get_app_data_folder (WCHAR* path, size_t size, const WCHAR* folder, bool create) noexcept
+{
+	size_t cc = get_app_data_path (path, size, create);
+	if (cc) {
+		if (create)
+			cc = create_app_data_folder (path, path + cc, folder);
+		else {
+			size_t ccf = wcslen (folder);
+			if (cc + ccf < size) {
+				std::copy (folder, folder + ccf + 1, path + cc);
+				cc += ccf;
+			} else
+				return 0;
 		}
 	}
-	return hr;
+	return cc;
 }
 
 HANDLE open_sysdomainid (bool write)
 {
 	WCHAR path [MAX_PATH + 1];
-	HRESULT hr = get_app_data_path (path, write);
-	if (S_OK != hr)
-		throw_INITIALIZE (hr);
+	size_t cc = get_app_data_path (path, std::size (path), write);
+	if (!cc)
+		throw_INITIALIZE ();
 	static const WCHAR sysdomainid [] = WINWCS ("sysdomainid");
-	std::copy (sysdomainid, sysdomainid + std::size (sysdomainid), path + wcslen (path));
+	std::copy (sysdomainid, sysdomainid + std::size (sysdomainid), path + cc);
 	DWORD access, share, disposition, flags;
 	if (write) {
 		access = GENERIC_WRITE;
