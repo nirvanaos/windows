@@ -1162,17 +1162,21 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
-inline void __stdcall report_unhandled_exception (_EXCEPTION_POINTERS* pex) NIRVANA_NOEXCEPT
+void __stdcall report_unhandled_exception (_EXCEPTION_POINTERS* pex) NIRVANA_NOEXCEPT
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 
 	CrashLog log;
+
+	char path [MAX_PATH + 1];
+	GetModuleFileNameA (nullptr, path, sizeof (path));
 
 	char buf [_MAX_I64TOSTR_BASE16_COUNT];
 	_itoa (GetCurrentProcessId (), buf, 10);
 	log << "Process " << buf;
 	_itoa (exc, buf, 16);
 	log << " Exception 0x" << buf << '\n';
+	log << path << '\n';
 	if (
 		EXCEPTION_ACCESS_VIOLATION == exc
 		&&
@@ -1194,15 +1198,12 @@ inline void __stdcall report_unhandled_exception (_EXCEPTION_POINTERS* pex) NIRV
 
 #ifdef _DEBUG
 	HANDLE process = GetCurrentProcess ();
-	{
-		char path [MAX_PATH + 1];
-		GetModuleFileNameA (nullptr, path, sizeof (path));
-		*strrchr (path, '\\') = '\0';
-		if (!SymInitialize (process, path, TRUE)) {
-			_itoa (GetLastError (), buf, 16);
-			log << "SymInitialize failed, error 0x" << buf << '\n';
-		}
+	*strrchr (path, '\\') = '\0';
+	if (!SymInitialize (process, path, TRUE)) {
+		_itoa (GetLastError (), buf, 16);
+		log << "SymInitialize failed, error 0x" << buf << '\n';
 	}
+
 	void* stack [63];
 	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
 	if (frame_cnt <= 0)
@@ -1227,7 +1228,7 @@ inline void __stdcall report_unhandled_exception (_EXCEPTION_POINTERS* pex) NIRV
 	ExitProcess (exc);
 }
 
-long __stdcall exception_filter (_EXCEPTION_POINTERS* pex) NIRVANA_NOEXCEPT
+long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 	if (
