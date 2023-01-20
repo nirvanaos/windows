@@ -132,6 +132,9 @@ public:
 	}
 
 private:
+	void create_folders ();
+
+private:
 	/// Helper class for executing in the current process.
 	class WorkerThreads :
 		public Windows::WorkerThreads <CompletionPort>,

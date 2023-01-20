@@ -63,7 +63,7 @@ from queue and remap stack memory. Default stack size for fibers is 1MB, but for
 fibers we can decrease stack size to save memory. If set to 0, neutral fibers have 
 default stack size.
 */
-const size_t NEUTRAL_FIBER_STACK_SIZE = 0x10000;
+const size_t NEUTRAL_FIBER_STACK_SIZE = 0;// 0x10000;
 
 /// Worker thread priority should be greater than normal thread priority.
 const int WORKER_THREAD_PRIORITY = THREAD_PRIORITY_ABOVE_NORMAL;

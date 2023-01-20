@@ -28,8 +28,6 @@
 #include "app_data.h"
 #include <StartupSys.h>
 
-#include "CrashLog.h"
-
 //#define DEBUG_SHUTDOWN
 
 #ifdef DEBUG_SHUTDOWN
@@ -56,14 +54,33 @@ SchedulerMaster::~SchedulerMaster ()
 	watchdog_.terminate ();
 }
 
+void SchedulerMaster::create_folders ()
+{
+	WCHAR path [MAX_PATH + 1];
+	size_t cc = get_app_data_path (path, std::size (path), true);
+	if (!cc)
+		throw_INITIALIZE ();
+	WCHAR* root_end = path + cc;
+
+	static const WCHAR* const folders [] = {
+		WINWCS ("var\\log"),
+		WINWCS ("etc")
+	};
+
+	for (const WCHAR* const* p = folders; p != std::end (folders); ++p) {
+		if (!create_app_data_folder (path, root_end, *p))
+			throw_INITIALIZE ();
+	}
+}
+
 bool SchedulerMaster::run (StartupSys& startup)
 {
-	CrashLog () << "Test\n";
-
 	sys_process_id = GetCurrentProcessId ();
 
 	if (!Office::create_mailslot (SCHEDULER_MAILSLOT_NAME))
 		return false; // System domain is already running
+
+	create_folders ();
 
 	if (!watchdog_.start ())
 		throw_INITIALIZE ();

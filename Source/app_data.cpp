@@ -35,7 +35,7 @@ uint32_t sys_process_id;
 
 size_t get_app_data_path (WCHAR* path, size_t size, bool create) noexcept
 {
-	size_t cc = GetEnvironmentVariableW (WINWCS ("ProgramData"), path, size);
+	size_t cc = GetEnvironmentVariableW (WINWCS ("ProgramData"), path, (DWORD)size);
 	if (!cc)
 		return 0;
 
