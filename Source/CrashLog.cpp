@@ -25,7 +25,6 @@
 */
 #include "CrashLog.h"
 #include "app_data.h"
-#include <Nirvana/Formatter.h>
 
 namespace Nirvana {
 namespace Core {
@@ -41,8 +40,7 @@ CrashLog::CrashLog () :
 		*(name++) = L'\\';
 		SYSTEMTIME t;
 		GetSystemTime (&t);
-		Nirvana::sprintf (name, path + std::size (path) - name,
-			WINWCS ("crash%4u%02u%02u_%02u%02u%02u_%u.txt"),
+		wsprintfW (name, WINWCS ("crash%4u%02u%02u_%02u%02u%02u_%u.txt"),
 			t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, GetCurrentProcessId ());
 		handle_ = CreateFileW (path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	}
