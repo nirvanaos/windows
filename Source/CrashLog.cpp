@@ -34,7 +34,7 @@ CrashLog::CrashLog () :
 	handle_ (INVALID_HANDLE_VALUE)
 {
 	WCHAR path [MAX_PATH + 1];
-	size_t cc = get_app_data_folder (path, std::size (path), WINWCS ("var\\log"), true);
+	size_t cc = get_app_data_folder (path, std::size (path), WINWCS ("var\\log"), false);
 	if (cc) {
 		WCHAR* name = path + cc;
 		*(name++) = L'\\';
