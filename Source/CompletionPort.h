@@ -80,7 +80,7 @@ public:
 	}
 
 	/// Worker thread procedure.
-	void thread_proc () NIRVANA_NOEXCEPT;
+	void thread_proc ();
 
 protected:
 	/// Ensure that port exists.

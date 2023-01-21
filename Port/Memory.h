@@ -124,9 +124,6 @@ private:
 
 	// Create new mapping
 	static HANDLE new_mapping ();
-
-private:
-	static void* handler_;
 };
 
 }

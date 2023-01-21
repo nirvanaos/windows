@@ -73,7 +73,8 @@ void ExecContext::run (ExecDomain& ed) NIRVANA_NOEXCEPT
 	siginfo_t siginfo;
 	__try {
 		ed.run ();
-	} __except (Windows::ex2signal (GetExceptionInformation (), siginfo), EXCEPTION_EXECUTE_HANDLER) {
+	} __except (Windows::ex2signal (GetExceptionInformation (), siginfo) ?
+		EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
 		ed.on_crash (siginfo);
 	}
 }

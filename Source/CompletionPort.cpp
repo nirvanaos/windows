@@ -43,7 +43,7 @@ void CompletionPort::create (HANDLE hfile, CompletionPortReceiver* receiver)
 	completion_port_ = port;
 }
 
-void CompletionPort::thread_proc () NIRVANA_NOEXCEPT
+void CompletionPort::thread_proc ()
 {
 	for (;;) {
 		ULONG_PTR key;

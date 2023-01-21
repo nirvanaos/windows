@@ -65,7 +65,7 @@ int start ()
   // Before we begin C++ initialization, set the unhandled exception
   // filter so that unhandled C++ exceptions result in std::terminate
   // being called:
-  __scrt_set_unhandled_exception_filter ();
+  // IP: We disable the standard filter and use own: __scrt_set_unhandled_exception_filter ();
 
   // Initialize C++
   _initterm (__xc_a, __xc_z);

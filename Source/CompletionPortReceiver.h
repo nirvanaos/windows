@@ -40,7 +40,7 @@ namespace Windows {
 class NIRVANA_NOVTABLE CompletionPortReceiver
 {
 public:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT = 0;
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) = 0;
 };
 
 }

@@ -53,7 +53,7 @@ class PostOffice :
 
 public:
 	/// Derived class T must override this method to receive messages.
-	void received (void* message, DWORD size) NIRVANA_NOEXCEPT
+	void received (void* message, DWORD size)
 	{}
 
 	/// Put the post office to work.
@@ -79,7 +79,7 @@ protected:
 	{}
 
 private:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) override
 	{
 		assert (!error);
 		if (!error) {

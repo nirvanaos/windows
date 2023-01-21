@@ -60,7 +60,7 @@ public:
 		return singleton_;
 	}
 
-	virtual void received (void* message, DWORD size) NIRVANA_NOEXCEPT;
+	virtual void received (void* message, DWORD size);
 
 private:
 	static StaticallyAllocated <MessageBroker> singleton_;

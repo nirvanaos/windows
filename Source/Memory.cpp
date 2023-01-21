@@ -25,7 +25,7 @@
 */
 #include "AddressSpace.inl"
 #include <Nirvana/real_copy.h>
-#include <ExecDomain.h>
+#include <SyncContext.h>
 #include <signal.h>
 #include "ex2signal.h"
 #include <winternl.h>
@@ -92,8 +92,6 @@ void BlockState::query (HANDLE process)
 using namespace Windows;
 
 namespace Port {
-
-void* Memory::handler_;
 
 const BlockState& Memory::Block::state ()
 {
@@ -1162,7 +1160,7 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
-void __stdcall report_unhandled_exception (_EXCEPTION_POINTERS* pex) NIRVANA_NOEXCEPT
+long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 
@@ -1222,10 +1220,15 @@ void __stdcall report_unhandled_exception (_EXCEPTION_POINTERS* pex) NIRVANA_NOE
 		}
 	}
 
+	if (frame_cnt == std::size (stack))
+		log << "More stack frames...\n";
+
 	SymCleanup (process);
 #endif
 
+	// Do not display message box
 	ExitProcess (exc);
+	return EXCEPTION_EXECUTE_HANDLER;
 }
 
 long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
@@ -1257,34 +1260,39 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 		}
 	}
 
-	siginfo_t siginfo;
-	if (ex2signal (pex, siginfo)) {
+	siginfo_t signal;
+	if (ex2signal (pex, signal)) {
 		Core::Thread* th = Core::Thread::current_ptr ();
 		if (th) {
 			ExecDomain* ed = th->exec_domain ();
-			if (ed && ed->on_signal (siginfo))
-				return EXCEPTION_CONTINUE_EXECUTION;
+			if (ed)
+				return ed->on_signal (signal) ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
 		}
-		report_unhandled_exception (pex);
+		if (signal.si_excode != CORBA::Exception::EC_NO_EXCEPTION)
+			CORBA::SystemException::_raise_by_code ((CORBA::SystemException::Code)signal.si_excode, signal.si_code);
 	}
 
 	return EXCEPTION_CONTINUE_SEARCH;
 }
+
+static void* exception_handler;
+static LPTOP_LEVEL_EXCEPTION_FILTER old_exception_filter;
 
 bool Memory::initialize () NIRVANA_NOEXCEPT
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 	if (!address_space_init ())
 		return false;
-	handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter);
-//	final_handler_ = AddVectoredExceptionHandler (FALSE, &final_exception_filter);
+	exception_handler = AddVectoredExceptionHandler (TRUE, &exception_filter);
+	old_exception_filter = SetUnhandledExceptionFilter (&unhandled_exception_filter);
 	return true;
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
-//	RemoveVectoredExceptionHandler (final_handler_);
-	RemoveVectoredExceptionHandler (handler_);
+	RemoveVectoredExceptionHandler (exception_handler);
+	LPTOP_LEVEL_EXCEPTION_FILTER flt = 
+	SetUnhandledExceptionFilter (old_exception_filter);
 	address_space_term ();
 }
 
