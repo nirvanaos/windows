@@ -68,7 +68,7 @@ ExecContext::~ExecContext ()
 	}
 }
 
-void ExecContext::run (ExecDomain& ed) NIRVANA_NOEXCEPT
+void ExecContext::run (ExecDomain& ed)
 {
 	siginfo_t siginfo;
 	__try {
@@ -79,7 +79,7 @@ void ExecContext::run (ExecDomain& ed) NIRVANA_NOEXCEPT
 	}
 }
 
-void __stdcall ExecContext::fiber_proc (Core::ExecContext* context) NIRVANA_NOEXCEPT
+void __stdcall ExecContext::fiber_proc (Core::ExecContext* context)
 {
 	assert (context);
 	current (context);
@@ -89,7 +89,7 @@ void __stdcall ExecContext::fiber_proc (Core::ExecContext* context) NIRVANA_NOEX
 	// Fiber procedures never complete.
 }
 
-void ExecContext::main_fiber_proc () NIRVANA_NOEXCEPT
+void ExecContext::main_fiber_proc ()
 {
 	for (;;) {
 		ExecDomain* ed = Core::Thread::current ().exec_domain ();

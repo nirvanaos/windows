@@ -104,7 +104,7 @@ public:
 
 	static void current (Core::ExecContext* context) NIRVANA_NOEXCEPT;
 
-	static void main_fiber_proc () NIRVANA_NOEXCEPT;
+	static void main_fiber_proc ();
 
 	static void* main_fiber () NIRVANA_NOEXCEPT
 	{
@@ -112,8 +112,8 @@ public:
 	}
 
 private:
-	static void run (ExecDomain& ed) NIRVANA_NOEXCEPT;
-	static void __stdcall fiber_proc (Core::ExecContext* context) NIRVANA_NOEXCEPT;
+	static void run (ExecDomain& ed);
+	static void __stdcall fiber_proc (Core::ExecContext* context);
 
 private:
 	static unsigned long current_;

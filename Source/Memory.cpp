@@ -1162,6 +1162,11 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 
 long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
 {
+#ifdef _DEBUG
+	if (IsDebuggerPresent ())
+		__debugbreak ();
+#endif
+
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 
 	CrashLog log;
@@ -1276,23 +1281,25 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 }
 
 static void* exception_handler;
-static LPTOP_LEVEL_EXCEPTION_FILTER old_exception_filter;
+static void* unhandled_exception_handler;
 
 bool Memory::initialize () NIRVANA_NOEXCEPT
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+//	_CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_FILE);
+//	_CrtSetReportFile (_CRT_ERROR, _CRTDBG_FILE_STDERR);
+//	_set_abort_behavior (0, ~0);
 	if (!address_space_init ())
 		return false;
 	exception_handler = AddVectoredExceptionHandler (TRUE, &exception_filter);
-	old_exception_filter = SetUnhandledExceptionFilter (&unhandled_exception_filter);
+	unhandled_exception_handler = AddVectoredExceptionHandler (FALSE, &unhandled_exception_filter);
 	return true;
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
+	RemoveVectoredExceptionHandler (unhandled_exception_handler);
 	RemoveVectoredExceptionHandler (exception_handler);
-	LPTOP_LEVEL_EXCEPTION_FILTER flt = 
-	SetUnhandledExceptionFilter (old_exception_filter);
 	address_space_term ();
 }
 
