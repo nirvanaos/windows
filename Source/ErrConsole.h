@@ -42,8 +42,6 @@ public:
 	ErrConsole ();
 	~ErrConsole ();
 
-	static HANDLE attach () noexcept;
-
 	const ErrConsole& operator << (const char* text) const noexcept;
 
 	const ErrConsole& operator << (char c) const noexcept
@@ -56,8 +54,8 @@ private:
 	void write (const char* text, size_t len) const noexcept;
 
 private:
-	static HANDLE handle_;
-	static bool allocated_;
+	HANDLE handle_;
+	bool allocated_;
 };
 
 }

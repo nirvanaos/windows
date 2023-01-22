@@ -29,7 +29,7 @@
 #include <signal.h>
 #include "ex2signal.h"
 #include <winternl.h>
-#include "CrashLog.h"
+#include "DebugLog.h"
 
 #ifdef _DEBUG
 #include <DbgHelp.h>
@@ -1164,17 +1164,11 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 
-	CrashLog log;
-
-	char path [MAX_PATH + 1];
-	GetModuleFileNameA (nullptr, path, sizeof (path));
+	DebugLog log;
 
 	char buf [_MAX_I64TOSTR_BASE16_COUNT];
-	_itoa (GetCurrentProcessId (), buf, 10);
-	log << "Process " << buf;
 	_itoa (exc, buf, 16);
 	log << " Exception 0x" << buf << '\n';
-	log << path << '\n';
 	if (
 		EXCEPTION_ACCESS_VIOLATION == exc
 		&&
@@ -1196,10 +1190,15 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 
 #ifdef _DEBUG
 	HANDLE process = GetCurrentProcess ();
-	*strrchr (path, '\\') = '\0';
-	if (!SymInitialize (process, path, TRUE)) {
-		_itoa (GetLastError (), buf, 16);
-		log << "SymInitialize failed, error 0x" << buf << '\n';
+	{
+		char path [MAX_PATH + 1];
+		GetModuleFileNameA (nullptr, path, sizeof (path));
+
+		*strrchr (path, '\\') = '\0';
+		if (!SymInitialize (process, path, TRUE)) {
+			_itoa (GetLastError (), buf, 16);
+			log << "SymInitialize failed, error 0x" << buf << '\n';
+		}
 	}
 
 	void* stack [63];
@@ -1291,9 +1290,21 @@ static void* unhandled_exception_handler;
 bool Memory::initialize () NIRVANA_NOEXCEPT
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
-//	_CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_FILE);
-//	_CrtSetReportFile (_CRT_ERROR, _CRTDBG_FILE_STDERR);
-//	_set_abort_behavior (0, ~0);
+#ifdef _DEBUG
+	if (!IsDebuggerPresent ()) {
+		HANDLE dbg = DebugLog::get_handle ();
+		if (INVALID_HANDLE_VALUE != dbg) {
+			_CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
+			_CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_FILE);
+			_CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_FILE);
+			_CrtSetReportFile (_CRT_ERROR, dbg);
+		}
+	} else {
+		_CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_DEBUG);
+		_CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_DEBUG);
+		_CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
+	}
+#endif
 	if (!address_space_init ())
 		return false;
 	exception_handler = AddVectoredExceptionHandler (TRUE, &exception_filter);
@@ -1303,6 +1314,7 @@ bool Memory::initialize () NIRVANA_NOEXCEPT
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
+	DebugLog::close_handle ();
 	RemoveVectoredExceptionHandler (unhandled_exception_handler);
 	RemoveVectoredExceptionHandler (exception_handler);
 	address_space_term ();

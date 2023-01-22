@@ -23,43 +23,67 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "CrashLog.h"
+#include "DebugLog.h"
 #include "app_data.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-CrashLog::CrashLog () :
-	handle_ (INVALID_HANDLE_VALUE)
+HANDLE DebugLog::handle_ = INVALID_HANDLE_VALUE;
+
+HANDLE DebugLog::get_handle () noexcept
 {
-	WCHAR path [MAX_PATH + 1];
-	size_t cc = get_app_data_folder (path, std::size (path), WINWCS ("var\\log"), false);
-	if (cc) {
-		WCHAR* name = path + cc;
-		*(name++) = L'\\';
-		SYSTEMTIME t;
-		GetSystemTime (&t);
-		wsprintfW (name, WINWCS ("crash%4u%02u%02u_%02u%02u%02u_%u.txt"),
-			t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, GetCurrentProcessId ());
-		handle_ = CreateFileW (path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (INVALID_HANDLE_VALUE == handle_) {
+		WCHAR path [MAX_PATH + 1];
+		size_t cc = get_app_data_folder (path, std::size (path), WINWCS ("var\\log"), false);
+		if (cc) {
+			WCHAR* name = path + cc;
+			*(name++) = L'\\';
+			SYSTEMTIME t;
+			GetSystemTime (&t);
+			wsprintfW (name, WINWCS ("debug%4u%02u%02u_%02u%02u%02u_%u.txt"),
+				t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, GetCurrentProcessId ());
+			handle_ = CreateFileW (path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+			if (INVALID_HANDLE_VALUE != handle_) {
+				char path [MAX_PATH + 1];
+				size_t cc = GetModuleFileNameA (nullptr, path, sizeof (path));
+				write (path, cc);
+				char c = '\n';
+				write (&c, 1);
+			}
+		}
+	}
+	return handle_;
+}
+
+void DebugLog::close_handle () noexcept
+{
+	if (INVALID_HANDLE_VALUE != handle_) {
+		CloseHandle (handle_);
+		handle_ = INVALID_HANDLE_VALUE;
 	}
 }
 
-CrashLog::~CrashLog ()
+DebugLog::DebugLog ()
 {
-	if (INVALID_HANDLE_VALUE != handle_)
-		CloseHandle (handle_);
+	get_handle ();
 }
 
-const CrashLog& CrashLog::operator << (const char* text) const noexcept
+DebugLog::~DebugLog ()
+{}
+
+const DebugLog& DebugLog::operator << (const char* text) const noexcept
 {
 	write (text, strlen (text));
 	return *this;
 }
 
-void CrashLog::write (const char* text, size_t len) const noexcept
+void DebugLog::write (const char* text, size_t len) noexcept
 {
+	if (INVALID_HANDLE_VALUE == handle_)
+		return;
+
 	const char* line = text;
 	const char* end = text + len;
 	for (;;) {

@@ -31,30 +31,20 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-HANDLE ErrConsole::handle_;
-bool ErrConsole::allocated_;
-
-HANDLE ErrConsole::attach () noexcept
+ErrConsole::ErrConsole () :
+	handle_ (nullptr),
+	allocated_ (false)
 {
-	if (!handle_) {
-		if (!IsDebuggerPresent ()) {
-			if (!AttachConsole (ATTACH_PARENT_PROCESS)) {
-				AllocConsole ();
-				allocated_ = true;
-			}
-		} else {
+	if (!IsDebuggerPresent ()) {
+		if (!AttachConsole (ATTACH_PARENT_PROCESS)) {
 			AllocConsole ();
 			allocated_ = true;
 		}
-		handle_ = GetStdHandle (STD_ERROR_HANDLE);
+	} else {
+		AllocConsole ();
+		allocated_ = true;
 	}
-
-	return handle_;
-}
-
-ErrConsole::ErrConsole ()
-{
-	attach ();
+	handle_ = GetStdHandle (STD_ERROR_HANDLE);
 }
 
 ErrConsole::~ErrConsole ()
@@ -70,6 +60,7 @@ ErrConsole::~ErrConsole ()
 					break;
 			}
 		}
+		FreeConsole ();
 	}
 }
 

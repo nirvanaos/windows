@@ -24,8 +24,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_CRASHLOG_H_
-#define NIRVANA_CORE_WINDOWS_CRASHLOG_H_
+#ifndef NIRVANA_CORE_WINDOWS_DEBUGLOG_H_
+#define NIRVANA_CORE_WINDOWS_DEBUGLOG_H_
 #pragma once
 
 #include "win32.h"
@@ -34,24 +34,27 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class CrashLog
+class DebugLog
 {
 public:
-	CrashLog ();
-	~CrashLog ();
+	DebugLog ();
+	~DebugLog ();
 
-	const CrashLog& operator << (const char* text) const noexcept;
-	const CrashLog& operator << (char c) const noexcept
+	const DebugLog& operator << (const char* text) const noexcept;
+	const DebugLog& operator << (char c) const noexcept
 	{
 		write (&c, 1);
 		return *this;
 	}
 
-private:
-	void write (const char* text, size_t len) const noexcept;
+	static HANDLE get_handle () noexcept;
+	static void close_handle () noexcept;
 
 private:
-	HANDLE handle_;
+	static void write (const char* text, size_t len) noexcept;
+
+private:
+	static HANDLE handle_;
 };
 
 }
