@@ -1160,13 +1160,8 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
-long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
+void report_unhandled (_EXCEPTION_POINTERS* pex)
 {
-#ifdef _DEBUG
-	if (IsDebuggerPresent ())
-		__debugbreak ();
-#endif
-
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 
 	CrashLog log;
@@ -1192,9 +1187,9 @@ long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
 			log << "Read from";
 		log << " address 0x";
 #ifdef _WIN64
-			_i64toa ((long long)address, buf, 16);
+		_i64toa ((long long)address, buf, 16);
 #else
-			_itoa ((int)address, buf, 16);
+		_itoa ((int)address, buf, 16);
 #endif
 		log << buf << '\n';
 	}
@@ -1230,9 +1225,19 @@ long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
 
 	SymCleanup (process);
 #endif
+}
+
+long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
+{
+#ifdef _DEBUG
+	if (IsDebuggerPresent ())
+		__debugbreak ();
+#endif
+
+	report_unhandled (pex);
 
 	// Do not display message box
-	ExitProcess (exc);
+	ExitProcess (pex->ExceptionRecord->ExceptionCode);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
@@ -1264,6 +1269,10 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 			}
 		}
 	}
+
+#ifdef _DEBUG
+	report_unhandled (pex);
+#endif
 
 	siginfo_t signal;
 	if (ex2signal (pex, signal)) {
