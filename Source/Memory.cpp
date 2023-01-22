@@ -1270,10 +1270,6 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 		}
 	}
 
-#ifdef _DEBUG
-	report_unhandled (pex);
-#endif
-
 	siginfo_t signal;
 	if (ex2signal (pex, signal)) {
 		Core::Thread* th = Core::Thread::current_ptr ();
