@@ -146,7 +146,7 @@ void SchedulerMaster::worker_thread_proc () NIRVANA_NOEXCEPT
 void SchedulerMaster::WorkerThreads::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
 {
 	Executor* executor = reinterpret_cast <Executor*> (ovl);
-	ThreadWorker::execute (*executor, CORBA::Exception::EC_NO_EXCEPTION);
+	ThreadWorker::execute (*executor);
 	SchedulerMaster::singleton ().core_free ();
 }
 

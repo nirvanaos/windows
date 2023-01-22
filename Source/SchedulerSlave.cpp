@@ -172,25 +172,19 @@ void SchedulerSlave::worker_thread_proc () NIRVANA_NOEXCEPT
 inline
 void SchedulerSlave::core_free () NIRVANA_NOEXCEPT
 {
-	if (error_ < 0) {
-		try {
-			scheduler_mailslot_.send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CORE_FREE));
-			return;
-		} catch (const CORBA::SystemException& ex) {
-			on_error (ex.__code ());
-		}
+	try {
+		scheduler_mailslot_.send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CORE_FREE));
+		return;
+	} catch (const CORBA::SystemException& ex) {
+		on_error (ex.__code ());
 	}
-
-	assert (error_ >= 0);
-	// Fallback
-	execute ();
 }
 
 void SchedulerSlave::execute () NIRVANA_NOEXCEPT
 {
 	Executor* executor;
 	if (queue_.delete_min (executor))
-		ThreadWorker::execute (*executor, error_);
+		ThreadWorker::execute (*executor);
 	core_free ();
 }
 
