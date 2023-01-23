@@ -1236,6 +1236,7 @@ long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
 	report_unhandled (pex);
 
 	// Do not display message box
+	DebugLog::close_handle ();
 	ExitProcess (pex->ExceptionRecord->ExceptionCode);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
@@ -1299,10 +1300,6 @@ bool Memory::initialize () NIRVANA_NOEXCEPT
 			_CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_FILE);
 			_CrtSetReportFile (_CRT_ERROR, dbg);
 		}
-	} else {
-		_CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_DEBUG);
-		_CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_DEBUG);
-		_CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
 	}
 #endif
 	if (!address_space_init ())

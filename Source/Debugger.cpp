@@ -45,11 +45,11 @@ void Debugger::output_debug_string (const char* msg)
 
 bool Debugger::debug_break ()
 {
-	if (IsDebuggerPresent ()) {
+//	if (IsDebuggerPresent ()) {
 		__debugbreak ();
 		return true;
-	}
-	return false;
+//	}
+//	return false;
 }
 
 }
