@@ -47,13 +47,20 @@ public:
 		return *this;
 	}
 
+	static void initialize () noexcept
+	{
+		InitializeCriticalSection (&cs_);
+	}
+
 	static HANDLE get_handle () noexcept;
-	static void close_handle () noexcept;
+
+	static void terminate () noexcept;
 
 private:
 	static void write (const char* text, size_t len) noexcept;
 
 private:
+	static CRITICAL_SECTION cs_;
 	static HANDLE handle_;
 };
 

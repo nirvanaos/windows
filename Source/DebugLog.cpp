@@ -31,6 +31,7 @@ namespace Core {
 namespace Windows {
 
 HANDLE DebugLog::handle_ = INVALID_HANDLE_VALUE;
+CRITICAL_SECTION DebugLog::cs_;
 
 HANDLE DebugLog::get_handle () noexcept
 {
@@ -57,21 +58,27 @@ HANDLE DebugLog::get_handle () noexcept
 	return handle_;
 }
 
-void DebugLog::close_handle () noexcept
+void DebugLog::terminate () noexcept
 {
+	EnterCriticalSection (&cs_);
 	if (INVALID_HANDLE_VALUE != handle_) {
 		CloseHandle (handle_);
 		handle_ = INVALID_HANDLE_VALUE;
 	}
+	LeaveCriticalSection (&cs_);
+	DeleteCriticalSection (&cs_);
 }
 
 DebugLog::DebugLog ()
 {
+	EnterCriticalSection (&cs_);
 	get_handle ();
 }
 
 DebugLog::~DebugLog ()
-{}
+{
+	LeaveCriticalSection (&cs_);
+}
 
 const DebugLog& DebugLog::operator << (const char* text) const noexcept
 {

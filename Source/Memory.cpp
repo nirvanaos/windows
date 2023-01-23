@@ -1236,7 +1236,7 @@ long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
 	report_unhandled (pex);
 
 	// Do not display message box
-	DebugLog::close_handle ();
+	DebugLog::terminate ();
 	ExitProcess (pex->ExceptionRecord->ExceptionCode);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
@@ -1291,6 +1291,7 @@ static void* unhandled_exception_handler;
 bool Memory::initialize () NIRVANA_NOEXCEPT
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+	DebugLog::initialize ();
 #ifdef _DEBUG
 	if (!IsDebuggerPresent ()) {
 		HANDLE dbg = DebugLog::get_handle ();
@@ -1311,7 +1312,7 @@ bool Memory::initialize () NIRVANA_NOEXCEPT
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
-	DebugLog::close_handle ();
+	DebugLog::terminate ();
 	RemoveVectoredExceptionHandler (unhandled_exception_handler);
 	RemoveVectoredExceptionHandler (exception_handler);
 	address_space_term ();

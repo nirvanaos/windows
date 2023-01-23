@@ -36,7 +36,7 @@ NIRVANA_NORETURN void _unrecoverable_error (int code, const char* file, unsigned
 	_itoa (code, scode, 10);
 	_itoa (line, sline, 10);
 	Windows::DebugLog () << file << '(' << sline << "): Unrecoverable error " << scode << "\n";
-	Windows::DebugLog::close_handle ();
+	Windows::DebugLog::terminate ();
 	ExitProcess (-1);
 }
 
