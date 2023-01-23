@@ -47,13 +47,8 @@ public:
 		return *this;
 	}
 
-	static void initialize () noexcept
-	{
-		InitializeCriticalSection (&cs_);
-	}
-
+	static void initialize () noexcept;
 	static HANDLE get_handle () noexcept;
-
 	static void terminate () noexcept;
 
 private:

@@ -1278,17 +1278,19 @@ bool Memory::initialize () NIRVANA_NOEXCEPT
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 	DebugLog::initialize ();
-#ifdef _DEBUG
+/*#ifdef _DEBUG
 	if (!IsDebuggerPresent ()) {
 		HANDLE dbg = DebugLog::get_handle ();
 		if (INVALID_HANDLE_VALUE != dbg) {
 			_CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
+			_CrtSetReportFile (_CRT_WARN, dbg);
 			_CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_FILE);
-			_CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_FILE);
 			_CrtSetReportFile (_CRT_ERROR, dbg);
+			_CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_FILE);
+			_CrtSetReportFile (_CRT_ASSERT, dbg);
 		}
 	}
-#endif
+#endif*/
 	if (!address_space_init ())
 		return false;
 	exception_handler = AddVectoredExceptionHandler (TRUE, &exception_filter);

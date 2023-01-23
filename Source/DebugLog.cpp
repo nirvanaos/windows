@@ -38,6 +38,26 @@ namespace Windows {
 HANDLE DebugLog::handle_ = nullptr;
 CRITICAL_SECTION DebugLog::cs_;
 
+void DebugLog::initialize () noexcept
+{
+	InitializeCriticalSection (&cs_);
+#ifdef _DEBUG
+	// TODO: Test SymSetOptions (SYMOPT_DEFERRED_LOADS);
+	char path [MAX_PATH + 1];
+	size_t cc = GetModuleFileNameA (nullptr, path, sizeof (path));
+	*strrchr (path, '\\') = '\0';
+	if (!SymInitialize (GetCurrentProcess (), path, TRUE)) {
+		char buf [_MAX_ITOSTR_BASE16_COUNT];
+		_itoa (GetLastError (), buf, 16);
+		const char msg [] = "SymInitialize failed, error 0x";
+		write (msg, sizeof (msg) - 1);
+		write (buf, strlen (buf));
+		char lf = '\n';
+		write (&lf, 1);
+	}
+#endif
+}
+
 HANDLE DebugLog::get_handle () noexcept
 {
 	if (!handle_) {
@@ -57,20 +77,6 @@ HANDLE DebugLog::get_handle () noexcept
 				write (path, cc);
 				char lf = '\n';
 				write (&lf, 1);
-
-#ifdef _DEBUG
-				// TODO: Test SymSetOptions (SYMOPT_DEFERRED_LOADS);
-				*strrchr (path, '\\') = '\0';
-				if (!SymInitialize (GetCurrentProcess (), path, TRUE)) {
-					char buf [_MAX_ITOSTR_BASE16_COUNT];
-					_itoa (GetLastError (), buf, 16);
-					const char msg [] = "SymInitialize failed, error 0x";
-					write (msg, sizeof (msg) - 1);
-					write (buf, strlen (buf));
-					write (&lf, 1);
-				}
-#endif
-
 			}
 		} else
 			handle_ = INVALID_HANDLE_VALUE;
@@ -84,8 +90,8 @@ void DebugLog::terminate () noexcept
 	if (handle_ && INVALID_HANDLE_VALUE != handle_) {
 		CloseHandle (handle_);
 		handle_ = INVALID_HANDLE_VALUE;
-		SymCleanup (GetCurrentProcess ());
 	}
+	SymCleanup (GetCurrentProcess ());
 	LeaveCriticalSection (&cs_);
 }
 
