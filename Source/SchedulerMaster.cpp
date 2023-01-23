@@ -28,7 +28,7 @@
 #include "app_data.h"
 #include <StartupSys.h>
 
-//#define DEBUG_SHUTDOWN
+#define DEBUG_SHUTDOWN
 
 #ifdef DEBUG_SHUTDOWN
 #include "../Port/Debugger.h"
