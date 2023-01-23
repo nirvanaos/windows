@@ -33,7 +33,6 @@
 
 #ifdef _DEBUG
 #include <DbgHelp.h>
-#pragma comment (lib, "Dbghelp.lib")
 #endif
 
 #pragma comment (lib, "OneCore.lib")
@@ -1189,18 +1188,6 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 	}
 
 #ifdef _DEBUG
-	HANDLE process = GetCurrentProcess ();
-	{
-		char path [MAX_PATH + 1];
-		GetModuleFileNameA (nullptr, path, sizeof (path));
-
-		*strrchr (path, '\\') = '\0';
-		if (!SymInitialize (process, path, TRUE)) {
-			_itoa (GetLastError (), buf, 16);
-			log << "SymInitialize failed, error 0x" << buf << '\n';
-		}
-	}
-
 	void* stack [63];
 	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
 	if (frame_cnt <= 0)
@@ -1210,6 +1197,7 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
 	DWORD displacement;
 
+	HANDLE process = GetCurrentProcess ();
 	for (int i = 0; i < frame_cnt; ++i) {
 		if (SymGetLineFromAddr64 (process, (DWORD64)(stack [i]), &displacement, &line)) {
 			_itoa (line.LineNumber, buf, 10);
@@ -1221,8 +1209,6 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 
 	if (frame_cnt == std::size (stack))
 		log << "More stack frames...\n";
-
-	SymCleanup (process);
 #endif
 }
 

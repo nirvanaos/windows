@@ -26,16 +26,21 @@
 #include "DebugLog.h"
 #include "app_data.h"
 
+#ifdef _DEBUG
+#include <DbgHelp.h>
+#pragma comment (lib, "Dbghelp.lib")
+#endif
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-HANDLE DebugLog::handle_ = INVALID_HANDLE_VALUE;
+HANDLE DebugLog::handle_ = nullptr;
 CRITICAL_SECTION DebugLog::cs_;
 
 HANDLE DebugLog::get_handle () noexcept
 {
-	if (INVALID_HANDLE_VALUE == handle_) {
+	if (!handle_) {
 		WCHAR path [MAX_PATH + 1];
 		size_t cc = get_app_data_folder (path, std::size (path), WINWCS ("var\\log"), false);
 		if (cc) {
@@ -50,10 +55,25 @@ HANDLE DebugLog::get_handle () noexcept
 				char path [MAX_PATH + 1];
 				size_t cc = GetModuleFileNameA (nullptr, path, sizeof (path));
 				write (path, cc);
-				char c = '\n';
-				write (&c, 1);
+				char lf = '\n';
+				write (&lf, 1);
+
+#ifdef _DEBUG
+				// TODO: Test SymSetOptions (SYMOPT_DEFERRED_LOADS);
+				*strrchr (path, '\\') = '\0';
+				if (!SymInitialize (GetCurrentProcess (), path, TRUE)) {
+					char buf [_MAX_ITOSTR_BASE16_COUNT];
+					_itoa (GetLastError (), buf, 16);
+					const char msg [] = "SymInitialize failed, error 0x";
+					write (msg, sizeof (msg) - 1);
+					write (buf, strlen (buf));
+					write (&lf, 1);
+				}
+#endif
+
 			}
-		}
+		} else
+			handle_ = INVALID_HANDLE_VALUE;
 	}
 	return handle_;
 }
@@ -61,12 +81,12 @@ HANDLE DebugLog::get_handle () noexcept
 void DebugLog::terminate () noexcept
 {
 	EnterCriticalSection (&cs_);
-	if (INVALID_HANDLE_VALUE != handle_) {
+	if (handle_ && INVALID_HANDLE_VALUE != handle_) {
 		CloseHandle (handle_);
 		handle_ = INVALID_HANDLE_VALUE;
+		SymCleanup (GetCurrentProcess ());
 	}
 	LeaveCriticalSection (&cs_);
-	DeleteCriticalSection (&cs_);
 }
 
 DebugLog::DebugLog ()
