@@ -1168,7 +1168,7 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 
 	char buf [_MAX_I64TOSTR_BASE16_COUNT];
 	_itoa (exc, buf, 16);
-	log << " Exception 0x" << buf << '\n';
+	log << "Exception 0x" << buf << '\n';
 	if (
 		EXCEPTION_ACCESS_VIOLATION == exc
 		&&
