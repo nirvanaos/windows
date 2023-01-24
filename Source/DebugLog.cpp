@@ -42,7 +42,8 @@ void DebugLog::initialize () noexcept
 {
 	InitializeCriticalSection (&cs_);
 #ifdef _DEBUG
-	SymSetOptions (SYMOPT_DEFERRED_LOADS);
+	SymSetOptions (SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES
+		| SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
 	char path [MAX_PATH + 1];
 	size_t cc = GetModuleFileNameA (nullptr, path, sizeof (path));
 	*strrchr (path, '\\') = '\0';
@@ -67,7 +68,8 @@ HANDLE DebugLog::get_handle () noexcept
 			GetSystemTime (&t);
 			wsprintfW (name, WINWCS ("debug%4u%02u%02u_%02u%02u%02u_%u.txt"),
 				t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, GetCurrentProcessId ());
-			handle_ = CreateFileW (path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+			handle_ = CreateFileW (path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
+				nullptr);
 			if (INVALID_HANDLE_VALUE != handle_) {
 				char path [MAX_PATH + 1];
 				size_t cc = GetModuleFileNameA (nullptr, path, sizeof (path));
