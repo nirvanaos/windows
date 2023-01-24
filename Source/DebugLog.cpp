@@ -42,7 +42,7 @@ void DebugLog::initialize () noexcept
 {
 	InitializeCriticalSection (&cs_);
 #ifdef _DEBUG
-	SymSetOptions (SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES
+	SymSetOptions (SYMOPT_DEFERRED_LOADS
 		| SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
 	char path [MAX_PATH + 1];
 	size_t cc = GetModuleFileNameA (nullptr, path, sizeof (path));
