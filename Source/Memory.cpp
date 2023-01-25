@@ -1159,6 +1159,10 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 		return false;
 }
 
+} // namespace Port
+
+namespace Windows {
+
 void report_unhandled (_EXCEPTION_POINTERS* pex)
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
@@ -1273,6 +1277,10 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 
 static void* exception_handler;
 static void* unhandled_exception_handler;
+
+} // namespace Windows
+
+namespace Port {
 
 bool Memory::initialize () NIRVANA_NOEXCEPT
 {
