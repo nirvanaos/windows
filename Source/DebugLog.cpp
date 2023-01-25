@@ -45,7 +45,7 @@ void DebugLog::initialize () noexcept
 	SymSetOptions (SYMOPT_DEFERRED_LOADS
 		| SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
 	char path [MAX_PATH + 1];
-	size_t cc = GetModuleFileNameA (nullptr, path, sizeof (path));
+	GetModuleFileNameA (nullptr, path, sizeof (path));
 	*strrchr (path, '\\') = '\0';
 	if (!SymInitialize (GetCurrentProcess (), path, TRUE)) {
 		char buf [_MAX_ITOSTR_BASE16_COUNT];
@@ -90,7 +90,9 @@ void DebugLog::terminate () noexcept
 		CloseHandle (handle_);
 		handle_ = INVALID_HANDLE_VALUE;
 	}
+#ifdef _DEBUG
 	SymCleanup (GetCurrentProcess ());
+#endif
 	LeaveCriticalSection (&cs_);
 }
 
