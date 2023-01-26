@@ -1218,11 +1218,6 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 
 long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
 {
-#ifdef _DEBUG
-	if (IsDebuggerPresent ())
-		__debugbreak ();
-#endif
-
 	report_unhandled (pex);
 
 	// Do not display message box
