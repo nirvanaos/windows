@@ -1276,7 +1276,7 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 }
 
 static void* exception_handler;
-static void* unhandled_exception_handler;
+static LPTOP_LEVEL_EXCEPTION_FILTER unhandled_exception_handler;
 
 } // namespace Windows
 
@@ -1302,14 +1302,14 @@ bool Memory::initialize () NIRVANA_NOEXCEPT
 	if (!address_space_init ())
 		return false;
 	exception_handler = AddVectoredExceptionHandler (TRUE, &exception_filter);
-	unhandled_exception_handler = AddVectoredExceptionHandler (FALSE, &unhandled_exception_filter);
+	unhandled_exception_handler = SetUnhandledExceptionFilter (&unhandled_exception_filter);
 	return true;
 }
 
 void Memory::terminate () NIRVANA_NOEXCEPT
 {
 	DebugLog::terminate ();
-	RemoveVectoredExceptionHandler (unhandled_exception_handler);
+	SetUnhandledExceptionFilter (unhandled_exception_handler);
 	RemoveVectoredExceptionHandler (exception_handler);
 	address_space_term ();
 }
