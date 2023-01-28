@@ -38,18 +38,17 @@ namespace Port {
 class NIRVANA_NOVTABLE ThreadBackground :
 	public Core::Thread
 {
+protected:
 	///@{
 	/// Members called from Core.
-public:
-	/// Continue execution.
-	void resume () NIRVANA_NOEXCEPT;
-
-protected:
 	ThreadBackground ();
 	~ThreadBackground ();
 
 	/// Create thread
 	void start ();
+
+	/// Continue execution.
+	void resume () NIRVANA_NOEXCEPT;
 
 	///@}
 
