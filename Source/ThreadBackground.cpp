@@ -47,8 +47,11 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 		thread.on_thread_proc_end ();
 		return 0;
 	}
-	WaitForSingleObject (_this->event_, INFINITE);
-	thread.execute ();
+
+	do
+		WaitForSingleObject (_this->event_, INFINITE);
+	while (thread.execute ());
+	
 	context.convert_to_thread ();
 	thread.on_thread_proc_end ();
 	return 0;
@@ -68,11 +71,6 @@ ThreadBackground::~ThreadBackground ()
 void ThreadBackground::start ()
 {
 	Thread::create (this, Windows::BACKGROUND_THREAD_PRIORITY);
-}
-
-void ThreadBackground::yield () NIRVANA_NOEXCEPT
-{
-	WaitForSingleObject (event_, INFINITE);
 }
 
 void ThreadBackground::resume () NIRVANA_NOEXCEPT

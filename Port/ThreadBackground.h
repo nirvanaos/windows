@@ -41,10 +41,6 @@ class NIRVANA_NOVTABLE ThreadBackground :
 	///@{
 	/// Members called from Core.
 public:
-
-	/// Suspend execution and wait for resume ().
-	virtual void yield () NIRVANA_NOEXCEPT;
-
 	/// Continue execution.
 	void resume () NIRVANA_NOEXCEPT;
 
