@@ -35,6 +35,8 @@ typedef unsigned long (__stdcall *PTHREAD_START_ROUTINE) (void* lpThreadParamete
 extern "C" __declspec (dllimport)
 void* __stdcall TlsGetValue (unsigned long dwTlsIndex);
 
+typedef void* HANDLE;
+
 namespace Nirvana {
 namespace Core {
 
@@ -99,7 +101,7 @@ private:
 protected:
 	static unsigned long current_;
 
-	void* handle_;
+	HANDLE handle_;
 };
 
 }

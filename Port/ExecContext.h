@@ -83,7 +83,7 @@ protected:
 	///@}
 
 public:
-	void convert_to_fiber ();
+	void convert_to_fiber () NIRVANA_NOEXCEPT;
 	void convert_to_thread () NIRVANA_NOEXCEPT;
 
 	void attach (void* fiber) NIRVANA_NOEXCEPT

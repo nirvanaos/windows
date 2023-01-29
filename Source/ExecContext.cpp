@@ -25,6 +25,7 @@
 */
 #include <ExecDomain.h>
 #include <Thread.h>
+#include <unrecoverable_error.h>
 #include "ExecContext.inl"
 #include "ex2signal.h"
 
@@ -102,14 +103,14 @@ void ExecContext::main_fiber_proc ()
 	}
 }
 
-void ExecContext::convert_to_fiber ()
+void ExecContext::convert_to_fiber () NIRVANA_NOEXCEPT
 {
 	assert (!fiber_);
 	// If dwFlags parameter is zero, the floating - point state on x86 systems is not switched and data 
 	// can be corrupted if a fiber uses floating - point arithmetic.
 	// This causes faster switching. Neutral execution context does not use floating - point arithmetic.
 	if (!(fiber_ = ConvertThreadToFiberEx (nullptr, 0)))
-		throw_NO_MEMORY ();
+		unrecoverable_error (GetLastError ());
 
 	current (static_cast <Core::ExecContext*> (this));
 }

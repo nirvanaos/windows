@@ -37,16 +37,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	Core::ThreadBackground& thread = static_cast <Core::ThreadBackground&> (*_this);
 	Port::Thread::current (&thread);
 	ExecContext& context = thread.neutral_context ().port ();
-	try {
-		context.convert_to_fiber ();
-	} catch (...) {
-		siginfo_t si;
-		zero (si);
-		si.si_excode = CORBA::SystemException::EC_NO_MEMORY;
-		thread.exec_domain ()->on_crash (si);
-		thread.on_thread_proc_end ();
-		return 0;
-	}
+	context.convert_to_fiber ();
 
 	do
 		WaitForSingleObject (_this->event_, INFINITE);

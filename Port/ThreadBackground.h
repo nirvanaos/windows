@@ -57,7 +57,7 @@ private:
 	static unsigned long __stdcall thread_proc (ThreadBackground* _this);
 
 private:
-	void* event_;
+	HANDLE event_;
 };
 
 }
