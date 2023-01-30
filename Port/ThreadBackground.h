@@ -50,6 +50,13 @@ protected:
 	/// Continue execution.
 	void resume () NIRVANA_NOEXCEPT;
 
+	/// Stop thread
+	void finish () NIRVANA_NOEXCEPT
+	{
+		finish_ = true;
+		resume ();
+	}
+
 	///@}
 
 private:
@@ -58,6 +65,7 @@ private:
 
 private:
 	HANDLE event_;
+	bool finish_;
 };
 
 }
