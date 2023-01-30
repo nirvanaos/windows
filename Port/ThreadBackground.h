@@ -53,6 +53,7 @@ protected:
 	/// Stop thread
 	void finish () NIRVANA_NOEXCEPT
 	{
+		assert (!exec_domain ());
 		finish_ = true;
 		resume ();
 	}
