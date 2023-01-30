@@ -43,10 +43,6 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 		WaitForSingleObject (_this->event_, INFINITE);
 		if (_this->finish_)
 			break;
-#ifdef _DEBUG
-//		if (!thread.exec_domain ())
-//			__debugbreak ();
-#endif
 		thread.execute ();
 	}
 	
