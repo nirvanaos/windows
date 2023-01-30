@@ -52,11 +52,14 @@ bool Debugger::debug_break ()
 
 	// If we are out of the execution domain, for example, in the postman thread,
 	// __debugbreak will cause unhandled exception and stack trace.
-	ExecDomain* ed = nullptr;
+	Runnable* r = nullptr;
 	Core::Thread* th = Thread::current ();
-	if (th)
-		ed = th->exec_domain ();
-	if (!ed) {
+	if (th) {
+		ExecDomain* ed = th->exec_domain ();
+		if (ed)
+			r = ed->runnable ();
+	}
+	if (!r) {
 		__debugbreak ();
 		return true;
 	}

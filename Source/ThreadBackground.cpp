@@ -39,16 +39,24 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	ExecContext& context = thread.neutral_context ().port ();
 	context.convert_to_fiber ();
 
-	do
+	for (;;) {
 		WaitForSingleObject (_this->event_, INFINITE);
-	while (thread.execute ());
+		if (_this->finish_)
+			break;
+#ifdef _DEBUG
+//		if (!thread.exec_domain ())
+//			__debugbreak ();
+#endif
+		thread.execute ();
+	}
 	
 	context.convert_to_thread ();
 	thread.on_thread_proc_end ();
 	return 0;
 }
 
-ThreadBackground::ThreadBackground ()
+ThreadBackground::ThreadBackground () :
+	finish_ (false)
 {
 	if (!(event_ = CreateEventW (nullptr, false, false, nullptr)))
 		throw_NO_MEMORY ();
