@@ -107,7 +107,7 @@ const bool RUNTIME_SUPPORT_DISABLE = false;
 
 /// Execution domain creation may be heavy.
 /// So we can enable pooling.
-const bool EXEC_DOMAIN_POOLING = false;
+const bool EXEC_DOMAIN_POOLING = true;
 
 ///@{
 /// When a request is issued, the request deadline is not known yet.
