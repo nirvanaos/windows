@@ -55,7 +55,7 @@ from HEAP_UNIT_MIN to HEAP_UNIT_MAX.
 */
 
 /// Heap unit size by default, optimal
-const size_t HEAP_UNIT_DEFAULT = 16;
+const size_t HEAP_UNIT_DEFAULT = sizeof (void*) * 4;
 
 /// Minimal possible user heap granularity
 const size_t HEAP_UNIT_MIN = 4;
