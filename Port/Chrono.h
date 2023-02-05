@@ -29,7 +29,7 @@
 #pragma once
 
 #include <CORBA/CORBA.h>
-#include <Nirvana/TimeBase.h>
+#include <CORBA/TimeBase.h>
 #include <Nirvana/time_defs.h>
 #include <Nirvana/rescale.h>
 
