@@ -124,9 +124,6 @@ private:
 	static bool adjustment_in_progress ();
 
 private:
-	// Offset from 15 October 1582 00:00:00 to 1 January 1601 12:00:00 in seconds
-	static const uint64_t WIN_TIME_OFFSET_SEC = 574862400UI64;
-
 	// Performance counter frequency
 	static uint64_t TSC_frequency_;
 

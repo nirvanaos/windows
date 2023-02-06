@@ -8,8 +8,8 @@
 
 namespace TestThreadPool {
 
-using namespace ::std;
 using namespace ::Nirvana::Core::Windows;
+using namespace ::Nirvana::Core::Port;
 
 class TestThreadPool :
 	public ::testing::Test
@@ -76,7 +76,7 @@ public:
 	}
 
 private:
-	atomic <size_t> message_cnt_;
+	std::atomic <size_t> message_cnt_;
 };
 
 TEST_F (TestThreadPool, PostOffice)
@@ -260,7 +260,7 @@ private:
 TEST_F (TestThreadPool, File)
 {
 	WCHAR path [MAX_PATH + 1];
-	GetModuleFileNameW (nullptr, path, (DWORD)size (path));
+	GetModuleFileNameW (nullptr, path, (DWORD)std::size (path));
 	wcscpy (wcsrchr (path, L'\\') + 1, L"TestThreadPool.File.tmp");
 
 	{

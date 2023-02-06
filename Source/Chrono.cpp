@@ -25,6 +25,7 @@
 */
 #include "../Port/Chrono.h"
 #include "win32.h"
+#include <timeapi.h>
 #include <limits>
 
 namespace Nirvana {
@@ -88,10 +89,17 @@ void Chrono::initialize () NIRVANA_NOEXCEPT
 #ifndef NIRVANA_FAST_RESCALE64
 	max_timeout64_ = std::numeric_limits <uint64_t>::max () / TSC_frequency_;
 #endif
+
+	TIMECAPS tc;
+	timeGetDevCaps (&tc, sizeof (tc));
+	timeBeginPeriod (tc.wPeriodMin);
 }
 
 void Chrono::terminate () NIRVANA_NOEXCEPT
 {
+	TIMECAPS tc;
+	timeGetDevCaps (&tc, sizeof (tc));
+	timeEndPeriod (tc.wPeriodMin);
 	RegCloseKey (hkey_time_config_);
 	RegCloseKey (hkey_time_client_);
 }
@@ -143,7 +151,7 @@ TimeBase::UtcT Chrono::UTC () NIRVANA_NOEXCEPT
 	else
 		inacclo = 1;
 
-	return TimeBase::UtcT (ui.QuadPart + WIN_TIME_OFFSET_SEC * 10000000UI64, inacclo, 0, 0);
+	return TimeBase::UtcT (ui.QuadPart + Windows::WIN_TIME_OFFSET_SEC * TimeBase::SECOND, inacclo, 0, 0);
 }
 
 TimeBase::UtcT Chrono::system_clock () NIRVANA_NOEXCEPT
