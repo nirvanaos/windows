@@ -71,9 +71,6 @@ const int WORKER_THREAD_PRIORITY = THREAD_PRIORITY_ABOVE_NORMAL;
 /// Background thread priority is normal priority.
 const int BACKGROUND_THREAD_PRIORITY = THREAD_PRIORITY_NORMAL;
 
-/// Boosted background thread priority must be above worker thread priority.
-const int BACKGROUND_THREAD_PRIORITY_BOOSTED = THREAD_PRIORITY_HIGHEST;
-
 /// System scheduler threads must have maximal priority.
 const int SCHEDULER_THREAD_PRIORITY = THREAD_PRIORITY_TIME_CRITICAL;
 

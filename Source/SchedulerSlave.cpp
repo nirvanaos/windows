@@ -196,7 +196,7 @@ DWORD WINAPI SchedulerSlave::s_watchdog_thread_proc (void* _this)
 		// System process was terminated unexpectedly.
 		DWORD exit_code = -1;
 		GetExitCodeProcess (wait_handles [1], &exit_code);
-		ExitProcess (exit_code);
+		unrecoverable_error (exit_code);
 	}
 	return 0;
 }

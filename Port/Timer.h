@@ -28,41 +28,38 @@
 #define NIRVANA_CORE_PORT_TIMER_H_
 #pragma once
 
-#include <CoreInterface.h>
-#include <CORBA/TimeBase.h>
-#include "../Source/CompletionPortReceiver.h"
+#include <CORBA/CORBA.h>
 
-typedef void* HANDLE;
+struct _TP_TIMER;
 
 namespace Nirvana {
 namespace Core {
+
+namespace Windows {
+class TimerPool;
+}
+
 namespace Port {
 
-class Timer :
-	private Windows::CompletionPortReceiver
+class Timer
 {
-	DECLARE_CORE_INTERFACE
-
 public:
 	void set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period);
-	void cancel () NIRVANA_NOEXCEPT;
+	void cancel () noexcept;
+
+	static void initialize () noexcept;
+	static void terminate () noexcept;
 
 protected:
-	Timer () :
-		handle_ (nullptr),
-		period_ (0)
-	{}
-
+	Timer ();
 	~Timer ();
 
-	virtual void signal () NIRVANA_NOEXCEPT = 0;
+	virtual void signal () noexcept = 0;
+
+	friend class Windows::TimerPool;
 
 private:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
-
-private:
-	HANDLE handle_;
-	long period_;
+	struct _TP_TIMER* timer_;
 };
 
 }

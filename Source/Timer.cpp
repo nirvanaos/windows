@@ -26,32 +26,89 @@
 
 #include <Timer.h>
 #include <limits>
-#include "MessageBroker.h"
+#include "../Port/SystemInfo.h"
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
+
+namespace Windows {
+
+class TimerPool
+{
+public:
+	void initialize () noexcept
+	{
+		InitializeThreadpoolEnvironment (&callback_environ_);
+		thread_pool_ = CreateThreadpool (nullptr);
+		assert (thread_pool_);
+
+		TP_POOL_STACK_INFORMATION si { NEUTRAL_FIBER_STACK_SIZE, NEUTRAL_FIBER_STACK_SIZE };
+		verify (SetThreadpoolStackInformation (thread_pool_, &si));
+		SetThreadpoolThreadMaximum (thread_pool_, Port::SystemInfo::hardware_concurrency ());
+		verify (SetThreadpoolThreadMinimum (thread_pool_, 1));
+
+		SetThreadpoolCallbackPool (&callback_environ_, thread_pool_);
+	}
+
+	void terminate () noexcept
+	{
+		CloseThreadpool (thread_pool_);
+	}
+
+	TP_TIMER* timer_create (Port::Timer& timer)
+	{
+		TP_TIMER* p = CreateThreadpoolTimer (&timer_callback, &timer, &callback_environ_);
+		if (!p)
+			throw_NO_MEMORY ();
+		return p;
+	}
+
+private:
+	static void CALLBACK timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*);
+
+private:
+	TP_POOL* thread_pool_;
+	TP_CALLBACK_ENVIRON callback_environ_;
+};
+
+void CALLBACK TimerPool::timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*)
+{
+	((Port::Timer*)context)->signal ();
+}
+
+static TimerPool timer_pool;
+
+}
+
+using Windows::timer_pool;
+
 namespace Port {
 
+void Timer::initialize () noexcept
+{
+	timer_pool.initialize ();
+}
+
+void Timer::terminate () noexcept
+{
+	timer_pool.terminate ();
+}
+
+Timer::Timer () :
+	timer_ (timer_pool.timer_create (*this))
+{}
 
 Timer::~Timer ()
 {
-	if (handle_)
-		CloseHandle (handle_);
-}
-
-void Timer::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
-{
-	if (!period_ && handle_) {
-		HANDLE h = handle_;
-		handle_ = nullptr;
-		verify (CloseHandle (h));
-	}
-	signal ();
+	SetThreadpoolTimer (timer_, nullptr, 0, 0);
+	WaitForThreadpoolTimerCallbacks (timer_, true);
+	CloseThreadpoolTimer (timer_);
 }
 
 void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period)
 {
-	if (period > (TimeBase::TimeT)std::numeric_limits <LONG>::max ())
+	if (period > (TimeBase::TimeT)std::numeric_limits <DWORD>::max ())
 		throw_BAD_PARAM ();
 	LARGE_INTEGER dt;
 	if (flags & Core::Timer::TIMER_ABSOLUTE)
@@ -61,20 +118,12 @@ void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT perio
 			throw_BAD_PARAM ();
 		dt.QuadPart = -(LONGLONG)due_time;
 	}
-	if (!handle_ && !(handle_ = CreateWaitableTimerW (nullptr, false, nullptr)))
-		throw_NO_MEMORY (GetLastError ());
-	Windows::MessageBroker::completion_port ().add_receiver (handle_, *this);
-	verify (SetWaitableTimer (handle_, &dt, period_ = (LONG)period, nullptr, nullptr, flags & Core::Timer::TIMER_WAKEUP));
+	SetThreadpoolTimer (timer_, (PFILETIME)&dt, (DWORD)period, 0);
 }
 
 void Timer::cancel () NIRVANA_NOEXCEPT
 {
-	if (handle_) {
-		HANDLE h = handle_;
-		handle_ = nullptr;
-		verify (CancelWaitableTimer (h));
-		verify (CloseHandle (h));
-	}
+	SetThreadpoolTimer (timer_, nullptr, 0, 0);
 }
 
 }

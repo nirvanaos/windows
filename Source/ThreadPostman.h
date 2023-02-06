@@ -45,7 +45,7 @@ public:
 		completion_port_ (completion_port)
 	{}
 
-protected:
+private:
 	friend class Thread;
 	static unsigned long __stdcall thread_proc (ThreadPostman* _this);
 

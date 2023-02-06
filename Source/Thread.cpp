@@ -36,8 +36,9 @@ void Thread::create (PTHREAD_START_ROUTINE thread_proc, void* param, int priorit
 	assert (!handle_);
 	handle_ = CreateThread (nullptr, Windows::NEUTRAL_FIBER_STACK_SIZE, thread_proc, param, 0, nullptr);
 	if (!handle_)
-		throw_INTERNAL ();
-	verify (SetThreadPriority (handle_, priority));
+		throw_NO_MEMORY ();
+	if (THREAD_PRIORITY_NORMAL != priority)
+		verify (SetThreadPriority (handle_, priority));
 }
 
 }
