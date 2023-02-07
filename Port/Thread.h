@@ -72,6 +72,10 @@ public:
 	{
 		return ExecContext::current ();
 	}
+
+	/// Wait for the thread termination
+	void join () const;
+
 	///@}
 
 public:
@@ -85,8 +89,6 @@ public:
 	{
 		create ((PTHREAD_START_ROUTINE)T::thread_proc, p, priority);
 	}
-
-	void join () const;
 
 protected:
 	Thread () NIRVANA_NOEXCEPT :

@@ -34,11 +34,6 @@ struct _TP_TIMER;
 
 namespace Nirvana {
 namespace Core {
-
-namespace Windows {
-class TimerPool;
-}
-
 namespace Port {
 
 class Timer
@@ -56,10 +51,11 @@ protected:
 
 	virtual void signal () noexcept = 0;
 
-	friend class Windows::TimerPool;
-
 private:
 	struct _TP_TIMER* timer_;
+
+	struct Pool;
+	static Pool pool_;
 };
 
 }

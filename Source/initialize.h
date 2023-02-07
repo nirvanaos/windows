@@ -32,7 +32,6 @@
 #include "ErrConsole.h"
 #include "../Port/SystemInfo.h"
 #include "../Port/Chrono.h"
-#include "../Port/Timer.h"
 #include <exception>
 
 namespace Nirvana {
@@ -49,7 +48,6 @@ bool initialize (void)
     ErrConsole () << "INITIALIZE" << '\n';
     return false;
   }
-  Port::Timer::initialize ();
   return true;
 }
 

@@ -31,83 +31,102 @@
 
 namespace Nirvana {
 namespace Core {
+namespace Port {
 
-namespace Windows {
-
-class TimerPool
+struct Timer::Pool
 {
-public:
 	void initialize () noexcept
 	{
-		InitializeThreadpoolEnvironment (&callback_environ_);
-		thread_pool_ = CreateThreadpool (nullptr);
-		assert (thread_pool_);
+		assert (!initialized);
 
-		TP_POOL_STACK_INFORMATION si { NEUTRAL_FIBER_STACK_SIZE, NEUTRAL_FIBER_STACK_SIZE };
-		verify (SetThreadpoolStackInformation (thread_pool_, &si));
-		SetThreadpoolThreadMaximum (thread_pool_, Port::SystemInfo::hardware_concurrency ());
-		verify (SetThreadpoolThreadMinimum (thread_pool_, 1));
+		InitializeThreadpoolEnvironment (&callback_environ);
+		thread_pool = CreateThreadpool (nullptr);
+		assert (thread_pool);
 
-		SetThreadpoolCallbackPool (&callback_environ_, thread_pool_);
+		TP_POOL_STACK_INFORMATION si { Windows::NEUTRAL_FIBER_STACK_SIZE, Windows::NEUTRAL_FIBER_STACK_SIZE };
+		verify (SetThreadpoolStackInformation (thread_pool, &si));
+		SetThreadpoolThreadMaximum (thread_pool, Port::SystemInfo::hardware_concurrency ());
+		verify (SetThreadpoolThreadMinimum (thread_pool, 0));
+
+		SetThreadpoolCallbackPool (&callback_environ, thread_pool);
+
+		cleanup_group = CreateThreadpoolCleanupGroup ();
+		assert (cleanup_group);
+		SetThreadpoolCallbackCleanupGroup (&callback_environ, cleanup_group, nullptr);
+
+		initialized = true;
 	}
 
 	void terminate () noexcept
 	{
-		CloseThreadpool (thread_pool_);
+		assert (initialized);
+
+		initialized = false;
+
+		CloseThreadpoolCleanupGroupMembers (cleanup_group, true, nullptr);
+		CloseThreadpoolCleanupGroup (cleanup_group);
+		CloseThreadpool (thread_pool);
+		DestroyThreadpoolEnvironment (&callback_environ);
 	}
 
 	TP_TIMER* timer_create (Port::Timer& timer)
 	{
-		TP_TIMER* p = CreateThreadpoolTimer (&timer_callback, &timer, &callback_environ_);
+		if (!initialized)
+			throw_INITIALIZE ();
+		TP_TIMER* p = CreateThreadpoolTimer (&timer_callback, &timer, &callback_environ);
 		if (!p)
 			throw_NO_MEMORY ();
 		return p;
 	}
 
-private:
+	void timer_close (TP_TIMER* timer) noexcept
+	{
+		if (initialized) {
+			SetThreadpoolTimer (timer, nullptr, 0, 0);
+			WaitForThreadpoolTimerCallbacks (timer, true);
+			CloseThreadpoolTimer (timer);
+		}
+	}
+
 	static void CALLBACK timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*);
 
-private:
-	TP_POOL* thread_pool_;
-	TP_CALLBACK_ENVIRON callback_environ_;
+	TP_CALLBACK_ENVIRON callback_environ;
+	TP_POOL* thread_pool;
+	TP_CLEANUP_GROUP* cleanup_group;
+	volatile bool initialized;
 };
 
-void CALLBACK TimerPool::timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*)
+void CALLBACK Timer::Pool::timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*)
 {
-	((Port::Timer*)context)->signal ();
+	((Timer*)context)->signal ();
 }
 
-static TimerPool timer_pool;
-
-}
-
-using Windows::timer_pool;
-
-namespace Port {
+Timer::Pool Timer::pool_ { 0 };
 
 void Timer::initialize () noexcept
 {
-	timer_pool.initialize ();
+	pool_.initialize ();
 }
 
 void Timer::terminate () noexcept
 {
-	timer_pool.terminate ();
+	pool_.terminate ();
 }
 
 Timer::Timer () :
-	timer_ (timer_pool.timer_create (*this))
+	timer_ (pool_.timer_create (*this))
 {}
 
 Timer::~Timer ()
 {
-	SetThreadpoolTimer (timer_, nullptr, 0, 0);
-	WaitForThreadpoolTimerCallbacks (timer_, true);
-	CloseThreadpoolTimer (timer_);
+	pool_.timer_close (timer_);
 }
 
 void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period)
 {
+	if (!pool_.initialized)
+		return;
+	period /= TimeBase::MILLISECOND;
 	if (period > (TimeBase::TimeT)std::numeric_limits <DWORD>::max ())
 		throw_BAD_PARAM ();
 	LARGE_INTEGER dt;
@@ -118,12 +137,13 @@ void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT perio
 			throw_BAD_PARAM ();
 		dt.QuadPart = -(LONGLONG)due_time;
 	}
-	SetThreadpoolTimer (timer_, (PFILETIME)&dt, (DWORD)period, 0);
+	SetThreadpoolTimer (timer_, (FILETIME*)&dt, (DWORD)period, 0);
 }
 
 void Timer::cancel () NIRVANA_NOEXCEPT
 {
-	SetThreadpoolTimer (timer_, nullptr, 0, 0);
+	if (pool_.initialized)
+		SetThreadpoolTimer (timer_, nullptr, 0, 0);
 }
 
 }

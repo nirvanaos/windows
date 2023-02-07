@@ -29,7 +29,6 @@ protected:
 		// before each test).
 		Nirvana::Core::Port::SystemInfo::initialize ();
 		Nirvana::Core::Port::Chrono::initialize ();
-		ASSERT_TRUE (Nirvana::Core::Heap::initialize ());
 		Nirvana::Core::Port::Timer::initialize ();
 	}
 
@@ -38,7 +37,6 @@ protected:
 		// Code here will be called immediately after each test (right
 		// before the destructor).
 		Nirvana::Core::Port::Timer::terminate ();
-		Nirvana::Core::Heap::terminate ();
 		Nirvana::Core::Port::Chrono::terminate ();
 	}
 };
@@ -88,6 +86,30 @@ TEST_F (TestTimer, Destruct)
 		timer.set (0, 1 * TimeBase::SECOND, 0);
 	}
 	Sleep (2000);
+}
+
+TEST_F (TestTimer, Shutdown)
+{
+	{
+		TimerTest timer;
+		timer.set (0, 1 * TimeBase::SECOND, 0);
+		Nirvana::Core::Port::Timer::terminate ();
+		Sleep (2000);
+		EXPECT_EQ (timer.signalled_, 0);
+	}
+	Nirvana::Core::Port::Timer::initialize ();
+}
+
+TEST_F (TestTimer, Periodic)
+{
+	TimerTest timer;
+	timer.set (0, 1 * TimeBase::SECOND, 1 * TimeBase::SECOND);
+	Sleep (500);
+	EXPECT_EQ (timer.signalled_, 0);
+	Sleep (1000);
+	EXPECT_EQ (timer.signalled_, 1);
+	Sleep (1000);
+	EXPECT_EQ (timer.signalled_, 2);
 }
 
 }
