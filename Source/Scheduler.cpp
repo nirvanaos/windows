@@ -34,7 +34,7 @@ namespace Core {
 
 namespace Windows {
 
-NIRVANA_NORETURN void SchedulerBase::on_error (int err)
+void SchedulerBase::on_error (int err)
 {
 	int zero = CORBA::Exception::EC_NO_EXCEPTION;
 	if (error_.compare_exchange_strong (zero, err))

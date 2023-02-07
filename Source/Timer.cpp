@@ -101,7 +101,7 @@ void CALLBACK Timer::Pool::timer_callback (TP_CALLBACK_INSTANCE*, void* context,
 	((Timer*)context)->signal ();
 }
 
-Timer::Pool Timer::pool_ { 0 };
+Timer::Pool Timer::pool_ {};
 
 void Timer::initialize () noexcept
 {

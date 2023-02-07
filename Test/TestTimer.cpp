@@ -1,14 +1,10 @@
-#include "../Source/MessageBroker.h"
 #include "../Port/Chrono.h"
 #include "../Port/Timer.h"
+#include "../Port/SystemInfo.h"
 #include <gtest/gtest.h>
 #include <atomic>
 
 namespace TestTimer {
-
-using namespace Nirvana::Core;
-using namespace Nirvana::Core::Windows;
-using namespace Nirvana::Core::Port;
 
 class TestTimer :
 	public ::testing::Test
@@ -42,7 +38,7 @@ protected:
 };
 
 class TimerTest :
-	public Port::Timer
+	public Nirvana::Core::Port::Timer
 {
 public:
 	TimerTest () :
