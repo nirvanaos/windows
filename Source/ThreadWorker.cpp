@@ -71,7 +71,7 @@ void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline)
 	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_neutral_fiber_proc, &param);
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
-	thread.neutral_context ().port ().attach (worker_fiber);
+	thread.neutral_context ().port ().attach (worker_fiber); // worker_fiber will be deleted in the neutral context destructor
 
 #ifdef _DEBUG
 	DWORD dbg_main_thread = GetCurrentThreadId ();

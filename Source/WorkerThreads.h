@@ -54,8 +54,8 @@ public:
 			p->create ();
 		}
 
-		// Run main
-		Pool::threads ()->run_main (startup, deadline);
+		// Run main for the thread 0 (main thread).
+		Pool::threads ()[0].run_main (startup, deadline);
 	}
 
 	void shutdown ()
