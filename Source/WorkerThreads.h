@@ -56,6 +56,12 @@ public:
 
 		// Run main for the thread 0 (main thread).
 		Pool::threads ()[0].run_main (startup, deadline);
+
+		// Wait for other worker threads termination
+		for (ThreadWorker* p = Pool::threads () + 1,
+			*end = Pool::threads () + Pool::thread_count (); p != end; ++p) {
+			p->join ();
+		}
 	}
 
 	void shutdown ()
