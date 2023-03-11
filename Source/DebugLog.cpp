@@ -173,7 +173,7 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 			ptr = (const DWORD*)(hinst + ptr [3]);
 			ptr = (const DWORD*)(hinst + ptr [1]);
 			ptr = (const DWORD*)(hinst + ptr [1]);
-			const char* class_name = ((const char* const*)ptr) [2];
+			const char* class_name = (const char*)(((const void**)ptr) + 2);
 			log << class_name << '\n';
 		} break;
 	}
