@@ -170,9 +170,9 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 			const BYTE* hinst = 0;
 #endif
 			const DWORD* ptr = (const DWORD*)pex->ExceptionRecord->ExceptionInformation [2];
-			ptr = (const DWORD*)(hinst + ptr [4]);
-			ptr = (const DWORD*)(hinst + ptr [2]);
-			ptr = (const DWORD*)(hinst + ptr [2]);
+			ptr = (const DWORD*)(hinst + ptr [3]);
+			ptr = (const DWORD*)(hinst + ptr [1]);
+			ptr = (const DWORD*)(hinst + ptr [1]);
 			const char* class_name = ((const char* const*)ptr) [2];
 			log << class_name << '\n';
 		} break;
