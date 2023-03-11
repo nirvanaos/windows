@@ -135,6 +135,74 @@ void DebugLog::write (const char* text, size_t len) noexcept
 	}
 }
 
+void report_unhandled (_EXCEPTION_POINTERS* pex)
+{
+	DWORD exc = pex->ExceptionRecord->ExceptionCode;
+
+	DebugLog log;
+
+	char buf [_MAX_I64TOSTR_BASE16_COUNT];
+	_itoa (exc, buf, 16);
+	log << "Unhandled exception 0x" << buf << '\n';
+	switch (exc) {
+	case EXCEPTION_ACCESS_VIOLATION:
+		if (pex->ExceptionRecord->NumberParameters >= 2) {
+			void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
+			if (pex->ExceptionRecord->ExceptionInformation [0])
+				log << "Write to";
+			else
+				log << "Read from";
+			log << " address 0x";
+#ifdef _WIN64
+			_i64toa ((long long)address, buf, 16);
+#else
+			_itoa ((int)address, buf, 16);
+#endif
+			log << buf << '\n';
+		} break;
+
+	case 0xe06d7363: // Visual C++
+#ifdef _WIN64
+		if (pex->ExceptionRecord->NumberParameters >= 4) {
+			const BYTE* hinst = (const BYTE*)pex->ExceptionRecord->ExceptionInformation [3];
+#else
+		if (pex->ExceptionRecord->NumberParameters >= 3) {
+			const BYTE* hinst = 0;
+#endif
+			const DWORD* ptr = (const DWORD*)pex->ExceptionRecord->ExceptionInformation [2];
+			ptr = (const DWORD*)(hinst + ptr [4]);
+			ptr = (const DWORD*)(hinst + ptr [2]);
+			ptr = (const DWORD*)(hinst + ptr [2]);
+			const char* class_name = ((const char* const*)ptr) [2];
+			log << class_name << '\n';
+		} break;
+	}
+
+#ifdef _DEBUG
+	void* stack [63];
+	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
+	if (frame_cnt <= 0)
+		log << "Stack trace is not available\n";
+
+	IMAGEHLP_LINE64 line;
+	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
+	DWORD displacement;
+
+	HANDLE process = GetCurrentProcess ();
+	for (int i = 0; i < frame_cnt; ++i) {
+		if (SymGetLineFromAddr64 (process, (DWORD64)(stack [i]), &displacement, &line)) {
+			_itoa (line.LineNumber, buf, 10);
+			log << line.FileName << '(' << buf << ")\n";
+		} else {
+			log << "Line not found\n";
+		}
+	}
+
+	if (frame_cnt == std::size (stack))
+		log << "More stack frames...\n";
+#endif
+}
+
 }
 }
 }
