@@ -687,12 +687,10 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 				end_mbi = begin_mbi;
 		}
 
-		if (!end_mbi.BaseAddress) {
+		if (!end_mbi.BaseAddress && INVALID_HANDLE_VALUE == end_handle) {
 			Address back = end - PAGE_SIZE;
-			if (INVALID_HANDLE_VALUE == end_handle) {
-				query (back, end_mbi);
-				assert (MEM_RESERVE == end_mbi.State);
-			}
+			query (back, end_mbi);
+			assert (MEM_RESERVE == end_mbi.State);
 		}
 
 		// Split reserved blocks at begin and end if need.
