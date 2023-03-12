@@ -388,7 +388,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 
 void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 {
-	// NOTE: Memory::SRC_DECOMMIT and Memory::SRC_RELEASE flags used only for optimozation.
+	// NOTE: Memory::SRC_DECOMMIT and Memory::SRC_RELEASE flags used only for optimization.
 	// We don't perform actual decommit or release here.
 	assert (size);
 	size_t offset = (uintptr_t)src % ALLOCATION_GRANULARITY;
@@ -397,6 +397,7 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 	if ((flags & Nirvana::Memory::SIMPLE_COPY) && has_data (offset, size, PageState::MASK_NO_WRITE))
 		throw_NO_PERMISSION ();
 
+	bool remap = false;
 	Block src_block (src, size == ALLOCATION_GRANULARITY);
 	for (;;) {
 		bool src_remap = false;
@@ -408,7 +409,7 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 					else
 						src_remap = true;
 				} else if (!need_remap_to_share (offset, size))
-					return; // If no unmapped pages at target region, we don't need to do anything.
+					goto manage_protection;
 				else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
 					goto fallback;
 			} else if (has_data_outside_of (offset, size))
@@ -440,23 +441,22 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 		assert (offset + size <= ALLOCATION_GRANULARITY);
 
 	restart:
-		HANDLE src_mapping = src_block.mapping ();
-		assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
-		assert (address () != src_block.address ());
+		{
+			HANDLE src_mapping = src_block.mapping ();
+			assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
+			assert (address () != src_block.address ());
 
-		bool remap;
-		HANDLE cur_mapping = mapping ();
-		if (INVALID_HANDLE_VALUE == cur_mapping)
-			remap = true;
-		else {
-			if (!CompareObjectHandles (cur_mapping, src_mapping)) {
+			HANDLE cur_mapping = mapping ();
+			if (INVALID_HANDLE_VALUE == cur_mapping)
+				remap = true;
+			else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
 				// Change mapping
 				assert (!has_data_outside_of (offset, size));
 				remap = true;
-			} else
-				remap = false;
+			}
 		}
 
+	manage_protection:
 		bool move = src_block.can_move (offset, size, flags);
 
 		if (move && src_block.exclusive_lock ())
