@@ -162,6 +162,8 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 		} break;
 
 	case 0xe06d7363: // Visual C++
+		// Decoding the parameters of a thrown C++ exception (0xE06D7363)
+		// https://devblogs.microsoft.com/oldnewthing/20100730-00/?p=13273
 #ifdef _WIN64
 		if (pex->ExceptionRecord->NumberParameters >= 4) {
 			const BYTE* hinst = (const BYTE*)pex->ExceptionRecord->ExceptionInformation [3];

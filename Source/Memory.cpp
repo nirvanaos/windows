@@ -473,36 +473,28 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 		if (remap)
 			Base::copy (src_block, offset, size, copied_pages_state);
 		else {
-			// Manage protection of copied pages
-			DWORD dst_page_state [PAGES_PER_BLOCK];
-			DWORD* dst_ps_begin = dst_page_state + offset / PAGE_SIZE;
-			DWORD* dst_ps_end = dst_page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
-			std::fill (dst_page_state, dst_ps_begin, PageState::DECOMMITTED);
-			std::fill (dst_ps_end, dst_page_state + PAGES_PER_BLOCK, PageState::DECOMMITTED);
-			std::fill (dst_ps_begin, dst_ps_end, copied_pages_state);
-			const PageState* cur_ps = state ().page_state;
-			const DWORD* region_begin = dst_page_state, * block_end = dst_page_state + PAGES_PER_BLOCK;
-			do {
-				DWORD protection;
-				while (!(PageState::MASK_ACCESS & (cur_ps->protection () ^ (protection = *region_begin)))) {
-					// We need to change access of the copied pages
-					++cur_ps;
-					if (++region_begin == block_end)
-						return;
-				}
-				auto region_end = region_begin;
-				do {
-					++cur_ps;
-					++region_end;
-				} while (region_end < block_end && protection == *region_end);
+			// Manage protection of the copied pages
 
-				BYTE* ptr = (BYTE*)address () + (region_begin - dst_page_state) * PAGE_SIZE;
-				size_t size = (region_end - region_begin) * PAGE_SIZE;
-				protect (ptr, size, protection);
-				invalidate_state ();
-
-				region_begin = region_end;
-			} while (region_begin < block_end);
+			size_t page_begin = offset / PAGE_SIZE;
+			size_t page_end = (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+			if (Nirvana::Memory::READ_ONLY & flags) {
+				if (offset % PAGE_SIZE && state ().page_state [page_begin].protection () & PageState::MASK_ACCESS)
+					++page_begin;
+				size_t page_last = page_end - 1;
+				if (page_last > page_begin && (offset + size) % PAGE_SIZE && state ().page_state [page_last].protection () & PageState::MASK_ACCESS)
+					page_end = page_last;
+				if (page_begin >= page_end)
+					return;
+			}
+			while (state ().page_state [page_begin].protection () == copied_pages_state) {
+				if (page_end == ++page_begin)
+					return;
+			}
+			// We need to change access of the copied pages
+			BYTE* ptr = (BYTE*)address () + page_begin * PAGE_SIZE;
+			size_t size = (page_end - page_begin) * PAGE_SIZE;
+			protect (ptr, size, copied_pages_state);
+			invalidate_state ();
 		}
 	}
 	return;

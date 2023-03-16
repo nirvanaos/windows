@@ -96,7 +96,7 @@ const unsigned PROT_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For protection domai
 /// Unused module unloading timeout
 /// 
 /// If module was not used during this period of time, it will be unloaded.
-const TimeBase::TimeT MODULE_UNLOAD_TIMEOUT = 30 * TimeBase::SECOND;
+const TimeBase::TimeT MODULE_UNLOAD_TIMEOUT = 10 * TimeBase::MINUTE;
 
 /// ORB proxy garbage collection deadline. May be INFINITE_DEADLINE
 const TimeBase::TimeT PROXY_GC_DEADLINE = 10 * TimeBase::SECOND;
