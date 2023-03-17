@@ -311,15 +311,7 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
-	HANDLE hm;
-	if (!DuplicateHandle (GetCurrentProcess (), src.mapping (), space_.process (), &hm, 0, FALSE, DUPLICATE_SAME_ACCESS))
-		throw_NO_MEMORY ();
-	try {
-		map (src.mapping (), hm, copied_pages_state);
-	} catch (...) {
-		space_.close_mapping (hm);
-		throw;
-	}
+	map_copy (src.mapping (), copied_pages_state);
 
 	// Disable access to the committed pages out of range.
 	size_t start_page = offset / PAGE_SIZE;
@@ -367,6 +359,20 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 				region_begin = region_end;
 			}
 		} while (region_begin < end);
+	}
+}
+
+template <bool x64>
+void AddressSpace <x64>::Block::map_copy (HANDLE src_mapping, uint32_t protection)
+{
+	HANDLE hm;
+	if (!DuplicateHandle (GetCurrentProcess (), src_mapping, space_.process (), &hm, 0, FALSE, DUPLICATE_SAME_ACCESS))
+		throw_NO_MEMORY ();
+	try {
+		map (src_mapping, hm, protection);
+	} catch (...) {
+		space_.close_mapping (hm);
+		throw;
 	}
 }
 

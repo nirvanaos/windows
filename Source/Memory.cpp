@@ -451,7 +451,7 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 				remap = true;
 			else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
 				// Change mapping
-				assert (!has_data_outside_of (offset, size));
+				assert (!has_data_outside_of (offset, size, PageState::MASK_UNMAPPED)); // was checked above
 				remap = true;
 			}
 		}
@@ -470,31 +470,70 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 		else
 			copied_pages_state = PageState::READ_WRITE_PRIVATE;
 
-		if (remap)
+		if (remap && !has_data_outside_of (offset, size))
 			Base::copy (src_block, offset, size, copied_pages_state);
 		else {
-			// Manage protection of the copied pages
-
+			const Windows::BlockState& block_state = state ();
 			size_t page_begin = offset / PAGE_SIZE;
 			size_t page_end = (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
 			if (Nirvana::Memory::READ_ONLY & flags) {
-				if (offset % PAGE_SIZE && state ().page_state [page_begin].protection () & PageState::MASK_ACCESS)
+				if (offset % PAGE_SIZE && block_state.page_state [page_begin].protection () & PageState::MASK_ACCESS)
 					++page_begin;
 				size_t page_last = page_end - 1;
 				if (page_last > page_begin && (offset + size) % PAGE_SIZE && state ().page_state [page_last].protection () & PageState::MASK_ACCESS)
 					page_end = page_last;
-				if (page_begin >= page_end)
-					return;
 			}
-			while (state ().page_state [page_begin].protection () == copied_pages_state) {
-				if (page_end == ++page_begin)
-					return;
+			if (remap) {
+				// Source and target blocks had the same mapping,
+				// but source block was remapped.
+				// We need to save page state outside the copied region.
+				DWORD page_protection [PAGES_PER_BLOCK];
+				for (size_t i = 0; i < page_begin; ++i) {
+					page_protection [i] = block_state.page_state [i].protection ();
+				}
+				for (size_t i = page_begin; i < page_end; ++i)
+					page_protection [i] = copied_pages_state;
+				for (size_t i = page_end; i < PAGES_PER_BLOCK; ++i) {
+					page_protection [i] = block_state.page_state [i].protection ();
+				}
+
+				map_copy (src_block.mapping (), copied_pages_state);
+
+				// Adjust protection for the non-copied pages.
+				DWORD protection;
+				const DWORD* pp = page_protection, * ppe = page_protection + PAGES_PER_BLOCK;
+				do {
+					for (; pp < ppe; ++pp) {
+						protection = *pp;
+						if (protection != copied_pages_state)
+							break;
+					}
+					if (pp < ppe) {
+						const DWORD* begin = pp;
+						for (++pp; pp < ppe; ++pp) {
+							if (protection != *pp)
+								break;
+						}
+						BYTE* ptr = (BYTE*)address () + (begin - page_protection) * PAGE_SIZE;
+						size_t size = (pp - begin) * PAGE_SIZE;
+						protect (ptr, size, copied_pages_state);
+						invalidate_state ();
+					}
+				} while (pp < ppe);
+
+			} else {
+				// Manage access to copied pages
+				while (page_begin < page_end && block_state.page_state [page_begin].protection () == copied_pages_state) {
+					++page_begin;
+				}
+				if (page_begin < page_end) {
+					// We need to change access of the copied pages
+					BYTE* ptr = (BYTE*)address () + page_begin * PAGE_SIZE;
+					size_t size = (page_end - page_begin) * PAGE_SIZE;
+					protect (ptr, size, copied_pages_state);
+					invalidate_state ();
+				}
 			}
-			// We need to change access of the copied pages
-			BYTE* ptr = (BYTE*)address () + page_begin * PAGE_SIZE;
-			size_t size = (page_end - page_begin) * PAGE_SIZE;
-			protect (ptr, size, copied_pages_state);
-			invalidate_state ();
 		}
 	}
 	return;

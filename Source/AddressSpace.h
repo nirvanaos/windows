@@ -143,6 +143,8 @@ public:
 
 		void map (HANDLE mapping_map, HANDLE mapping_store, uint32_t protection);
 
+		void map_copy (HANDLE src_mapping, uint32_t protection);
+
 	private:
 		static BlockInfo& check_block (BlockInfo* info)
 		{
