@@ -52,7 +52,7 @@ public:
 		port ().create (this, WORKER_THREAD_PRIORITY);
 	}
 
-	void run_main (Startup& startup, DeadlineTime deadline);
+	void run_main (Startup& startup, DeadlineTime deadline, ThreadWorker* other_workers, size_t other_worker_cnt);
 
 	ThreadWorker (Windows::WorkerSemaphore& master)
 	{}

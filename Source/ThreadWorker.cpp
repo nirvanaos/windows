@@ -48,6 +48,8 @@ struct ThreadWorker::MainNeutralFiberParam
 {
 	Startup& startup;
 	DeadlineTime deadline;
+	ThreadWorker* other_workers;
+	size_t other_worker_cnt;
 };
 
 void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* param)
@@ -57,17 +59,21 @@ void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* para
 	param->startup.launch (param->deadline);
 	// Do worker thread proc.
 	SchedulerBase::singleton ().worker_thread_proc ();
+	// Wait while all other workers terminate
+	for (ThreadWorker* t = param->other_workers, *end = t + param->other_worker_cnt; t != end; ++t) {
+		t->join ();
+	}
 	// Switch back to main fiber.
 	SwitchToFiber (Port::ExecContext::main_fiber ());
 }
 
-void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline)
+void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline, ThreadWorker* other_workers, size_t other_worker_cnt)
 {
 	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
 	Port::Thread::current (&thread);
 
 	// Create fiber for neutral context
-	MainNeutralFiberParam param{ startup, deadline };
+	MainNeutralFiberParam param { startup, deadline, other_workers, other_worker_cnt };
 	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_neutral_fiber_proc, &param);
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
@@ -81,7 +87,7 @@ void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline)
 	int prio = GetThreadPriority (GetCurrentThread ());
 	SetThreadPriority (GetCurrentThread (), Windows::WORKER_THREAD_PRIORITY);
 
-	// Switch to neutral context and run main_fiber_proc
+	// Switch to neutral context and run main_neutral_fiber_proc
 	SwitchToFiber (worker_fiber);
 
 	// Do fiber_proc for this worker thread

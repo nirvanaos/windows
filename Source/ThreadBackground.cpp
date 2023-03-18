@@ -47,6 +47,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	}
 	
 	context.convert_to_thread ();
+	Port::Thread::current (nullptr);
 	thread.on_thread_proc_end ();
 	return 0;
 }
