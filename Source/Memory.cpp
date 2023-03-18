@@ -435,28 +435,29 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 	// Virtual copy.
 	if (!(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
+
+	exclusive_lock ();
+	assert (size);
+	assert (offset + size <= ALLOCATION_GRANULARITY);
+
+restart:
 	{
-		exclusive_lock ();
-		assert (size);
-		assert (offset + size <= ALLOCATION_GRANULARITY);
+		HANDLE src_mapping = src_block.mapping ();
+		assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
+		assert (address () != src_block.address ());
 
-	restart:
-		{
-			HANDLE src_mapping = src_block.mapping ();
-			assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
-			assert (address () != src_block.address ());
-
-			HANDLE cur_mapping = mapping ();
-			if (INVALID_HANDLE_VALUE == cur_mapping)
-				remap = true;
-			else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
-				// Change mapping
-				assert (!has_data_outside_of (offset, size, PageState::MASK_UNMAPPED)); // was checked above
-				remap = true;
-			}
+		HANDLE cur_mapping = mapping ();
+		if (INVALID_HANDLE_VALUE == cur_mapping)
+			remap = true;
+		else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
+			// Change mapping
+			assert (!has_data_outside_of (offset, size, PageState::MASK_UNMAPPED)); // was checked above
+			remap = true;
 		}
+	}
 
-	manage_protection:
+manage_protection:
+	{
 		bool move = src_block.can_move (offset, size, flags);
 
 		if (move && src_block.exclusive_lock ())

@@ -158,9 +158,10 @@ public:
 
 	void prepare_to_share (size_t offset, size_t size, unsigned flags)
 	{
-		if (need_remap_to_share (offset, size))
-			if (exclusive_lock () && need_remap_to_share (offset, size))
+		if (need_remap_to_share (offset, size)) {
+			if (!exclusive_lock () || need_remap_to_share (offset, size))
 				remap ();
+		}
 		if (!(flags & Nirvana::Memory::SRC_DECOMMIT)) // Memory::SRC_RELEASE includes flag DECOMMIT.
 			prepare_to_share_no_remap (offset, size);
 	}
