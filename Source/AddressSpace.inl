@@ -106,22 +106,25 @@ void AddressSpace <x64>::query (Address address, MBI& mbi) const
 }
 
 template <bool x64> inline
-void AddressSpace <x64>::protect (Address address, size_t size, uint32_t protection) const
+void AddressSpace <x64>::Block::protect (Address addr, size_t size, uint32_t protection)
 {
 	assert (!(protection & ~PageState::MASK_PROTECTION));
+	assert (addr >= address ());
 	assert (size && 0 == size % PAGE_SIZE);
+	assert (addr + size <= address () + ALLOCATION_GRANULARITY);
+	exclusive_lock ();
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
 	if (x64) {
 		DWORD64 tmp_size = size;
 		DWORD64 old;
-		DWORD64 status = X64Call (wow64_NtProtectVirtualMemory, 5, HANDLE_TO_DWORD64 (process_),
-			PTR_TO_DWORD64 (&address), PTR_TO_DWORD64 (&tmp_size), (DWORD64)protection, PTR_TO_DWORD64 (&old));
+		DWORD64 status = X64Call (wow64_NtProtectVirtualMemory, 5, HANDLE_TO_DWORD64 (space_.process ()),
+			PTR_TO_DWORD64 (&addr), PTR_TO_DWORD64 (&tmp_size), (DWORD64)protection, PTR_TO_DWORD64 (&old));
 		assert (!status);
 	} else
 #endif
 	{
 		unsigned long old;
-		verify (VirtualProtectEx (process_, (void*)(uintptr_t)address, size, protection, &old));
+		verify (VirtualProtectEx (space_.process (), (void*)(uintptr_t)addr, size, protection, &old));
 	}
 }
 
@@ -331,7 +334,7 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 						break;
 					++region_end;
 				}
-				space_.protect ((Address)(address () + (region_begin - page_state) * PAGE_SIZE),
+				protect ((Address)(address () + (region_begin - page_state) * PAGE_SIZE),
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}
@@ -354,7 +357,7 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 						break;
 					++region_end;
 				}
-				space_.protect ((Address)(address () + (region_begin - page_state) * PAGE_SIZE),
+				protect ((Address)(address () + (region_begin - page_state) * PAGE_SIZE),
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}

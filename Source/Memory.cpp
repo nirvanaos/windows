@@ -197,7 +197,7 @@ restart:
 						// Error, decommit back and throw the exception.
 						while (p != regions.begin) {
 							--p;
-							protect (p->ptr, p->size, PageState::DECOMMITTED);
+							protect ((BYTE*)p->ptr, p->size, PageState::DECOMMITTED);
 							verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
 						}
 						throw_NO_MEMORY ();
@@ -315,7 +315,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 					
 					// Temporary disable write access to save data consistency.
 					if (access_mask & PageState::MASK_RW)
-						protect (src, size, PAGE_READONLY);
+						protect ((BYTE*)src, size, PAGE_READONLY);
 
 					real_copy (src, src + size / sizeof (LONG_PTR), dst);
 				} else {
@@ -368,7 +368,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 				while (region_end < block_end && protection == *region_end);
 
 				size_t offset = (region_begin - page_protection) * PAGE_SIZE;
-				void* dst = (BYTE*)address () + offset;
+				BYTE* dst = (BYTE*)address () + offset;
 				size_t size = (region_end - region_begin) * PAGE_SIZE;
 				protect (dst, size, PageState::READ_ONLY);
 			} else {

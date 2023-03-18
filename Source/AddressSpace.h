@@ -145,6 +145,8 @@ public:
 
 		void map_copy (HANDLE src_mapping, uint32_t protection);
 
+		void protect (Address address, size_t size, uint32_t protection);
+
 	private:
 		static BlockInfo& check_block (BlockInfo* info)
 		{
@@ -188,7 +190,6 @@ public:
 private:
 	friend class Port::Memory;
 
-	void protect (Address address, size_t size, uint32_t protection) const;
 	Address alloc (Address address, size_t size, uint32_t flags, uint32_t protection) const;
 	bool free (Address address, Size size, uint32_t flags) const;
 	Address map (HANDLE hm, Address address, size_t size, uint32_t flags, uint32_t protection) const;
