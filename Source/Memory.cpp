@@ -246,6 +246,7 @@ void Memory::Block::prepare_to_share_no_remap (size_t offset, size_t size)
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 	assert (!reserved ());
 
+restart:
 	// Prepare pages
 	const BlockState& st = state ();
 	auto region_begin = st.page_state + offset / PAGE_SIZE, block_end = st.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -257,6 +258,8 @@ void Memory::Block::prepare_to_share_no_remap (size_t offset, size_t size)
 		while (region_end < block_end && protection == region_end->protection ());
 
 		if (PageState::READ_WRITE_PRIVATE == protection) {
+			if (exclusive_lock ())
+				goto restart;
 			BYTE* ptr = (BYTE*)address () + (region_begin - st.page_state) * PAGE_SIZE;
 			size_t size = (region_end - region_begin) * PAGE_SIZE;
 			protect (ptr, size, PageState::READ_WRITE_SHARED);
