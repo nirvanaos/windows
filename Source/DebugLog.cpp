@@ -26,7 +26,11 @@
 #include "DebugLog.h"
 #include "app_data.h"
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
+#define DEBUG_SYMBOLS
+//#endif
+
+#ifdef DEBUG_SYMBOLS
 #include <DbgHelp.h>
 #pragma comment (lib, "Dbghelp.lib")
 #endif
@@ -41,9 +45,9 @@ CRITICAL_SECTION DebugLog::cs_;
 void DebugLog::initialize () noexcept
 {
 	InitializeCriticalSection (&cs_);
-#ifdef _DEBUG
+#ifdef DEBUG_SYMBOLS
 	SymSetOptions (
-		//SYMOPT_DEFERRED_LOADS |
+		SYMOPT_DEFERRED_LOADS |
 		SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
 	char path [MAX_PATH + 1];
 	GetModuleFileNameA (nullptr, path, sizeof (path));
@@ -91,7 +95,7 @@ void DebugLog::terminate () noexcept
 		CloseHandle (handle_);
 		handle_ = INVALID_HANDLE_VALUE;
 	}
-#ifdef _DEBUG
+#ifdef DEBUG_SYMBOLS
 	SymCleanup (GetCurrentProcess ());
 #endif
 	LeaveCriticalSection (&cs_);
@@ -180,7 +184,7 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 		} break;
 	}
 
-#ifdef _DEBUG
+#ifdef DEBUG_SYMBOLS
 	void* stack [63];
 	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
 	if (frame_cnt <= 0)
