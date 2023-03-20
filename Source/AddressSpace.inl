@@ -106,12 +106,12 @@ void AddressSpace <x64>::query (Address address, MBI& mbi) const
 }
 
 template <bool x64> inline
-void AddressSpace <x64>::Block::protect (Address addr, size_t size, uint32_t protection)
+void AddressSpace <x64>::Block::protect (size_t offset, size_t size, uint32_t protection)
 {
 	assert (!(protection & ~PageState::MASK_PROTECTION));
-	assert (addr >= address ());
 	assert (size && 0 == size % PAGE_SIZE);
-	assert (addr + size <= address () + ALLOCATION_GRANULARITY);
+	assert (offset + size <= ALLOCATION_GRANULARITY);
+	Address addr = (Address)(address () + offset);
 	exclusive_lock ();
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
 	if (x64) {
@@ -334,7 +334,7 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 						break;
 					++region_end;
 				}
-				protect ((Address)(address () + (region_begin - page_state) * PAGE_SIZE),
+				protect ((region_begin - page_state) * PAGE_SIZE,
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}
@@ -357,7 +357,7 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 						break;
 					++region_end;
 				}
-				protect ((Address)(address () + (region_begin - page_state) * PAGE_SIZE),
+				protect ((region_begin - page_state) * PAGE_SIZE,
 					(region_end - region_begin) * PAGE_SIZE, PAGE_NOACCESS);
 				region_begin = region_end;
 			}

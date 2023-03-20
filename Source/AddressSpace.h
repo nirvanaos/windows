@@ -145,7 +145,7 @@ public:
 
 		void map_copy (HANDLE src_mapping, uint32_t protection);
 
-		void protect (Address address, size_t size, uint32_t protection);
+		void protect (size_t offset, size_t size, uint32_t protection);
 
 	private:
 		static BlockInfo& check_block (BlockInfo* info)

@@ -197,7 +197,7 @@ restart:
 						// Error, decommit back and throw the exception.
 						while (p != regions.begin) {
 							--p;
-							protect ((BYTE*)p->ptr, p->size, PageState::DECOMMITTED);
+							protect ((BYTE*)p->ptr - address (), p->size, PageState::DECOMMITTED);
 							verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
 						}
 						throw_NO_MEMORY ();
@@ -260,9 +260,7 @@ restart:
 		if (PageState::READ_WRITE_PRIVATE == protection) {
 			if (exclusive_lock ())
 				goto restart;
-			BYTE* ptr = (BYTE*)address () + (region_begin - st.page_state) * PAGE_SIZE;
-			size_t size = (region_end - region_begin) * PAGE_SIZE;
-			protect (ptr, size, PageState::READ_WRITE_SHARED);
+			protect ((region_begin - st.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE, PageState::READ_WRITE_SHARED);
 		}
 
 		region_begin = region_end;
@@ -314,12 +312,12 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 					size_t size = (region_end - region_begin) * PAGE_SIZE;
 					if (!VirtualAlloc (dst, size, MEM_COMMIT, PageState::READ_WRITE_PRIVATE))
 						throw_NO_MEMORY ();
-					LONG_PTR* src = (LONG_PTR*)((BYTE*)address () + offset);
 					
 					// Temporary disable write access to save data consistency.
 					if (access_mask & PageState::MASK_RW)
-						protect ((BYTE*)src, size, PAGE_READONLY);
+						protect (offset, size, PAGE_READONLY);
 
+					LONG_PTR* src = (LONG_PTR*)((BYTE*)address () + offset);
 					real_copy (src, src + size / sizeof (LONG_PTR), dst);
 				} else {
 					do
@@ -349,7 +347,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 			for (const DWORD* p = page_protection, *end = p + PAGES_PER_BLOCK; p != end; ++p) {
 				DWORD protection = *p;
 				if (PageState::MASK_RW & protection)
-					protect ((BYTE*)address () + (p - page_protection) * PAGE_SIZE, PAGE_SIZE, protection);
+					protect ((p - page_protection) * PAGE_SIZE, PAGE_SIZE, protection);
 			}
 			throw;
 		}
@@ -370,10 +368,8 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 					++region_end;
 				while (region_end < block_end && protection == *region_end);
 
-				size_t offset = (region_begin - page_protection) * PAGE_SIZE;
-				BYTE* dst = (BYTE*)address () + offset;
-				size_t size = (region_end - region_begin) * PAGE_SIZE;
-				protect (dst, size, PageState::READ_ONLY);
+				protect ((region_begin - page_protection) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE,
+					PageState::READ_ONLY);
 			} else {
 				do
 					++region_end;
@@ -518,9 +514,7 @@ manage_protection:
 							if (protection != *pp)
 								break;
 						}
-						BYTE* ptr = (BYTE*)address () + (begin - page_protection) * PAGE_SIZE;
-						size_t size = (pp - begin) * PAGE_SIZE;
-						protect (ptr, size, copied_pages_state);
+						protect ((begin - page_protection)* PAGE_SIZE, (pp - begin)* PAGE_SIZE, copied_pages_state);
 						invalidate_state ();
 					}
 				} while (pp < ppe);
@@ -532,9 +526,7 @@ manage_protection:
 				}
 				if (page_begin < page_end) {
 					// We need to change access of the copied pages
-					BYTE* ptr = (BYTE*)address () + page_begin * PAGE_SIZE;
-					size_t size = (page_end - page_begin) * PAGE_SIZE;
-					protect (ptr, size, copied_pages_state);
+					protect (page_begin* PAGE_SIZE, (page_end - page_begin)* PAGE_SIZE, copied_pages_state);
 					invalidate_state ();
 				}
 			}
@@ -600,10 +592,8 @@ void Memory::Block::decommit (size_t offset, size_t size)
 					unmap ();
 				else {
 					// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
-					BYTE* ptr = (BYTE*)address () + offset;
-					size_t size = offset_end - offset;
-					protect (ptr, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
-					verify (VirtualAlloc (ptr, size, MEM_RESET, PageState::DECOMMITTED));
+					protect (offset, offset_end - offset, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
+					verify (VirtualAlloc ((BYTE*)address () + offset, size, MEM_RESET, PageState::DECOMMITTED));
 
 					// Invalidate block state.
 					invalidate_state ();
@@ -624,7 +614,7 @@ void Memory::Block::change_protection (size_t offset, size_t size, unsigned flag
 		offset_end = round_down (offset_end, PAGE_SIZE);
 		ptrdiff_t cb = offset_end - offset;
 		if (cb > 0)
-			protect ((BYTE*)address () + offset, cb, PageState::READ_ONLY);
+			protect (offset, cb, PageState::READ_ONLY);
 		return;
 	}
 	offset = round_down (offset, PAGE_SIZE);
@@ -633,7 +623,7 @@ void Memory::Block::change_protection (size_t offset, size_t size, unsigned flag
 	exclusive_lock ();
 	if (handle_count (mapping ()) <= 1) {
 		// Not shared
-		protect ((BYTE*)address () + offset, offset_end - offset, PageState::READ_WRITE_PRIVATE);
+		protect (offset, offset_end - offset, PageState::READ_WRITE_PRIVATE);
 		return;
 	}
 
@@ -647,9 +637,7 @@ void Memory::Block::change_protection (size_t offset, size_t size, unsigned flag
 		while (region_end < state_end && region_end->is_mapped () == mapped);
 
 		DWORD new_prot = mapped ? PageState::READ_WRITE_SHARED : PageState::READ_WRITE_PRIVATE;
-		BYTE* ptr = (BYTE*)address () + (region_begin - page_state) * PAGE_SIZE;
-		size_t size = (region_end - region_begin) * PAGE_SIZE;
-		protect (ptr, size, new_prot);
+		protect ((region_begin - page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE, new_prot);
 
 		region_begin = region_end;
 	}
