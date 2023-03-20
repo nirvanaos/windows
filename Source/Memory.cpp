@@ -791,9 +791,18 @@ void Memory::commit (void* ptr, size_t size)
 	// Memory must be allocated.
 	local_address_space->check_allocated ((uint8_t*)ptr, size);
 
-	uint32_t prot_mask = commit_no_check (ptr, size);
-	if (prot_mask & PageState::MASK_RO)
-		change_protection (ptr, size, Nirvana::Memory::READ_WRITE);
+	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
+		Block block (p);
+		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
+		if (block_end > end)
+			block_end = end;
+		size_t offset = p - (BYTE*)block.address ();
+		size_t size = block_end - p;
+		DWORD state = block.commit (offset, size);
+		if (state & PageState::MASK_RO)
+			block.change_protection (offset, size, Nirvana::Memory::READ_WRITE);
+		p = block_end;
+	}
 }
 
 void Memory::decommit (void* ptr, size_t size)
