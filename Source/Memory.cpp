@@ -581,6 +581,7 @@ void Memory::Block::decommit (size_t offset, size_t size)
 {
 	offset = round_up (offset, PAGE_SIZE);
 	size_t offset_end = round_down (offset + size, PAGE_SIZE);
+	size = offset_end - offset;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	if (offset < offset_end) {
 		if (!offset && offset_end == ALLOCATION_GRANULARITY)
@@ -592,7 +593,7 @@ void Memory::Block::decommit (size_t offset, size_t size)
 					unmap ();
 				else {
 					// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
-					protect (offset, offset_end - offset, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
+					protect (offset, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
 					verify (VirtualAlloc ((BYTE*)address () + offset, size, MEM_RESET, PageState::DECOMMITTED));
 
 					// Invalidate block state.
@@ -814,7 +815,7 @@ void Memory::decommit (void* ptr, size_t size)
 	local_address_space->check_allocated ((uint8_t*)ptr, size);
 
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
-		Block block (p);
+		Block block (p, end - p >= ALLOCATION_GRANULARITY);
 		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;

@@ -112,7 +112,6 @@ void AddressSpace <x64>::Block::protect (size_t offset, size_t size, uint32_t pr
 	assert (size && 0 == size % PAGE_SIZE);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 	Address addr = (Address)(address () + offset);
-	exclusive_lock ();
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
 	if (x64) {
 		DWORD64 tmp_size = size;
