@@ -137,7 +137,7 @@ bool Memory::Block::has_data_outside_of (size_t offset, size_t size, uint32_t ma
 
 DWORD Memory::Block::commit (size_t offset, size_t size)
 { // This operation must be thread-safe.
-
+	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
 	if (INVALID_HANDLE_VALUE == mapping ())
@@ -158,55 +158,57 @@ restart:
 			throw_NO_MEMORY ();
 		ret = PageState::READ_WRITE_PRIVATE;
 	} else {
-		if (size) {
-			const BlockState& bs = state ();
-			Regions regions;	// Regions to commit.
-			auto region_begin = bs.page_state + offset / PAGE_SIZE, state_end = bs.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
-			do {
-				auto region_end = region_begin;
-				DWORD state = region_begin->state ();
-				if (!(PageState::MASK_ACCESS & state)) {
-					do {
-						++region_end;
-					} while (region_end < state_end && !(PageState::MASK_ACCESS & (state = region_end->state ())));
+		const BlockState& bs = state ();
+		Regions regions;	// Regions to commit.
+		auto region_begin = bs.page_state + offset / PAGE_SIZE, state_end = bs.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+		do {
+			auto region_end = region_begin;
+			DWORD state = region_begin->state ();
+			if (!(PageState::MASK_ACCESS & state)) {
+				do {
+					++region_end;
+				} while (region_end < state_end && !(PageState::MASK_ACCESS & (state = region_end->state ())));
 
-					regions.add ((BYTE*)address () + (region_begin - bs.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE);
-				} else {
-					do {
-						ret |= state;
-						++region_end;
-					} while (region_end < state_end && (PageState::MASK_ACCESS & (state = region_end->state ())));
-				}
-				region_begin = region_end;
-			} while (region_begin < state_end);
-
-			if (regions.end != regions.begin) {
-
-				// If the memory section is shared, we mustn't commit pages.
-				// If the page is not committed and we commit it, it will become committed in another block.
-				if (exclusive_lock ())
-					goto restart;
-				if (handle_count (mapping ()) > 1) {
-					remap ();
-					ret = ((ret & PageState::MASK_RW) ? PageState::READ_WRITE_PRIVATE : 0)
-						| ((ret & PageState::MASK_RO) ? PageState::READ_ONLY : 0);
-				}
-
-				for (const Region* p = regions.begin; p != regions.end; ++p) {
-					if (!VirtualAlloc (p->ptr, p->size, MEM_COMMIT, PageState::READ_WRITE_PRIVATE)) {
-						// Error, decommit back and throw the exception.
-						while (p != regions.begin) {
-							--p;
-							protect ((BYTE*)p->ptr - address (), p->size, PageState::DECOMMITTED);
-							verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
-						}
-						throw_NO_MEMORY ();
-					} else
-						ret |= PageState::READ_WRITE_PRIVATE;
-				}
-
-				invalidate_state ();
+				regions.add ((BYTE*)address () + (region_begin - bs.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE);
+			} else {
+				do {
+					ret |= state;
+					++region_end;
+				} while (region_end < state_end && (PageState::MASK_ACCESS & (state = region_end->state ())));
 			}
+			region_begin = region_end;
+		} while (region_begin < state_end);
+
+		if (regions.end != regions.begin) {
+
+			// If the memory section is shared, we mustn't commit pages.
+			// If the page is not committed and we commit it, it will become committed in another block.
+			if (exclusive_lock ())
+				goto restart;
+			if (handle_count (mapping ()) > 1) {
+				remap ();
+				ret = ((ret & PageState::MASK_RW) ? PageState::READ_WRITE_PRIVATE : 0)
+					| ((ret & PageState::MASK_RO) ? PageState::READ_ONLY : 0);
+			}
+
+			for (const Region* p = regions.begin; p != regions.end; ++p) {
+				if (!VirtualAlloc (p->ptr, p->size, MEM_COMMIT, PageState::READ_WRITE_PRIVATE)) {
+#ifdef _DEBUG
+					DWORD err = GetLastError ();
+					state ();
+#endif
+					// Error, decommit back and throw the exception.
+					while (p != regions.begin) {
+						--p;
+						protect ((BYTE*)p->ptr - address (), p->size, PageState::DECOMMITTED);
+						verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
+					}
+					throw_NO_MEMORY ();
+				} else
+					ret |= PageState::READ_WRITE_PRIVATE;
+			}
+
+			invalidate_state ();
 		}
 	}
 	return ret;
@@ -695,20 +697,6 @@ HANDLE Memory::new_mapping ()
 	return mapping;
 }
 
-uint32_t Memory::commit_no_check (void* ptr, size_t size, bool exclusive)
-{
-	uint32_t state_bits = 0; // Page states bit mask
-	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
-		Block block (p, exclusive);
-		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
-		if (block_end > end)
-			block_end = end;
-		state_bits |= block.commit (p - (BYTE*)block.address (), block_end - p);
-		p = block_end;
-	}
-	return state_bits;
-}
-
 void Memory::prepare_to_share (void* src, size_t size, unsigned flags)
 {
 	if (!size)
@@ -793,7 +781,7 @@ void Memory::commit (void* ptr, size_t size)
 	local_address_space->check_allocated ((uint8_t*)ptr, size);
 
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
-		Block block (p);
+		Block block (p, (uintptr_t)p % ALLOCATION_GRANULARITY == 0 && size >= ALLOCATION_GRANULARITY);
 		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
@@ -806,6 +794,20 @@ void Memory::commit (void* ptr, size_t size)
 	}
 }
 
+uint32_t Memory::commit_no_check (void* ptr, size_t size, bool exclusive)
+{
+	uint32_t state_bits = 0; // Page states bit mask
+	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
+		Block block (p, exclusive || ((uintptr_t)p % ALLOCATION_GRANULARITY == 0 && size >= ALLOCATION_GRANULARITY));
+		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
+		if (block_end > end)
+			block_end = end;
+		state_bits |= block.commit (p - (BYTE*)block.address (), block_end - p);
+		p = block_end;
+	}
+	return state_bits;
+}
+
 void Memory::decommit (void* ptr, size_t size)
 {
 	if (!size)
@@ -815,7 +817,7 @@ void Memory::decommit (void* ptr, size_t size)
 	local_address_space->check_allocated ((uint8_t*)ptr, size);
 
 	for (BYTE* p = (BYTE*)ptr, *end = p + size; p < end;) {
-		Block block (p, end - p >= ALLOCATION_GRANULARITY);
+		Block block (p, (uintptr_t)p % ALLOCATION_GRANULARITY == 0 && size >= ALLOCATION_GRANULARITY);
 		BYTE* block_end = (BYTE*)block.address () + ALLOCATION_GRANULARITY;
 		if (block_end > end)
 			block_end = end;
