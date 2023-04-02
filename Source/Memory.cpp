@@ -190,8 +190,14 @@ restart:
 							break;
 					}
 					if (!VirtualAlloc (address () + (page - bs.page_state) * PAGE_SIZE, (region_end - page) * PAGE_SIZE,
-						MEM_COMMIT, PageState::READ_WRITE_PRIVATE))
+						MEM_COMMIT, PageState::READ_WRITE_PRIVATE)) {
+#ifdef _DEBUG
+						DWORD err = GetLastError ();
+						invalidate_state ();
+						state ();
+#endif
 						throw_NO_MEMORY ();
+					}
 				} else {
 					// The regions has no access, enable access
 					for (; region_end != end_page; ++region_end) {
@@ -437,7 +443,7 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 	if (!(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
 
-	exclusive_lock ();
+	assert (exclusive_locked ());
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
@@ -486,7 +492,9 @@ manage_protection:
 					page_end = page_last;
 			}
 			if (remap) {
-				// Source and target blocks had the same mapping,
+				assert (exclusive_locked ());
+
+				// Source and target blocks had the same mapping handle,
 				// but source block was remapped.
 				// We need to save page state outside the copied region.
 				DWORD page_protection [PAGES_PER_BLOCK];
@@ -502,9 +510,9 @@ manage_protection:
 				map_copy (src_block.mapping (), copied_pages_state);
 
 				// Adjust protection for the non-copied pages.
-				DWORD protection;
 				const DWORD* pp = page_protection, * ppe = page_protection + PAGES_PER_BLOCK;
 				do {
+					DWORD protection;
 					for (; pp < ppe; ++pp) {
 						protection = *pp;
 						if (protection != copied_pages_state)
@@ -513,10 +521,10 @@ manage_protection:
 					if (pp < ppe) {
 						const DWORD* begin = pp;
 						for (++pp; pp < ppe; ++pp) {
-							if (protection != *pp)
+							if (*pp != protection)
 								break;
 						}
-						protect ((begin - page_protection)* PAGE_SIZE, (pp - begin)* PAGE_SIZE, copied_pages_state);
+						protect ((begin - page_protection) * PAGE_SIZE, (pp - begin) * PAGE_SIZE, protection);
 						invalidate_state ();
 					}
 				} while (pp < ppe);
@@ -528,7 +536,7 @@ manage_protection:
 				}
 				if (page_begin < page_end) {
 					// We need to change access of the copied pages
-					protect (page_begin* PAGE_SIZE, (page_end - page_begin)* PAGE_SIZE, copied_pages_state);
+					protect (page_begin * PAGE_SIZE, (page_end - page_begin) * PAGE_SIZE, copied_pages_state);
 					invalidate_state ();
 				}
 			}
