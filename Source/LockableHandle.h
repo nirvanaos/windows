@@ -53,16 +53,7 @@ public:
 		return (val_ & ~SPIN_MASK) != 0;
 	}
 
-	void* lock () NIRVANA_NOEXCEPT
-	{
-		for (BackOff bo; true; bo ()) {
-			uint32_t cur = val_.load ();
-			while ((cur & SPIN_MASK) != SPIN_MASK) {
-				if (val_.compare_exchange_weak (cur, cur + 1, std::memory_order_acquire))
-					return val2handle (cur & ~SPIN_MASK);
-			}
-		}
-	}
+	void* lock () NIRVANA_NOEXCEPT;
 
 	void unlock () NIRVANA_NOEXCEPT
 	{
@@ -70,16 +61,7 @@ public:
 		--val_;
 	}
 
-	void* exclusive_lock () NIRVANA_NOEXCEPT
-	{
-		for (BackOff bo; true; bo ()) {
-			uint32_t cur = val_.load ();
-			while ((cur & SPIN_MASK) == 0) {
-				if (val_.compare_exchange_weak (cur, cur | SPIN_MASK, std::memory_order_acquire))
-					return val2handle (cur);
-			}
-		}
-	}
+	void* exclusive_lock () NIRVANA_NOEXCEPT;
 
 	void* handle () const NIRVANA_NOEXCEPT
 	{
