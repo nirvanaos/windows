@@ -182,8 +182,6 @@ public:
 	const Windows::BlockState& state ();
 
 private:
-	struct Regions;
-
 	struct CopyReadOnly
 	{
 		size_t offset;
@@ -210,24 +208,6 @@ private:
 
 private:
 	Windows::BlockState block_state_;
-};
-
-struct Memory::Block::Regions
-{
-	Region begin [PAGES_PER_BLOCK];
-	Region* end;
-
-	Regions () :
-		end (begin)
-	{}
-
-	void add (void* ptr, size_t size)
-	{
-		assert (end < begin + PAGES_PER_BLOCK);
-		Region* p = end++;
-		p->ptr = ptr;
-		p->size = size;
-	}
 };
 
 }

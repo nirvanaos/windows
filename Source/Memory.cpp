@@ -159,54 +159,54 @@ restart:
 		ret = PageState::READ_WRITE_PRIVATE;
 	} else {
 		const BlockState& bs = state ();
-		Regions regions;	// Regions to commit.
-		auto region_begin = bs.page_state + offset / PAGE_SIZE, state_end = bs.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+		auto page = bs.page_state + offset / PAGE_SIZE,
+			end_page = bs.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
 		do {
-			auto region_end = region_begin;
-			DWORD state = region_begin->state ();
-			if (!(PageState::MASK_ACCESS & state)) {
-				do {
-					++region_end;
-				} while (region_end < state_end && !(PageState::MASK_ACCESS & (state = region_end->state ())));
+			DWORD access = PageState::MASK_ACCESS & page->state ();
+			if (!access)
+				break;
+			ret |= access;
+		} while (end_page != ++page);
 
-				regions.add ((BYTE*)address () + (region_begin - bs.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE);
-			} else {
-				do {
-					ret |= state;
-					++region_end;
-				} while (region_end < state_end && (PageState::MASK_ACCESS & (state = region_end->state ())));
-			}
-			region_begin = region_end;
-		} while (region_begin < state_end);
-
-		if (regions.end != regions.begin) {
+		if (page != end_page) {
 
 			// If the memory section is shared, we mustn't commit pages.
 			// If the page is not committed and we commit it, it will become committed in another block.
-			if (exclusive_lock ())
-				goto restart;
 			if (handle_count (mapping ()) > 1) {
+				if (exclusive_lock ())
+					goto restart;
 				remap ();
-				ret = ((ret & PageState::MASK_RW) ? PageState::READ_WRITE_PRIVATE : 0)
-					| ((ret & PageState::MASK_RO) ? PageState::READ_ONLY : 0);
+				invalidate_state ();
+				state ();
 			}
 
-			for (const Region* p = regions.begin; p != regions.end; ++p) {
-				if (!VirtualAlloc (p->ptr, p->size, MEM_COMMIT, PageState::READ_WRITE_PRIVATE)) {
-#ifdef _DEBUG
-					DWORD err = GetLastError ();
-					state ();
-#endif
-					// Error, decommit back and throw the exception.
-					while (p != regions.begin) {
-						--p;
-						protect ((BYTE*)p->ptr - address (), p->size, PageState::DECOMMITTED);
-						verify (VirtualAlloc (p->ptr, p->size, MEM_RESET, PageState::DECOMMITTED));
+			ret |= PageState::READ_WRITE_PRIVATE;
+			do {
+				auto region_end = page + 1;
+				if (PageState::MASK_NOT_COMMITTED & page->state ()) {
+					// The region is not committed, commit
+					for (; region_end != end_page; ++region_end) {
+						if (!(PageState::MASK_NOT_COMMITTED & region_end->state ()))
+							break;
 					}
-					throw_NO_MEMORY ();
-				} else
-					ret |= PageState::READ_WRITE_PRIVATE;
-			}
+					if (!VirtualAlloc (address () + (page - bs.page_state) * PAGE_SIZE, (region_end - page) * PAGE_SIZE,
+						MEM_COMMIT, PageState::READ_WRITE_PRIVATE))
+						throw_NO_MEMORY ();
+				} else {
+					// The regions has no access, enable access
+					for (; region_end != end_page; ++region_end) {
+						if ((PageState::MASK_NOT_COMMITTED | PageState::MASK_ACCESS) & region_end->state ())
+							break;
+					}
+					protect ((page - bs.page_state) * PAGE_SIZE, (region_end - page) * PAGE_SIZE, PageState::READ_WRITE_PRIVATE);
+				}
+				for (page = region_end; page != end_page; ++page) {
+					DWORD access = PageState::MASK_ACCESS & page->state ();
+					if (!access)
+						break;
+					ret |= access;
+				}
+			} while (page != end_page);
 
 			invalidate_state ();
 		}
