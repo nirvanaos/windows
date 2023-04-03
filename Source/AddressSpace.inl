@@ -286,7 +286,8 @@ void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store, u
 		space_.close_mapping (old);
 	}
 
-	verify (space_.map (mapping_map, address (), ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection));
+	if (!space_.map (mapping_map, address (), ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection))
+		throw_NO_MEMORY ();
 }
 
 template <bool x64>

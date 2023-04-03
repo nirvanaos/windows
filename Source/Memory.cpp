@@ -142,7 +142,6 @@ DWORD Memory::Block::commit (size_t offset, size_t size)
 
 	if (INVALID_HANDLE_VALUE == mapping ())
 		exclusive_lock ();
-restart:
 	DWORD ret = 0;	// Page state bits in committed region
 	if (INVALID_HANDLE_VALUE == mapping ()) {
 		HANDLE hm = new_mapping ();
@@ -170,17 +169,9 @@ restart:
 
 		if (page != end_page) {
 
-			// If the memory section is shared, we mustn't commit pages.
-			// If the page is not committed and we commit it, it will become committed in another block.
-			if (handle_count (mapping ()) > 1) {
-				if (exclusive_lock ())
-					goto restart;
-				remap ();
-				invalidate_state ();
-				state ();
-			}
+			DWORD protection = handle_count (mapping ()) > 1 ? PageState::READ_WRITE_SHARED
+				: PageState::READ_WRITE_PRIVATE;
 
-			ret |= PageState::READ_WRITE_PRIVATE;
 			do {
 				auto region_end = page + 1;
 				if (PageState::MASK_NOT_COMMITTED & page->state ()) {
@@ -189,22 +180,26 @@ restart:
 						if (!(PageState::MASK_NOT_COMMITTED & region_end->state ()))
 							break;
 					}
-					if (!VirtualAlloc (address () + (page - bs.page_state) * PAGE_SIZE, (region_end - page) * PAGE_SIZE,
+					if (!VirtualAlloc (page->VirtualAddress, (region_end - page) * PAGE_SIZE,
 						MEM_COMMIT, PageState::READ_WRITE_PRIVATE)) {
 #ifdef _DEBUG
 						DWORD err = GetLastError ();
+						MEMORY_BASIC_INFORMATION mbi;
+						VirtualQuery (page->VirtualAddress, &mbi, sizeof (mbi));
 						invalidate_state ();
 						state ();
 #endif
 						throw_NO_MEMORY ();
 					}
+					ret |= PageState::READ_WRITE_PRIVATE;
 				} else {
 					// The regions has no access, enable access
 					for (; region_end != end_page; ++region_end) {
 						if ((PageState::MASK_NOT_COMMITTED | PageState::MASK_ACCESS) & region_end->state ())
 							break;
 					}
-					protect ((page - bs.page_state) * PAGE_SIZE, (region_end - page) * PAGE_SIZE, PageState::READ_WRITE_PRIVATE);
+					protect ((page - bs.page_state) * PAGE_SIZE, (region_end - page) * PAGE_SIZE, protection);
+					ret |= protection;
 				}
 				for (page = region_end; page != end_page; ++page) {
 					DWORD access = PageState::MASK_ACCESS & page->state ();
@@ -439,13 +434,11 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 			break;
 	}
 
+	assert (exclusive_locked ());
+
 	// Virtual copy.
 	if (!(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
-
-	assert (exclusive_locked ());
-	assert (size);
-	assert (offset + size <= ALLOCATION_GRANULARITY);
 
 restart:
 	{
