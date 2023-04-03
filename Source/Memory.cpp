@@ -142,6 +142,7 @@ DWORD Memory::Block::commit (size_t offset, size_t size)
 
 	if (INVALID_HANDLE_VALUE == mapping ())
 		exclusive_lock ();
+restart:
 	DWORD ret = 0;	// Page state bits in committed region
 	if (INVALID_HANDLE_VALUE == mapping ()) {
 		HANDLE hm = new_mapping ();
@@ -169,8 +170,26 @@ DWORD Memory::Block::commit (size_t offset, size_t size)
 
 		if (page != end_page) {
 
-			DWORD protection = handle_count (mapping ()) > 1 ? PageState::READ_WRITE_SHARED
-				: PageState::READ_WRITE_PRIVATE;
+			DWORD protection = PageState::READ_WRITE_PRIVATE;
+
+			// If the memory section is shared, we mustn't commit pages.
+			// If the page is not committed and we commit it, it will become committed in another block.
+			if (handle_count (mapping ()) > 1) {
+				auto not_committed = page;
+				do {
+					if (PageState::MASK_NOT_COMMITTED & not_committed->state ())
+						break;
+				} while (end_page != ++not_committed);
+
+				if (not_committed != end_page) {
+					if (exclusive_lock ())
+						goto restart;
+					remap ();
+					invalidate_state ();
+					state ();
+				} else
+					protection = PageState::READ_WRITE_SHARED;
+			}
 
 			do {
 				auto region_end = page + 1;
