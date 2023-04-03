@@ -978,4 +978,37 @@ TEST_F (TestAPI, OtherProcess)
 	EXPECT_EQ (ec, 0);
 }
 
+TEST_F (TestAPI, CommitProblem)
+{
+	HANDLE hm = new_mapping ();
+	void* p = MapViewOfFile3 (hm, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READWRITE, nullptr, 0);
+	ASSERT_TRUE (p);
+	ASSERT_TRUE (VirtualAlloc (p, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
+	DWORD old;
+	ASSERT_TRUE (VirtualProtect (p, PAGE_SIZE, PAGE_WRITECOPY, &old));
+	HANDLE hm1 = dup_mapping (hm);
+	void* p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_WRITECOPY, nullptr, 0);
+	// We can not commit PAGE_READWRITE if mapping is PAGE_WRITECOPY
+	EXPECT_FALSE (VirtualAlloc ((BYTE*)p1 + PAGE_SIZE, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
+	UnmapViewOfFile (p1);
+	CloseHandle (hm1);
+
+	hm1 = dup_mapping (hm);
+	p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READONLY, nullptr, 0);
+	// We can not commit PAGE_READWRITE if mapping is PAGE_READONLY
+	EXPECT_FALSE (VirtualAlloc ((BYTE*)p1 + PAGE_SIZE, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
+	UnmapViewOfFile (p1);
+	CloseHandle (hm1);
+
+	hm1 = dup_mapping (hm);
+	p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READWRITE, nullptr, 0);
+	ASSERT_TRUE (VirtualProtect (p1, PAGE_SIZE, PAGE_WRITECOPY, &old));
+	EXPECT_TRUE (VirtualAlloc ((BYTE*)p1 + PAGE_SIZE, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
+	UnmapViewOfFile (p1);
+	CloseHandle (hm1);
+
+	UnmapViewOfFile (p);
+	CloseHandle (hm);
+}
+
 }
