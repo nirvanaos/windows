@@ -213,9 +213,11 @@ restart:
 					ret |= PageState::READ_WRITE_PRIVATE;
 				} else {
 					// The regions has no access, enable access
+					assert (page->is_mapped ());
 					for (; region_end != end_page; ++region_end) {
 						if ((PageState::MASK_NOT_COMMITTED | PageState::MASK_ACCESS) & region_end->state ())
 							break;
+						assert (region_end->is_mapped ());
 					}
 					protect ((page - bs.page_state) * PAGE_SIZE, (region_end - page) * PAGE_SIZE, protection);
 					ret |= protection;
@@ -268,7 +270,6 @@ void Memory::Block::prepare_to_share_no_remap (size_t offset, size_t size)
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 	assert (!reserved ());
 
-restart:
 	// Prepare pages
 	const BlockState& st = state ();
 	auto region_begin = st.page_state + offset / PAGE_SIZE, block_end = st.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -279,11 +280,8 @@ restart:
 			++region_end;
 		while (region_end < block_end && protection == region_end->protection ());
 
-		if (PageState::READ_WRITE_PRIVATE == protection) {
-			if (exclusive_lock ())
-				goto restart;
+		if (PageState::READ_WRITE_PRIVATE == protection)
 			protect ((region_begin - st.page_state) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE, PageState::READ_WRITE_SHARED);
-		}
 
 		region_begin = region_end;
 	} while (region_begin < block_end);
@@ -595,18 +593,15 @@ void Memory::Block::decommit (size_t offset, size_t size)
 		if (!offset && offset_end == ALLOCATION_GRANULARITY)
 			unmap ();
 		else if (!reserved ()) {
-			exclusive_lock ();
-			if (!reserved ()) {
-				if (!has_data_outside_of (offset, size))
-					unmap ();
-				else {
-					// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
-					protect (offset, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
-					verify (VirtualAlloc ((BYTE*)address () + offset, size, MEM_RESET, PageState::DECOMMITTED));
+			if (!has_data_outside_of (offset, size))
+				unmap ();
+			else {
+				// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
+				protect (offset, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
+				verify (VirtualAlloc ((BYTE*)address () + offset, size, MEM_RESET, PageState::DECOMMITTED));
 
-					// Invalidate block state.
-					invalidate_state ();
-				}
+				// Invalidate block state.
+				invalidate_state ();
 			}
 		}
 	}
@@ -629,7 +624,6 @@ void Memory::Block::change_protection (size_t offset, size_t size, unsigned flag
 	offset = round_down (offset, PAGE_SIZE);
 	offset_end = round_up (offset_end, PAGE_SIZE);
 
-	exclusive_lock ();
 	if (handle_count (mapping ()) <= 1) {
 		// Not shared
 		protect (offset, offset_end - offset, PageState::READ_WRITE_PRIVATE);
