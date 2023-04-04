@@ -141,9 +141,9 @@ public:
 			state_ = State::PAGE_STATE_UNKNOWN;
 		}
 
-		void map (HANDLE mapping_map, HANDLE mapping_store, uint32_t protection);
+		void map (HANDLE mapping_map, HANDLE mapping_store);
 
-		void map_copy (HANDLE src_mapping, uint32_t protection);
+		void map_copy (HANDLE src_mapping);
 
 		void protect (size_t offset, size_t size, uint32_t protection);
 
@@ -192,7 +192,7 @@ private:
 
 	Address alloc (Address address, size_t size, uint32_t flags, uint32_t protection) const;
 	bool free (Address address, Size size, uint32_t flags) const;
-	Address map (HANDLE hm, Address address, size_t size, uint32_t flags, uint32_t protection) const;
+	Address map (HANDLE hm, Address address, size_t size, uint32_t flags) const;
 	bool unmap (Address address, uint32_t flags) const;
 
 	BlockInfo* block_ptr (Address address, bool commit);

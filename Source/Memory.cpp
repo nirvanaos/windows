@@ -147,7 +147,7 @@ restart:
 	if (INVALID_HANDLE_VALUE == mapping ()) {
 		HANDLE hm = new_mapping ();
 		try {
-			map (hm, hm, PageState::READ_WRITE_PRIVATE);
+			map (hm, hm);
 		} catch (...) {
 			CloseHandle (hm);
 			throw;
@@ -309,7 +309,6 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 				*dst = ps->protection ();
 			}
 		}
-		const auto block_end = page_protection + PAGES_PER_BLOCK;
 
 		// Copy data to the temporary address.
 		try {
@@ -327,7 +326,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 					do {
 						access_mask |= *region_end;
 						++region_end;
-					} while (region_end < block_end && (PageState::MASK_ACCESS & *region_end));
+					} while (region_end < std::end (page_protection) && (PageState::MASK_ACCESS & *region_end));
 
 					size_t offset = (region_begin - page_protection) * PAGE_SIZE;
 					LONG_PTR* dst = (LONG_PTR*)(ptmp + offset);
@@ -344,11 +343,11 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 				} else {
 					do
 						++region_end;
-					while (region_end < block_end && !(PageState::MASK_ACCESS & *region_end));
+					while (region_end < std::end (page_protection) && !(PageState::MASK_ACCESS & *region_end));
 				}
 
 				region_begin = region_end;
-			} while (region_begin < block_end);
+			} while (region_begin < std::end (page_protection));
 
 			if (copy_rgn) {
 				if (copy_begin < copy_end) {
@@ -378,28 +377,10 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 		verify (UnmapViewOfFile (ptmp));
 
 		// Change this block mapping to the new.
-		map (hm, hm, PageState::READ_WRITE_PRIVATE);
+		map (hm, hm);
 
-		// Change protection for read-only pages.
-		DWORD* region_begin = page_protection;
-		do {
-			auto region_end = region_begin;
-			DWORD protection;
-			if (PageState::MASK_RO & (protection = *region_begin)) {
-				do
-					++region_end;
-				while (region_end < block_end && protection == *region_end);
-
-				protect ((region_begin - page_protection) * PAGE_SIZE, (region_end - region_begin) * PAGE_SIZE,
-					PageState::READ_ONLY);
-			} else {
-				do
-					++region_end;
-				while (region_end < block_end && !(PageState::MASK_RO & *region_end));
-			}
-
-			region_begin = region_end;
-		} while (region_begin < block_end);
+		// Restore protection.
+		adjust_protection (page_protection);
 
 	} catch (...) {
 		CloseHandle (hm);
@@ -508,7 +489,7 @@ manage_protection:
 
 				// Source and target blocks had the same mapping handle,
 				// but source block was remapped.
-				// We need to save page state outside the copied region.
+				// We need to save page state and then restore it.
 				DWORD page_protection [PAGES_PER_BLOCK];
 				for (size_t i = 0; i < page_begin; ++i) {
 					page_protection [i] = block_state.page_state [i].protection ();
@@ -519,27 +500,9 @@ manage_protection:
 					page_protection [i] = block_state.page_state [i].protection ();
 				}
 
-				map_copy (src_block.mapping (), copied_pages_state);
+				map_copy (src_block.mapping ());
 
-				// Adjust protection for the non-copied pages.
-				const DWORD* pp = page_protection, * ppe = page_protection + PAGES_PER_BLOCK;
-				do {
-					DWORD protection;
-					for (; pp < ppe; ++pp) {
-						protection = *pp;
-						if (protection != copied_pages_state)
-							break;
-					}
-					if (pp < ppe) {
-						const DWORD* begin = pp;
-						for (++pp; pp < ppe; ++pp) {
-							if (*pp != protection)
-								break;
-						}
-						protect ((begin - page_protection) * PAGE_SIZE, (pp - begin) * PAGE_SIZE, protection);
-						invalidate_state ();
-					}
-				} while (pp < ppe);
+				adjust_protection (page_protection);
 
 			} else {
 				// Manage access to copied pages
@@ -560,6 +523,29 @@ fallback:
 	// Real copy
 	commit (offset, size);
 	copy_unaligned (offset, size, src, flags);
+}
+
+void Memory::Block::adjust_protection (const DWORD page_protection [PAGES_PER_BLOCK])
+{
+	const DWORD* pp = page_protection, * const ppe = pp + PAGES_PER_BLOCK;
+	do {
+		// Not accessible pages were not committed on remap, skip them
+		do {
+			if (PageState::MASK_ACCESS & *pp)
+				break;
+		} while (ppe > ++pp);
+
+		if (pp < ppe) {
+			const DWORD* begin = pp;
+			DWORD protection = *pp;
+			for (++pp; pp < ppe; ++pp) {
+				if (protection != *pp)
+					break;
+			}
+			protect ((begin - page_protection) * PAGE_SIZE, (pp - begin) * PAGE_SIZE, protection);
+			invalidate_state ();
+		}
+	} while (pp < ppe);
 }
 
 void Memory::Block::copy_unaligned (size_t offset, size_t size, const void* src, unsigned flags)

@@ -163,15 +163,16 @@ bool AddressSpace <x64>::free (Address address, Size size, uint32_t flags) const
 
 template <bool x64> inline
 typename AddressSpace <x64>::Address AddressSpace <x64>::map (HANDLE hm, Address address,
-	size_t size, uint32_t flags, uint32_t protection) const
+	size_t size, uint32_t flags) const
 {
+	static const DWORD PROTECTION = PAGE_EXECUTE_READWRITE;
 #if !defined (_WIN64) && !defined (NIRVANA_SINGLE_PLATFORM)
 	if (x64) {
 		DWORD64 tmp_addr = (uintptr_t)address;
 		DWORD64 tmp_size = size;
 		DWORD64 status = X64Call (wow64_NtMapViewOfSectionEx, 9, HANDLE_TO_DWORD64 (hm),
 			HANDLE_TO_DWORD64 (process_), PTR_TO_DWORD64 (&tmp_addr), (DWORD64)0, PTR_TO_DWORD64 (&tmp_size),
-			(DWORD64)flags, (DWORD64)protection, (DWORD64)0, (DWORD64)0);
+			(DWORD64)flags, (DWORD64)PROTECTION, (DWORD64)0, (DWORD64)0);
 		if (!status)
 			return (Address)tmp_addr;
 		else
@@ -179,7 +180,7 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::map (HANDLE hm, Address
 	} else
 #endif
 		return (Address)(uintptr_t)MapViewOfFile3 (hm, process_, (void*)(uintptr_t)address, 0, size,
-			flags, protection, nullptr, 0);
+			flags, PROTECTION, nullptr, 0);
 }
 
 template <bool x64> inline
@@ -247,7 +248,7 @@ void AddressSpace <x64>::close_mapping (HANDLE hm) const
 }
 
 template <bool x64>
-void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store, uint32_t protection)
+void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store)
 {
 	assert (mapping_map);
 	assert (mapping_store);
@@ -286,7 +287,7 @@ void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store, u
 		space_.close_mapping (old);
 	}
 
-	if (!space_.map (mapping_map, address (), ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER, protection))
+	if (!space_.map (mapping_map, address (), ALLOCATION_GRANULARITY, MEM_REPLACE_PLACEHOLDER))
 		throw_NO_MEMORY ();
 }
 
@@ -314,9 +315,9 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 	assert (size);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 
-	map_copy (src.mapping (), copied_pages_state);
+	map_copy (src.mapping ());
 
-	// Disable access to the committed pages out of range.
+	// Fix access to the pages.
 	size_t start_page = offset / PAGE_SIZE;
 	if (start_page) {
 		const PageState* page_state = src.state ().page_state;
@@ -340,7 +341,10 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 			}
 		} while (region_begin < end);
 	}
+	
 	size_t end_page = (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
+	protect (start_page * PAGE_SIZE, (end_page - start_page) * PAGE_SIZE, copied_pages_state);
+
 	if (end_page < PAGES_PER_BLOCK) {
 		const PageState* page_state = src.state ().page_state;
 		const PageState* region_begin = page_state + end_page;
@@ -366,13 +370,13 @@ void AddressSpace <x64>::Block::copy (Port::Memory::Block& src, size_t offset, s
 }
 
 template <bool x64>
-void AddressSpace <x64>::Block::map_copy (HANDLE src_mapping, uint32_t protection)
+void AddressSpace <x64>::Block::map_copy (HANDLE src_mapping)
 {
 	HANDLE hm;
 	if (!DuplicateHandle (GetCurrentProcess (), src_mapping, space_.process (), &hm, 0, FALSE, DUPLICATE_SAME_ACCESS))
 		throw_NO_MEMORY ();
 	try {
-		map (src_mapping, hm, protection);
+		map (src_mapping, hm);
 	} catch (...) {
 		space_.close_mapping (hm);
 		throw;

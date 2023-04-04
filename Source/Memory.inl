@@ -206,6 +206,8 @@ private:
 		return move;
 	}
 
+	void adjust_protection (const DWORD page_protection [PAGES_PER_BLOCK]);
+
 private:
 	Windows::BlockState block_state_;
 };
