@@ -64,7 +64,7 @@ const size_t HEAP_UNIT_MIN = 4;
 const size_t HEAP_UNIT_MAX = 4096;
 
 /// Core heap granularity
-const size_t HEAP_UNIT_CORE = 16;
+const size_t HEAP_UNIT_CORE = HEAP_UNIT_DEFAULT;
 
 /**	Size of the heap control block.
 The size should be a multiple of the protection domain's heap granularity:
