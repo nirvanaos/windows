@@ -66,7 +66,7 @@ public:
 		return __rdtsc ();
 	}
 
-	/// Steady clock frequency, Hz.
+	/// Deadline clock frequency, Hz.
 	static const DeadlineTime& deadline_clock_frequency () NIRVANA_NOEXCEPT
 	{
 		return TSC_frequency_;

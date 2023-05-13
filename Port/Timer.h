@@ -39,6 +39,8 @@ namespace Port {
 class Timer
 {
 public:
+	static const unsigned TIMER_ABSOLUTE = 0x01;
+
 	void set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period);
 	void cancel () noexcept;
 

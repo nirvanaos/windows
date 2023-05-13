@@ -24,9 +24,9 @@
 *  popov.nirvana@gmail.com
 */
 
-#include <Timer.h>
-#include <limits>
+#include "../Port/Timer.h"
 #include "../Port/SystemInfo.h"
+#include <limits>
 #include "win32.h"
 
 namespace Nirvana {
@@ -130,7 +130,7 @@ void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT perio
 	if (period > (TimeBase::TimeT)std::numeric_limits <DWORD>::max ())
 		throw_BAD_PARAM ();
 	LARGE_INTEGER dt;
-	if (flags & Core::Timer::TIMER_ABSOLUTE)
+	if (flags & TIMER_ABSOLUTE)
 		dt.QuadPart = due_time - Windows::WIN_TIME_OFFSET_SEC * TimeBase::SECOND;
 	else {
 		if (due_time > (TimeBase::TimeT)std::numeric_limits <LONGLONG>::max ())
