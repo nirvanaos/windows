@@ -44,7 +44,11 @@ int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
 			if ('-' == arg [0]) {
 				switch (arg [1]) {
 
-					case 's': {
+				case 's':
+					if (BUILD_NO_SYS_DOMAIN) {
+						ErrConsole () << "Wrong platform. Use 64-bit version.\n";
+						return -1;
+					} else {
 						std::copy (argv + 2, argv + argc, argv + 1);
 						--argc;
 						StartupSys startup (argc, argv, envp);

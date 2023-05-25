@@ -1,5 +1,5 @@
 ﻿/// \file
-/// Core compile parameters
+/// Core compilation parameters
 /*
 * Nirvana Core. Windows port library.
 *
@@ -30,6 +30,7 @@
 #pragma once
 
 #include <Nirvana/time_defs.h>
+#include <Nirvana/platform.h>
 
 namespace Nirvana {
 namespace Core {
@@ -123,6 +124,14 @@ const TimeBase::TimeT INITIAL_REQUEST_DEADLINE_REMOTE = 1 * TimeBase::MILLISECON
 
 /// Cancel request deadline.
 const TimeBase::TimeT CANCEL_REQUEST_DEADLINE = 1 * TimeBase::SECOND;
+
+/// `true` if the implementation does not support protection domains.
+const bool SINGLE_DOMAIN = false;
+
+/// `true` to exclude system domain code from the binary.
+/// 
+/// Used for build auxiliary platform core.
+const bool BUILD_NO_SYS_DOMAIN = HOST_PLATFORM != PLATFORM;
 
 }
 }

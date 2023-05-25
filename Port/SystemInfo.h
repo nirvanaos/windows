@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_PORT_SYSTEMINFO_H_
 #pragma once
 
-#include <Nirvana/NirvanaBase.h>
+#include <Nirvana/Nirvana.h>
 #include <Section.h>
 
 namespace Nirvana {
@@ -47,6 +47,17 @@ public:
 	}
 
 	static bool get_OLF_section (Section& section) NIRVANA_NOEXCEPT;
+
+	static const size_t SUPPORTED_PLATFORM_CNT =
+#if HOST_PLATFORM == PLATFORM_X64
+		2;
+#elif HOST_PLATFORM == PLATFORM_I386
+		1;
+#else
+#error Unsupported host.
+#endif
+
+	static const uint16_t supported_platforms_ [SUPPORTED_PLATFORM_CNT];
 
 private:
 	static unsigned int hardware_concurrency_;
