@@ -39,29 +39,25 @@ inline bool OtherDomainBase::is_64_bit () const NIRVANA_NOEXCEPT
 
 }
 
-#ifdef NIRVANA_SINGLE_PLATFORM
-
-OtherDomain::OtherDomain (ProtDomainId domain_id) :
+OtherDomainSinglePlatform::OtherDomainSinglePlatform (ProtDomainId domain_id) :
 	Windows::OtherDomainBase (domain_id),
-	Space (domain_id, process ())
+	Space (domain_id, Windows::OtherDomainBase::process ())
 {}
 
-SharedMemPtr OtherDomain::reserve (size_t size)
+SharedMemPtr OtherDomainSinglePlatform::reserve (size_t size)
 {
 	return Space::reserve (size);
 }
 
-SharedMemPtr OtherDomain::copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src)
+SharedMemPtr OtherDomainSinglePlatform::copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src)
 {
 	return Space::copy (reserved, src, size, release_src);
 }
 
-void OtherDomain::release (SharedMemPtr p, size_t size)
+void OtherDomainSinglePlatform::release (SharedMemPtr p, size_t size)
 {
 	Space::release (p, size);
 }
-
-#else
 
 namespace Windows {
 
@@ -110,7 +106,7 @@ public:
 
 }
 
-OtherDomain::OtherDomain (ProtDomainId domain_id) :
+OtherDomainMultiPlatform::OtherDomainMultiPlatform (ProtDomainId domain_id) :
 	Windows::OtherDomainBase (domain_id),
 	implementation_ (nullptr)
 {
@@ -119,7 +115,5 @@ OtherDomain::OtherDomain (ProtDomainId domain_id) :
 	else
 		implementation_ = new Windows::OtherDomainImpl <false> (domain_id, process ());
 }
-
-#endif
 
 }

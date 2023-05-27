@@ -31,8 +31,7 @@
 #include <ORB/ESIOP.h>
 #include "../Source/Mailslot.h"
 #include "../Source/OtherSpace.h"
-
-//#define NIRVANA_SINGLE_PLATFORM
+#include "SystemInfo.h"
 
 namespace ESIOP {
 
@@ -66,12 +65,10 @@ private:
 
 }
 
-#ifdef NIRVANA_SINGLE_PLATFORM
-
 /// Other protection domain communication endpoint.
-class OtherDomain :
+class OtherDomainSinglePlatform :
 	public ESIOP::Windows::OtherDomainBase,
-	public ESIOP::Windows::OtherSpace <sizeof (void*) == 8>,
+	public ESIOP::Windows::OtherSpace <sizeof (void*) == 8>
 {
 	typedef ESIOP::Windows::OtherSpace <sizeof (void*) == 8> Space;
 
@@ -98,10 +95,8 @@ public:
 	}
 
 protected:
-	OtherDomain (ProtDomainId domain_id);
+	OtherDomainSinglePlatform (ProtDomainId domain_id);
 };
-
-#else
 
 namespace Windows {
 
@@ -122,7 +117,7 @@ public:
 }
 
 /// Other protection domain communication endpoint.
-class OtherDomain :
+class OtherDomainMultiPlatform :
 	public Windows::OtherDomainBase
 {
 public:
@@ -159,9 +154,9 @@ public:
 	}
 
 protected:
-	OtherDomain (ProtDomainId domain_id);
+	OtherDomainMultiPlatform (ProtDomainId domain_id);
 
-	~OtherDomain ()
+	~OtherDomainMultiPlatform ()
 	{
 		delete implementation_;
 	}
@@ -169,7 +164,8 @@ protected:
 	Windows::OtherDomain* implementation_;
 };
 
-#endif
+using OtherDomain = std::conditional_t <(Nirvana::Core::Port::SystemInfo::SUPPORTED_PLATFORM_CNT > 1),
+OtherDomainMultiPlatform, OtherDomainSinglePlatform>;
 
 }
 
