@@ -125,6 +125,9 @@ const TimeBase::TimeT INITIAL_REQUEST_DEADLINE_REMOTE = 1 * TimeBase::MILLISECON
 /// Cancel request deadline.
 const TimeBase::TimeT CANCEL_REQUEST_DEADLINE = 1 * TimeBase::SECOND;
 
+/// Close connection deadline.
+const TimeBase::TimeT CLOSE_CONNECTION_DEADLINE = 1 * TimeBase::SECOND;
+
 /// `true` if the implementation does not support protection domains.
 const bool SINGLE_DOMAIN = false;
 
