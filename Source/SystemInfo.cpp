@@ -34,10 +34,10 @@ namespace Port {
 unsigned int SystemInfo::hardware_concurrency_;
 
 const uint16_t SystemInfo::supported_platforms_ [SUPPORTED_PLATFORM_CNT] = {
-#if HOST_PLATFORM == PLATFORM_X64
-	PLATFORM_X64,
+#if HOST_PLATFORM == NIRVANA_PLATFORM_X64
+	NIRVANA_PLATFORM_X64,
 #endif
-	PLATFORM_I386
+	NIRVANA_PLATFORM_I386
 };
 
 void SystemInfo::initialize () NIRVANA_NOEXCEPT

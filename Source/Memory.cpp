@@ -47,7 +47,7 @@ namespace Windows {
 
 StaticallyAllocated <AddressSpace <sizeof (void*) == 8> > local_address_space;
 
-#if !defined (_WIN64) && (HOST_PLATFORM == PLATFORM_X64)
+#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
 DWORD64 wow64_NtQueryVirtualMemory;
 DWORD64 wow64_NtProtectVirtualMemory;
 DWORD64 wow64_NtAllocateVirtualMemoryEx;

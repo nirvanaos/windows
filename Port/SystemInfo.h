@@ -49,9 +49,9 @@ public:
 	static bool get_OLF_section (Section& section) NIRVANA_NOEXCEPT;
 
 	static const size_t SUPPORTED_PLATFORM_CNT =
-#if HOST_PLATFORM == PLATFORM_X64
+#if HOST_PLATFORM == NIRVANA_PLATFORM_X64
 		2;
-#elif HOST_PLATFORM == PLATFORM_I386
+#elif HOST_PLATFORM == NIRVANA_PLATFORM_I386
 		1;
 #else
 #error Unsupported host.
