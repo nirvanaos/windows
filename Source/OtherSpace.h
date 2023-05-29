@@ -49,7 +49,7 @@ public:
 		Base (process_id, process_handle)
 	{}
 
-	SharedMemPtr reserve (size_t size);
+	SharedMemPtr reserve (size_t& size);
 	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src);
 	void release (SharedMemPtr p, size_t size);
 

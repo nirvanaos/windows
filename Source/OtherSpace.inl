@@ -37,7 +37,7 @@ namespace ESIOP {
 namespace Windows {
 
 template <bool x64> inline
-SharedMemPtr OtherSpace <x64>::reserve (size_t size)
+SharedMemPtr OtherSpace <x64>::reserve (size_t& size)
 {
 	return (SharedMemPtr)Base::reserve (0, size, 0);
 }

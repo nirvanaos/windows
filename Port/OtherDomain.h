@@ -32,6 +32,7 @@
 #include "../Source/Mailslot.h"
 #include "../Source/OtherSpace.h"
 #include "SystemInfo.h"
+#include <UserObject.h>
 
 namespace ESIOP {
 
@@ -101,7 +102,7 @@ protected:
 
 namespace Windows {
 
-class OtherDomain
+class OtherDomain : public Nirvana::Core::UserObject
 {
 public:
 	virtual SharedMemPtr reserve (size_t size) = 0;
