@@ -44,6 +44,9 @@ OtherDomainSinglePlatform::OtherDomainSinglePlatform (ProtDomainId domain_id) :
 	Space (domain_id, Windows::OtherDomainBase::process ())
 {}
 
+OtherDomainSinglePlatform::~OtherDomainSinglePlatform ()
+{}
+
 SharedMemPtr OtherDomainSinglePlatform::reserve (size_t size)
 {
 	return Space::reserve (size);

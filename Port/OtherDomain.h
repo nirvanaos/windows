@@ -96,6 +96,7 @@ public:
 
 protected:
 	OtherDomainSinglePlatform (ProtDomainId domain_id);
+	~OtherDomainSinglePlatform ();
 };
 
 namespace Windows {
