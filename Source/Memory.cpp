@@ -75,7 +75,7 @@ void BlockState::query (HANDLE process)
 		// For such pages we call VirtualQuery to obtain memory protection.
 		if (!ps->VirtualAttributes.Valid && ps->VirtualAttributes.Shared) {
 			MEMORY_BASIC_INFORMATION mbi;
-			VirtualQueryEx (process, ps->VirtualAddress, &mbi, sizeof (mbi));
+			verify (VirtualQueryEx (process, ps->VirtualAddress, &mbi, sizeof (mbi)));
 			BYTE* end = (BYTE*)mbi.BaseAddress + mbi.RegionSize;
 			do {
 				ps->VirtualAttributes.Win32Protection = mbi.Protect;
@@ -258,6 +258,8 @@ bool Memory::Block::need_remap_to_share (size_t offset, size_t size)
 		throw_BAD_PARAM ();
 	const BlockState& st = state ();
 	for (auto ps = st.page_state + offset / PAGE_SIZE, end = st.page_state + (offset + size + PAGE_SIZE - 1) / PAGE_SIZE; ps < end; ++ps) {
+		if (!ps->is_committed ())
+			throw_BAD_PARAM ();
 		if (!ps->is_mapped ())
 			return true;
 	}

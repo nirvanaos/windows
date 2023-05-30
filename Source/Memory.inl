@@ -83,18 +83,23 @@ public:
 		MASK_PROTECTION = MASK_ACCESS | DECOMMITTED | PAGE_REVERT_TO_FILE_MAP
 	};
 
-	ULONG_PTR is_mapped () const
+	ULONG_PTR is_mapped () const noexcept
 	{
 		return VirtualAttributes.Shared;
 	}
 
-	DWORD protection () const
+	DWORD protection () const noexcept
 	{
 		return VirtualAttributes.Win32Protection;
 	}
 
+	bool is_committed () const noexcept
+	{
+		return VirtualAttributes.Valid || VirtualAttributes.Shared;
+	}
+
 	// Returns page state
-	DWORD state () const
+	DWORD state () const noexcept
 	{
 		if (!VirtualAttributes.Valid && !VirtualAttributes.Shared)
 			return MASK_NOT_COMMITTED;
