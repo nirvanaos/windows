@@ -19,7 +19,7 @@ int other_process ()
 	Memory::initialize ();
 
 	HANDLE mailslot = CreateMailslotW (MailslotName (GetCurrentProcessId ()),
-    8, MAILSLOT_WAIT_FOREVER, nullptr);
+    sizeof (Message), MAILSLOT_WAIT_FOREVER, nullptr);
   if (INVALID_HANDLE_VALUE == mailslot)
     return -1;
 
@@ -70,11 +70,9 @@ protected:
 	{
 		// Code here will be called immediately after each test (right
 		// before the destructor).
-		if (other_process_handle_) {
-			Mailslot mailslot;
-			mailslot.open (MailslotName (other_process_id_));
+		if (mailslot_.is_open ()) {
 			Message msg{ 0, 0 };
-			mailslot.send (msg);
+			mailslot_.send (msg);
 			WaitForSingleObject (other_process_handle_, INFINITE);
 			CloseHandle (other_process_handle_);
 		}
@@ -111,8 +109,20 @@ protected:
 		BOOL ok = CreateProcessW (nullptr, (WCHAR*)cmd.data (), nullptr, nullptr, FALSE, NORMAL_PRIORITY_CLASS, nullptr, nullptr, &si, &pi);
 		ASSERT_TRUE (ok);
 		EXPECT_TRUE (CloseHandle (pi.hThread));
-		other_process_id_ = pi.dwProcessId;
-		other_process_handle_ = pi.hProcess;
+
+		for (int i = 0; i < 100; ++i) {
+			Sleep (10);
+			if (mailslot_.open (MailslotName (pi.dwProcessId)))
+				break;
+		}
+
+		if (!mailslot_.is_open ()) {
+			TerminateProcess (pi.hProcess, 1);
+			ADD_FAILURE ();
+		} else {
+			other_process_id_ = pi.dwProcessId;
+			other_process_handle_ = pi.hProcess;
+		}
 	}
 
 	static WCHAR* find_slash (WCHAR* begin, WCHAR* end)
@@ -137,21 +147,23 @@ protected:
 private:
 	DWORD other_process_id_;
 	HANDLE other_process_handle_;
+	Mailslot mailslot_;
 };
 
 TEST_F (TestOtherSpace, ReserveCopy64)
 {
 	start_other_process (L"x64");
-	OtherSpace <true> space (other_process_id (), other_process_handle ());
+	OtherSpace <true> other (other_process_id (), other_process_handle ());
 
 	size_t block_size = 0x10000;
 	size_t cb = block_size;
 	void* block = Nirvana::Core::Port::Memory::allocate (nullptr, cb, Nirvana::Memory::RESERVED);
-	Nirvana::Core::Port::Memory::commit (block, 4096);
+	size_t cb_commit = 4096;
+	Nirvana::Core::Port::Memory::commit (block, cb_commit);
 	*(int*)block = 0;
-	ESIOP::SharedMemPtr p = space.reserve (cb);
-	EXPECT_EQ (p, space.copy (p, block, cb, true));
-	space.release (p, cb);
+	ESIOP::SharedMemPtr p = other.reserve (cb);
+	EXPECT_EQ (p, other.copy (p, block, cb_commit, true));
+	other.release (p, cb);
 //	Memory::release (block, cb);
 }
 /*
@@ -170,10 +182,10 @@ TEST_F (TestOtherSpace, Copy64)
 */
 int main (int argc, char** argv)
 {
-  if (argc > 1 && !strcmp (argv [1], "o")) {
+	other_space_init ();
+	if (argc > 1 && !strcmp (argv [1], "o")) {
     return other_process ();
   } else {
-		other_space_init ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
   }
