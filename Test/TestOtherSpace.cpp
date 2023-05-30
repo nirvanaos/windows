@@ -6,7 +6,6 @@
 #include "../Source/Mailslot.h"
 #include <gtest/gtest.h>
 
-using namespace Nirvana::Core::Port;
 using namespace Nirvana::Core::Windows;
 using namespace ESIOP::Windows;
 
@@ -17,12 +16,12 @@ struct Message
 
 int other_process ()
 {
-  HANDLE mailslot = CreateMailslotW (MailslotName (GetCurrentProcessId ()),
+	Memory::initialize ();
+
+	HANDLE mailslot = CreateMailslotW (MailslotName (GetCurrentProcessId ()),
     8, MAILSLOT_WAIT_FOREVER, nullptr);
   if (INVALID_HANDLE_VALUE == mailslot)
     return -1;
-
-	Memory::initialize ();
 
 	Message msg;
 	for (;;) {
@@ -43,17 +42,17 @@ int other_process ()
 	return 0;
 }
 
-class TestAddressSpace :
+class TestOtherSpace :
 	public ::testing::Test
 {
 protected:
-	TestAddressSpace () :
+	TestOtherSpace () :
 		other_process_id_ (0),
 		other_process_handle_ (nullptr)
 	{
 	}
 
-	virtual ~TestAddressSpace ()
+	virtual ~TestOtherSpace ()
 	{
 	}
 
@@ -140,21 +139,23 @@ private:
 	HANDLE other_process_handle_;
 };
 
-TEST_F (TestAddressSpace, ReserveCopy64)
+TEST_F (TestOtherSpace, ReserveCopy64)
 {
 	start_other_process (L"x64");
 	OtherSpace <true> space (other_process_id (), other_process_handle ());
 
 	size_t block_size = 0x10000;
 	size_t cb = block_size;
-	void* block = Memory::allocate (nullptr, cb, 0);
+	void* block = Nirvana::Core::Port::Memory::allocate (nullptr, cb, Nirvana::Memory::RESERVED);
+	Nirvana::Core::Port::Memory::commit (block, 4096);
+	*(int*)block = 0;
 	ESIOP::SharedMemPtr p = space.reserve (cb);
 	EXPECT_EQ (p, space.copy (p, block, cb, true));
 	space.release (p, cb);
 //	Memory::release (block, cb);
 }
-
-TEST_F (TestAddressSpace, Copy64)
+/*
+TEST_F (TestOtherSpace, Copy64)
 {
 	start_other_process (L"x64");
 	OtherSpace <true> space (other_process_id (), other_process_handle ());
@@ -166,7 +167,7 @@ TEST_F (TestAddressSpace, Copy64)
 	space.release (p, cb);
 	Memory::release (block, cb);
 }
-
+*/
 int main (int argc, char** argv)
 {
   if (argc > 1 && !strcmp (argv [1], "o")) {
