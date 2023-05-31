@@ -52,9 +52,9 @@ SharedMemPtr OtherDomainSinglePlatform::reserve (size_t size)
 	return Space::reserve (size);
 }
 
-SharedMemPtr OtherDomainSinglePlatform::copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src)
+SharedMemPtr OtherDomainSinglePlatform::copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags)
 {
-	return Space::copy (reserved, src, size, release_src);
+	return Space::copy (reserved, src, size, flags);
 }
 
 void OtherDomainSinglePlatform::release (SharedMemPtr p, size_t size)
@@ -81,9 +81,9 @@ public:
 		return Space::reserve (size);
 	}
 
-	virtual SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src) override
+	virtual SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags) override
 	{
-		return Space::copy (reserved, src, size, release_src);
+		return Space::copy (reserved, src, size, flags);
 	}
 
 	virtual void release (SharedMemPtr p, size_t size) override

@@ -174,7 +174,7 @@ TEST_F (TestOtherSpace, Move)
 	Nirvana::Core::Port::Memory::commit (block, cb_commit);
 	*(int*)block = 0;
 	ESIOP::SharedMemPtr p = other.reserve (cb);
-	EXPECT_EQ (p, other.copy (p, block, cb_commit, true));
+	EXPECT_EQ (p, other.copy (p, block, cb_commit, Nirvana::Memory::SRC_RELEASE));
 	other.release (p, cb);
 }
 
@@ -187,7 +187,21 @@ TEST_F (TestOtherSpace, Copy)
 	size_t cb = block_size;
 	void* block = Memory::allocate (nullptr, cb, 0);
 	*(int*)block = 0;
-	ESIOP::SharedMemPtr p = other.copy (0, block, cb, false);
+	ESIOP::SharedMemPtr p = other.copy (0, block, cb, 0);
+	Memory::release (block, cb);
+	other.release (p, cb);
+}
+
+TEST_F (TestOtherSpace, Decommit)
+{
+	start_other_process (L"x64");
+	OtherSpace <true> other (other_process_id (), other_process_handle ());
+
+	size_t block_size = 0x20000;
+	size_t cb = block_size;
+	void* block = Memory::allocate (nullptr, cb, 0);
+	*(int*)block = 0;
+	ESIOP::SharedMemPtr p = other.copy (0, block, cb, Nirvana::Memory::SRC_DECOMMIT);
 	Memory::release (block, cb);
 	other.release (p, cb);
 }

@@ -43,8 +43,10 @@ SharedMemPtr OtherSpace <x64>::reserve (size_t& size)
 }
 
 template <bool x64> inline
-SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src)
+SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags)
 {
+	assert (!(flags & ~Nirvana::Memory::SRC_RELEASE));
+
 	size_t size_in = size;
 	if (!src || !size_in)
 		Nirvana::throw_BAD_PARAM ();
@@ -57,21 +59,18 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 	void* tmp = nullptr;
 	size_t tmp_size = 0;
 	if (!Nirvana::Core::Windows::local_address_space->allocated_block ((uint8_t*)src)) {
-		if (release_src)
+		if (flags)
 			Nirvana::throw_BAD_PARAM ();
 		tmp_size = size;
 		tmp = Memory::copy (nullptr, src, tmp_size, 0);
 		src = tmp;
-		release_src = true;
+		flags = Nirvana::Memory::SRC_RELEASE;
 	}
 
-	unsigned flags;
 	DWORD copied_pages_state;
-	if (release_src) {
-		flags = Nirvana::Memory::SRC_RELEASE;
+	if (flags) {
 		copied_pages_state = PageState::READ_WRITE_PRIVATE;
 	} else {
-		flags = 0;
 		copied_pages_state = PageState::READ_WRITE_SHARED;
 	}
 
@@ -102,8 +101,18 @@ SharedMemPtr OtherSpace <x64>::copy (SharedMemPtr reserved, void* src, size_t& s
 			d_p += (Size)cb;
 			s_p += (Size)cb;
 		}
-		if (release_src)
+		switch (flags & Nirvana::Memory::SRC_RELEASE) {
+		case Nirvana::Memory::SRC_RELEASE:
 			Memory::release (src, size_in);
+			break;
+		case Nirvana::Memory::SRC_DECOMMIT: {
+			BYTE* p = (BYTE*)src;
+			BYTE* end = p + size_in;
+			p = Nirvana::round_up (p, Memory::FIXED_COMMIT_UNIT);
+			size_t cb = Nirvana::round_down (end, Memory::FIXED_COMMIT_UNIT) - p;
+			Memory::decommit (p, cb);
+		} break;
+		}
 	} catch (...) {
 		if (alloc_size)
 			Base::release (alloc_ptr, alloc_size);

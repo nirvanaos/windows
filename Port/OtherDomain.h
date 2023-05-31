@@ -77,7 +77,7 @@ public:
 	static const bool slow_creation = true;
 
 	SharedMemPtr reserve (size_t size);
-	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src);
+	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags);
 	void release (SharedMemPtr p, size_t size);
 
 	static void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT
@@ -106,7 +106,7 @@ class OtherDomain : public Nirvana::Core::UserObject
 {
 public:
 	virtual SharedMemPtr reserve (size_t size) = 0;
-	virtual SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src) = 0;
+	virtual SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags) = 0;
 	virtual void release (SharedMemPtr p, size_t size) = 0;
 	virtual void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT = 0;
 	virtual void* store_pointer (void* where, SharedMemPtr p) NIRVANA_NOEXCEPT = 0;
@@ -130,9 +130,9 @@ public:
 		return implementation_->reserve (size);
 	}
 
-	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src)
+	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags)
 	{
-		return implementation_->copy (reserved, src, size, release_src);
+		return implementation_->copy (reserved, src, size, flags);
 	}
 
 	void release (SharedMemPtr p, size_t size)

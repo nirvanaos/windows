@@ -50,7 +50,7 @@ public:
 	{}
 
 	SharedMemPtr reserve (size_t& size);
-	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, bool release_src);
+	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags);
 	void release (SharedMemPtr p, size_t size);
 
 	static void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT
