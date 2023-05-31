@@ -197,6 +197,16 @@ private:
 
 	BlockInfo* block_ptr (Address address, bool commit);
 
+	static Address address (void* addr) NIRVANA_NOEXCEPT
+	{
+		return (Address)(uint64_t)addr;
+	}
+
+	static Address address (uint64_t addr) NIRVANA_NOEXCEPT
+	{
+		return (Address)addr;
+	}
+
 private:
 	HANDLE process_;
 	HANDLE file_;

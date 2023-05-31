@@ -61,12 +61,12 @@ namespace Windows {
 
 enum WOW64
 {
-	WOW64_VirtualQueryEx,
-	WOW64_VirtualProtectEx,
-	WOW64_VirtualAlloc2,
-	WOW64_VirtualFreeEx,
-	WOW64_MapViewOfFile3,
-	WOW64_UnmapViewOfFile2,
+	WOW64_NtQueryVirtualMemory,
+	WOW64_NtProtectVirtualMemory,
+	WOW64_NtAllocateVirtualMemoryEx,
+	WOW64_NtFreeVirtualMemory,
+	WOW64_NtMapViewOfSectionEx,
+	WOW64_NtUnmapViewOfSectionEx,
 
 	WOW64_FUNC_CNT
 };
@@ -108,7 +108,7 @@ void AddressSpace <x64>::query (Address address, MBI& mbi) const
 #if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
 	if (x64) {
 		DWORD64 ret = 0;
-		DWORD64 status = X64Call (wow64_func [WOW64_VirtualQueryEx], 6, HANDLE_TO_DWORD64 (process_), address,
+		DWORD64 status = X64Call (wow64_func [WOW64_NtQueryVirtualMemory], 6, HANDLE_TO_DWORD64 (process_), address,
 			(DWORD64)0, PTR_TO_DWORD64 (&mbi), (DWORD64)sizeof (mbi), PTR_TO_DWORD64 (&ret));
 		assert (!status);
 	} else
@@ -128,7 +128,7 @@ void AddressSpace <x64>::Block::protect (size_t offset, size_t size, uint32_t pr
 	if (x64) {
 		DWORD64 tmp_size = size;
 		DWORD64 old;
-		DWORD64 status = X64Call (wow64_func [WOW64_VirtualProtectEx], 5, HANDLE_TO_DWORD64 (space_.process ()),
+		DWORD64 status = X64Call (wow64_func [WOW64_NtProtectVirtualMemory], 5, HANDLE_TO_DWORD64 (space_.process ()),
 			PTR_TO_DWORD64 (&addr), PTR_TO_DWORD64 (&tmp_size), (DWORD64)protection, PTR_TO_DWORD64 (&old));
 		assert (!status);
 	} else
@@ -147,7 +147,7 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::alloc (Address address,
 	if (x64) {
 		DWORD64 tmp_addr = (DWORD64)address;
 		DWORD64 tmp_size = size;
-		DWORD64 status = X64Call (wow64_func [WOW64_VirtualAlloc2], 7, HANDLE_TO_DWORD64 (process_),
+		DWORD64 status = X64Call (wow64_func [WOW64_NtAllocateVirtualMemoryEx], 7, HANDLE_TO_DWORD64 (process_),
 			PTR_TO_DWORD64 (&tmp_addr), PTR_TO_DWORD64 (&tmp_size), (DWORD64)flags, (DWORD64)protection,
 			PTR_TO_DWORD64 (nullptr), (DWORD64)0);
 		if (!status)
@@ -167,7 +167,7 @@ bool AddressSpace <x64>::free (Address address, Size size, uint32_t flags) const
 	if (x64) {
 		DWORD64 tmp_addr = (DWORD64)address;
 		DWORD64 tmp_size = size;
-		DWORD64 status = X64Call (wow64_func [WOW64_VirtualFreeEx], 4, HANDLE_TO_DWORD64 (process_),
+		DWORD64 status = X64Call (wow64_func [WOW64_NtFreeVirtualMemory], 4, HANDLE_TO_DWORD64 (process_),
 			PTR_TO_DWORD64 (&tmp_addr), PTR_TO_DWORD64 (&tmp_size), (DWORD64)flags);
 		return !status;
 	} else
@@ -184,7 +184,7 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::map (HANDLE hm, Address
 	if (x64) {
 		DWORD64 tmp_addr = (DWORD64)address;
 		DWORD64 tmp_size = size;
-		DWORD64 status = X64Call (wow64_func [WOW64_MapViewOfFile3], 9, HANDLE_TO_DWORD64 (hm),
+		DWORD64 status = X64Call (wow64_func [WOW64_NtMapViewOfSectionEx], 9, HANDLE_TO_DWORD64 (hm),
 			HANDLE_TO_DWORD64 (process_), PTR_TO_DWORD64 (&tmp_addr), (DWORD64)0, PTR_TO_DWORD64 (&tmp_size),
 			(DWORD64)flags, (DWORD64)PROTECTION, (DWORD64)0, (DWORD64)0);
 		if (!status)
@@ -202,7 +202,7 @@ bool AddressSpace <x64>::unmap (Address address, uint32_t flags) const
 {
 #if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
 	if (x64) {
-		DWORD64 status = X64Call (wow64_func [WOW64_UnmapViewOfFile2], 3, HANDLE_TO_DWORD64 (process_),
+		DWORD64 status = X64Call (wow64_func [WOW64_NtUnmapViewOfSectionEx], 3, HANDLE_TO_DWORD64 (process_),
 			(DWORD64)address, (DWORD64)flags);
 		return !status;
 	} else
@@ -722,13 +722,13 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 
 		// Split reserved blocks at begin and end if need.
 		if (begin_mbi.BaseAddress) {
-			SSize realloc = begin - (Address)begin_mbi.AllocationBase;
+			SSize realloc = begin - address (begin_mbi.AllocationBase);
 			if (realloc > 0)
-				verify (free ((Address)begin_mbi.AllocationBase, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
+				verify (free (address (begin_mbi.AllocationBase), realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 
 		if (end_mbi.BaseAddress) {
-			SSize realloc = (SSize )((Address)end_mbi.BaseAddress + end_mbi.RegionSize - end);
+			SSize realloc = (SSize )(address (end_mbi.BaseAddress) + end_mbi.RegionSize - end);
 			if (realloc > 0)
 				verify (free (end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
