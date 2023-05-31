@@ -29,7 +29,7 @@
 #define NIRVANA_ESIOP_PORT_H_
 #pragma once
 
-#include <Nirvana/NirvanaBase.h>
+#include <Nirvana/Nirvana.h>
 
 extern "C" __declspec (dllimport)
 unsigned long __stdcall GetCurrentProcessId (void);
@@ -68,7 +68,11 @@ inline ProtDomainId sys_domain_id (void) NIRVANA_NOEXCEPT
 /// Sender allocates the message data via OtherMemory interface.
 /// SharedMemPtr size is enough to store memory address
 /// for any supported platform.
+#if HOST_PLATFORM != NIRVANA_PLATFORM_I386
 typedef uint64_t SharedMemPtr;
+#else
+typedef uint32_t SharedMemPtr;
+#endif
 
 /// If an incoming request can't be processed, the system uses this function
 /// to send ESIOP error message to caller.

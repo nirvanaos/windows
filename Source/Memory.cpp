@@ -48,12 +48,20 @@ namespace Windows {
 StaticallyAllocated <AddressSpace <sizeof (void*) == 8> > local_address_space;
 
 #if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
-DWORD64 wow64_NtQueryVirtualMemory;
-DWORD64 wow64_NtProtectVirtualMemory;
-DWORD64 wow64_NtAllocateVirtualMemoryEx;
-DWORD64 wow64_NtFreeVirtualMemory;
-DWORD64 wow64_NtMapViewOfSectionEx;
-DWORD64 wow64_NtUnmapViewOfSectionEx;
+
+DWORD64 wow64_func [WOW64_FUNC_CNT];
+
+const WCHAR* const wow64_dll_name = L"ntdll.dll";
+
+const char* const wow64_func_names [WOW64_FUNC_CNT] = {
+	"NtQueryVirtualMemory",      // WOW64_VirtualQueryEx
+	"NtProtectVirtualMemory",    // WOW64_VirtualProtectEx
+	"NtAllocateVirtualMemoryEx", // WOW64_VirtualAlloc2
+	"NtFreeVirtualMemory",       // WOW64_VirtualFreeEx
+	"NtMapViewOfSectionEx",      // WOW64_MapViewOfFile3
+	"NtUnmapViewOfSectionEx"     // WOW64_UnmapViewOfFile2
+};
+
 #endif
 
 inline ULONG handle_count (HANDLE h)

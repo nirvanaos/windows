@@ -33,7 +33,8 @@ namespace Port {
 
 void PostOffice::initialize (const StringView& host, uint16_t port)
 {
-	Windows::other_space_init ();
+	if (!Windows::other_space_init ())
+		throw CORBA::INITIALIZE ();
 	Windows::MessageBroker::initialize ();
 }
 
