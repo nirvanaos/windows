@@ -145,7 +145,7 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::alloc (Address address,
 {
 #if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
 	if (x64) {
-		DWORD64 tmp_addr = (uintptr_t)address;
+		DWORD64 tmp_addr = (DWORD64)address;
 		DWORD64 tmp_size = size;
 		DWORD64 status = X64Call (wow64_func [WOW64_VirtualAlloc2], 7, HANDLE_TO_DWORD64 (process_),
 			PTR_TO_DWORD64 (&tmp_addr), PTR_TO_DWORD64 (&tmp_size), (DWORD64)flags, (DWORD64)protection,
@@ -165,8 +165,10 @@ bool AddressSpace <x64>::free (Address address, Size size, uint32_t flags) const
 {
 #if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
 	if (x64) {
+		DWORD64 tmp_addr = (DWORD64)address;
+		DWORD64 tmp_size = size;
 		DWORD64 status = X64Call (wow64_func [WOW64_VirtualFreeEx], 4, HANDLE_TO_DWORD64 (process_),
-			(DWORD64)address, (DWORD64)size, (DWORD64)flags);
+			PTR_TO_DWORD64 (&tmp_addr), PTR_TO_DWORD64 (&tmp_size), (DWORD64)flags);
 		return !status;
 	} else
 #endif
@@ -180,7 +182,7 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::map (HANDLE hm, Address
 	static const DWORD PROTECTION = PAGE_EXECUTE_READWRITE;
 #if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
 	if (x64) {
-		DWORD64 tmp_addr = (uintptr_t)address;
+		DWORD64 tmp_addr = (DWORD64)address;
 		DWORD64 tmp_size = size;
 		DWORD64 status = X64Call (wow64_func [WOW64_MapViewOfFile3], 9, HANDLE_TO_DWORD64 (hm),
 			HANDLE_TO_DWORD64 (process_), PTR_TO_DWORD64 (&tmp_addr), (DWORD64)0, PTR_TO_DWORD64 (&tmp_size),
@@ -720,13 +722,13 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 
 		// Split reserved blocks at begin and end if need.
 		if (begin_mbi.BaseAddress) {
-			SSize realloc = begin - (Address)(uintptr_t)begin_mbi.AllocationBase;
+			SSize realloc = begin - (Address)begin_mbi.AllocationBase;
 			if (realloc > 0)
-				verify (free ((Address)(uintptr_t)begin_mbi.AllocationBase, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
+				verify (free ((Address)begin_mbi.AllocationBase, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 
 		if (end_mbi.BaseAddress) {
-			SSize realloc = (SSize )((Address)(uintptr_t)end_mbi.BaseAddress + end_mbi.RegionSize - end);
+			SSize realloc = (SSize )((Address)end_mbi.BaseAddress + end_mbi.RegionSize - end);
 			if (realloc > 0)
 				verify (free (end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}

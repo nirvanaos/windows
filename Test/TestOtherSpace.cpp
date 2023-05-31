@@ -63,7 +63,8 @@ protected:
 	{
 		// Code here will be called immediately after the constructor (right
 		// before each test).
-		ASSERT_TRUE (Nirvana::Core::Port::Memory::initialize ());
+		ASSERT_TRUE (Nirvana::Core::Heap::initialize ());
+		ASSERT_TRUE (other_space_init ());
 	}
 
 	virtual void TearDown ()
@@ -76,7 +77,7 @@ protected:
 			WaitForSingleObject (other_process_handle_, INFINITE);
 			CloseHandle (other_process_handle_);
 		}
-		Nirvana::Core::Port::Memory::terminate ();
+		Nirvana::Core::Heap::terminate ();
 	}
 
 	void start_other_process (const WCHAR* platform)
@@ -150,7 +151,18 @@ private:
 	Mailslot mailslot_;
 };
 
-TEST_F (TestOtherSpace, ReserveCopy64)
+TEST_F (TestOtherSpace, ReserveRelease)
+{
+	start_other_process (L"x64");
+	OtherSpace <true> other (other_process_id (), other_process_handle ());
+
+	size_t block_size = 0x10000;
+	size_t cb = block_size;
+	ESIOP::SharedMemPtr p = other.reserve (cb);
+	other.release (p, cb);
+}
+/*
+TEST_F (TestOtherSpace, ReserveCopy)
 {
 	start_other_process (L"x64");
 	OtherSpace <true> other (other_process_id (), other_process_handle ());
@@ -166,7 +178,7 @@ TEST_F (TestOtherSpace, ReserveCopy64)
 	other.release (p, cb);
 //	Memory::release (block, cb);
 }
-/*
+
 TEST_F (TestOtherSpace, Copy64)
 {
 	start_other_process (L"x64");
@@ -182,7 +194,6 @@ TEST_F (TestOtherSpace, Copy64)
 */
 int main (int argc, char** argv)
 {
-	other_space_init ();
 	if (argc > 1 && !strcmp (argv [1], "o")) {
     return other_process ();
   } else {

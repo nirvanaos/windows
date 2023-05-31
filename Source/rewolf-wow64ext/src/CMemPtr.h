@@ -38,12 +38,10 @@ public:
             *m_ptr = 0; 
         } 
     }
-
-    void disableWatch() { watchActive = false; }
 };
 
 #define WATCH(ptr) \
     CMemPtr watch_##ptr((void**)&ptr)
-
+/*
 #define DISABLE_WATCH(ptr) \
-    watch_##ptr.disableWatch()
+    watch_##ptr.disableWatch()*/
