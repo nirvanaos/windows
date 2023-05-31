@@ -161,8 +161,8 @@ TEST_F (TestOtherSpace, ReserveRelease)
 	ESIOP::SharedMemPtr p = other.reserve (cb);
 	other.release (p, cb);
 }
-/*
-TEST_F (TestOtherSpace, ReserveCopy)
+
+TEST_F (TestOtherSpace, Move)
 {
 	start_other_process (L"x64");
 	OtherSpace <true> other (other_process_id (), other_process_handle ());
@@ -176,22 +176,22 @@ TEST_F (TestOtherSpace, ReserveCopy)
 	ESIOP::SharedMemPtr p = other.reserve (cb);
 	EXPECT_EQ (p, other.copy (p, block, cb_commit, true));
 	other.release (p, cb);
-//	Memory::release (block, cb);
 }
 
-TEST_F (TestOtherSpace, Copy64)
+TEST_F (TestOtherSpace, Copy)
 {
 	start_other_process (L"x64");
-	OtherSpace <true> space (other_process_id (), other_process_handle ());
+	OtherSpace <true> other (other_process_id (), other_process_handle ());
 
-	size_t block_size = 0x10000;
+	size_t block_size = 0x20000;
 	size_t cb = block_size;
 	void* block = Memory::allocate (nullptr, cb, 0);
-	ESIOP::SharedMemPtr p = space.copy (0, block, cb, false);
-	space.release (p, cb);
+	*(int*)block = 0;
+	ESIOP::SharedMemPtr p = other.copy (0, block, cb, false);
 	Memory::release (block, cb);
+	other.release (p, cb);
 }
-*/
+
 int main (int argc, char** argv)
 {
 	if (argc > 1 && !strcmp (argv [1], "o")) {
