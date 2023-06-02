@@ -26,7 +26,7 @@
 #include "../Port/Module.h"
 #include <PortableExecutable.h>
 #include "win32.h"
-#include <stdexcept>
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
@@ -44,7 +44,7 @@ Module::Module (const StringView& file)
 		utf8_to_wide (file, wpath);
 		DWORD att = GetFileAttributesW (wpath.c_str ());
 		if (att & FILE_ATTRIBUTE_DIRECTORY)
-			throw std::runtime_error ("File not found");
+			throw RuntimeError (ENOENT);
 		WCHAR temp_dir [MAX_PATH + 1];
 		if (!GetTempPathW ((DWORD)countof(temp_dir), temp_dir))
 			throw_UNKNOWN ();
@@ -63,13 +63,13 @@ Module::Module (const StringView& file)
 	void* mod = LoadLibraryW (temp_path_.c_str ());
 	try {
 		if (!mod)
-			throw std::runtime_error ("Can not load module");
+			throw RuntimeError (error2errno (GetLastError ()));
 		Nirvana::Core::PortableExecutable pe (mod);
 		if (!pe.find_OLF_section (metadata_))
-			throw std::runtime_error ("Invalid file format");
+			throw RuntimeError (ENOEXEC);
 		const COFF::PE32Header* pehdr = pe.pe32_header ();
 		if (!pehdr || pehdr->AddressOfEntryPoint)
-			throw std::runtime_error ("Invalid file format");
+			throw RuntimeError (ENOEXEC);
 	} catch (...) {
 		unload ();
 		throw;

@@ -48,7 +48,7 @@ static const struct ErrMap
   { ERROR_WRITE_PROTECT,           EROFS },
   { ERROR_BAD_UNIT,                ENODEV },
   { ERROR_NOT_READY,               EBUSY },
-  { ERROR_CRC,			EIO },
+  { ERROR_CRC,                     EIO },
   { ERROR_SEEK,                    ESPIPE },
   { ERROR_NOT_DOS_DISK,            ENOTDIR },
   { ERROR_SECTOR_NOT_FOUND,        EINVAL },
