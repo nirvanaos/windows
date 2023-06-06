@@ -29,12 +29,16 @@
 #define NIRVANA_CORE_PORT_PROTDOMAIN_H_
 #pragma once
 
+#include <Nirvana/Nirvana.h>
+
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
 class ProtDomain
 {
+public:
+	static IDL::String user ();
 };
 
 }

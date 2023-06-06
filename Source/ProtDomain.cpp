@@ -24,10 +24,24 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/ProtDomain.h"
+#include "win32.h"
+#include <Lmcons.h>
+#include <Nirvana/string_conv.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
+
+IDL::String ProtDomain::user ()
+{
+	IDL::String name;
+	WCHAR buf [UNLEN + 1];
+	DWORD cc = (DWORD)std::size (buf);
+	if (GetUserNameW (buf, &cc))
+		Nirvana::wide_to_utf8 (buf, buf + cc - 1, name);
+
+	return name;
+}
 
 }
 }
