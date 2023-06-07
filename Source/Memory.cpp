@@ -418,8 +418,11 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 						goto fallback;
 					else
 						src_remap = true;
-				} else if (!need_remap_to_share (offset, size))
+				} else if (!need_remap_to_share (offset, size)) {
+					if (src_block.exclusive_lock ())
+						continue;
 					goto manage_protection;
+				}
 				else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
 					goto fallback;
 			} else if (has_data_outside_of (offset, size))
@@ -430,25 +433,23 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 			src_remap = src_block.need_remap_to_share (offset, size);
 
 		// Virtual copy is possible.
-		if (src_remap) {
-			exclusive_lock ();
-			if (src_block.exclusive_lock ())
-				continue;
-			else
-				src_block.remap ();
-		}
+		if (src_block.exclusive_lock ())
+			continue;
+
+		if (src_remap)
+			src_block.remap ();
 
 		if (!exclusive_lock ())
 			break;
 	}
 
 	assert (exclusive_locked ());
+	assert (src_block.exclusive_locked ());
 
 	// Virtual copy.
 	if (!(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
 
-restart:
 	{
 		HANDLE src_mapping = src_block.mapping ();
 		assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
@@ -466,10 +467,8 @@ restart:
 
 manage_protection:
 	{
+		assert (src_block.exclusive_locked ());
 		bool move = src_block.can_move (offset, size, flags);
-
-		if (move && src_block.exclusive_lock ())
-			goto restart;
 
 		DWORD copied_pages_state;
 		if (Nirvana::Memory::READ_ONLY & flags)
@@ -502,14 +501,14 @@ manage_protection:
 				for (size_t i = 0; i < page_begin; ++i) {
 					page_protection [i] = block_state.page_state [i].protection ();
 				}
-				for (size_t i = page_begin; i < page_end; ++i)
+				for (size_t i = page_begin; i < page_end; ++i) {
 					page_protection [i] = copied_pages_state;
+				}
 				for (size_t i = page_end; i < PAGES_PER_BLOCK; ++i) {
 					page_protection [i] = block_state.page_state [i].protection ();
 				}
 
 				map_copy (src_block.mapping ());
-
 				adjust_protection (page_protection);
 
 			} else {
