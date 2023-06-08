@@ -308,15 +308,12 @@ void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store)
 template <bool x64>
 void AddressSpace <x64>::Block::unmap ()
 {
-	if (!exclusive_) {
-		if (INVALID_HANDLE_VALUE == mapping ())
-			return;
-		exclusive_lock ();
-	}
+	assert (exclusive_locked ());
 	HANDLE hm = mapping ();
 	assert (hm);
 	if (INVALID_HANDLE_VALUE != hm) {
 		verify (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
+		state_ = State::RESERVED;
 		space_.close_mapping (hm);
 		mapping (INVALID_HANDLE_VALUE);
 	}

@@ -112,6 +112,9 @@ const BlockState& Memory::Block::state ()
 
 bool Memory::Block::has_data (size_t offset, size_t size, uint32_t mask)
 {
+	if (State::RESERVED == state_)
+		return false;
+
 	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	auto page_state = state ().page_state;
@@ -581,23 +584,28 @@ repeat:
 
 void Memory::Block::decommit (size_t offset, size_t size)
 {
-	offset = round_up (offset, PAGE_SIZE);
 	size_t offset_end = round_down (offset + size, PAGE_SIZE);
-	size = offset_end - offset;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
-	if (offset < offset_end) {
+	offset = round_up (offset, PAGE_SIZE);
+	size = offset_end - offset;
+	if (size) {
 		if (!offset && offset_end == ALLOCATION_GRANULARITY)
 			unmap ();
-		else if (!reserved ()) {
-			if (!has_data_outside_of (offset, size))
-				unmap ();
-			else {
-				// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
-				protect (offset, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
-				verify (VirtualAlloc ((BYTE*)address () + offset, size, MEM_RESET, PageState::DECOMMITTED));
+		else {
+			retry:
+			if (!reserved ()) {
+				if (!has_data_outside_of (offset, size)) {
+					if (exclusive_lock ())
+						goto retry;
+					unmap ();
+				} else if (has_data (offset, size)) {
+					// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
+					protect (offset, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
+					verify (VirtualAlloc ((BYTE*)address () + offset, size, MEM_RESET, PageState::DECOMMITTED));
 
-				// Invalidate block state.
-				invalidate_state ();
+					// Invalidate block state.
+					invalidate_state ();
+				}
 			}
 		}
 	}
