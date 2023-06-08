@@ -102,6 +102,7 @@ namespace Port {
 
 const BlockState& Memory::Block::state ()
 {
+	assert (State::RESERVED != state_);
 	if (State::PAGE_STATE_UNKNOWN == state_) {
 		block_state_.query (space_.process ());
 		state_ = State::MAPPED;
@@ -123,6 +124,9 @@ bool Memory::Block::has_data (size_t offset, size_t size, uint32_t mask)
 
 bool Memory::Block::has_data_outside_of (size_t offset, size_t size, uint32_t mask)
 {
+	if (State::RESERVED == state_)
+		return false;
+
 	size_t offset_end = offset + size;
 	assert (offset_end <= ALLOCATION_GRANULARITY);
 	if (offset || size < ALLOCATION_GRANULARITY) {
