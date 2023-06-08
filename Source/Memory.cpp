@@ -396,55 +396,41 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 	}
 }
 
-void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
+void Memory::Block::copy_aligned (Block& src_block, void* src, size_t size, unsigned flags)
 {
 	// NOTE: Memory::SRC_DECOMMIT and Memory::SRC_RELEASE flags used only for optimization.
 	// We don't perform actual decommit or release here.
 	assert (size);
 	size_t offset = (uintptr_t)src % ALLOCATION_GRANULARITY;
 	assert (offset + size <= ALLOCATION_GRANULARITY);
+	assert (exclusive_locked ());
+	assert (src_block.exclusive_locked ());
 
 	if ((flags & Nirvana::Memory::SIMPLE_COPY) && has_data (offset, size, PageState::MASK_NO_WRITE))
 		throw_NO_PERMISSION ();
 
 	bool remap = false;
-	Block src_block (src, size == ALLOCATION_GRANULARITY);
-	for (;;) {
-		bool src_remap = false;
-		if ((offset || size < ALLOCATION_GRANULARITY) && INVALID_HANDLE_VALUE != mapping ()) {
-			if (CompareObjectHandles (mapping (), src_block.mapping ())) {
-				if (src_block.need_remap_to_share (offset, size)) {
-					if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
-						goto fallback;
-					else
-						src_remap = true;
-				} else if (!need_remap_to_share (offset, size)) {
-					if (src_block.exclusive_lock ())
-						continue;
-					goto manage_protection;
-				}
-				else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
+	bool src_remap = false;
+	if ((offset || size < ALLOCATION_GRANULARITY) && INVALID_HANDLE_VALUE != mapping ()) {
+		if (CompareObjectHandles (mapping (), src_block.mapping ())) {
+			if (src_block.need_remap_to_share (offset, size)) {
+				if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
 					goto fallback;
-			} else if (has_data_outside_of (offset, size))
+				else
+					src_remap = true;
+			} else if (!need_remap_to_share (offset, size))
+				goto manage_protection;
+			else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
 				goto fallback;
-			else
-				src_remap = src_block.need_remap_to_share (offset, size);
-		} else
+		} else if (has_data_outside_of (offset, size))
+			goto fallback;
+		else
 			src_remap = src_block.need_remap_to_share (offset, size);
+	} else
+		src_remap = src_block.need_remap_to_share (offset, size);
 
-		// Virtual copy is possible.
-		if (src_block.exclusive_lock ())
-			continue;
-
-		if (src_remap)
-			src_block.remap ();
-
-		if (!exclusive_lock ())
-			break;
-	}
-
-	assert (exclusive_locked ());
-	assert (src_block.exclusive_locked ());
+	if (src_remap)
+		src_block.remap ();
 
 	// Virtual copy.
 	if (!(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
@@ -467,7 +453,6 @@ void Memory::Block::copy_aligned (void* src, size_t size, unsigned flags)
 
 manage_protection:
 	{
-		assert (src_block.exclusive_locked ());
 		bool move = src_block.can_move (offset, size, flags);
 
 		DWORD copied_pages_state;
@@ -492,8 +477,6 @@ manage_protection:
 					page_end = page_last;
 			}
 			if (remap) {
-				assert (exclusive_locked ());
-
 				// Source and target blocks had the same mapping handle,
 				// but source block was remapped.
 				// We need to save page state and then restore it.
@@ -974,7 +957,10 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 			if (dst_own) {
 				if (src_own && (uintptr_t)dst % ALLOCATION_GRANULARITY == src_align) {
 					// Share (regions may overlap).
+					// To avoid deadlock, we must always lock source and target blocks in the same order.
+					// Block with lesser address is locked first.
 					if (dst < src) {
+						// Destination block lock first
 						BYTE* d_p = (BYTE*)dst, * d_end = d_p + size;
 						BYTE* s_p = (BYTE*)src;
 						if (d_end > src) {
@@ -984,20 +970,23 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							unsigned overlapped_flags = (flags & ~Nirvana::Memory::SRC_RELEASE) | Nirvana::Memory::SRC_DECOMMIT;
 							while (d_p < overlapped_end) {
 								size_t cb = round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY - d_p;
-								Block block (d_p, cb == ALLOCATION_GRANULARITY);
-								block.copy_aligned (s_p, cb, overlapped_flags);
+								Block block (d_p, true);
+								Block src_block (s_p, true);
+								block.copy_aligned (src_block, s_p, cb, overlapped_flags);
 								d_p += cb;
 								s_p += cb;
 							}
 						}
 						while (d_p < d_end) {
 							size_t cb = std::min (round_down (d_p, ALLOCATION_GRANULARITY) + ALLOCATION_GRANULARITY, d_end) - d_p;
-							Block block (d_p, cb == ALLOCATION_GRANULARITY);
-							block.copy_aligned (s_p, cb, flags);
+							Block block (d_p, true);
+							Block src_block (s_p, true);
+							block.copy_aligned (src_block, s_p, cb, flags);
 							d_p += cb;
 							s_p += cb;
 						}
 					} else {
+						// Source block lock first
 						BYTE* s_end = (BYTE*)src + size;
 						BYTE* d_p = (BYTE*)dst + size, * s_p = (BYTE*)src + size;
 						if (dst < s_end) {
@@ -1008,9 +997,10 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							while (d_p > overlapped_begin) {
 								BYTE* block_begin = round_down (d_p - 1, ALLOCATION_GRANULARITY);
 								size_t cb = d_p - block_begin;
-								Block block (block_begin, cb == ALLOCATION_GRANULARITY);
 								s_p -= cb;
-								block.copy_aligned (s_p, cb, overlapped_flags);
+								Block src_block (s_p, true);
+								Block block (block_begin, true);
+								block.copy_aligned (src_block, s_p, cb, overlapped_flags);
 								d_p = block_begin;
 							}
 						}
@@ -1019,9 +1009,10 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 							if (block_begin < dst)
 								block_begin = (BYTE*)dst;
 							size_t cb = d_p - block_begin;
-							Block block (block_begin, cb == ALLOCATION_GRANULARITY);
 							s_p -= cb;
-							block.copy_aligned (s_p, cb, flags);
+							Block src_block (s_p, true);
+							Block block (block_begin, true);
+							block.copy_aligned (src_block, s_p, cb, flags);
 							d_p = block_begin;
 						}
 					}

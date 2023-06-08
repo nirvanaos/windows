@@ -171,7 +171,7 @@ public:
 			prepare_to_share_no_remap (offset, size);
 	}
 
-	void copy_aligned (void* src, size_t size, unsigned flags);
+	void copy_aligned (Block& src_block, void* src, size_t size, unsigned flags);
 	void copy_unaligned (size_t offset, size_t size, const void* src, unsigned flags);
 
 	void decommit (size_t offset, size_t size);
