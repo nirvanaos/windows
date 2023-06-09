@@ -76,7 +76,7 @@ public:
 	/// 
 	/// \param utc UTC time.
 	/// \returns Local deadline time.
-	static DeadlineTime deadline_from_UTC (TimeBase::UtcT utc) NIRVANA_NOEXCEPT
+	static DeadlineTime deadline_from_UTC (const TimeBase::UtcT& utc) NIRVANA_NOEXCEPT
 	{
 		TimeBase::UtcT cur = UTC ();
 		return deadline_clock () + rescale64 (utc.time () - cur.time () + inacc_max (utc, cur),
