@@ -463,10 +463,16 @@ void Memory::Block::copy_aligned (Block& src_block, void* src, size_t size, unsi
 			size_t page_begin = offset / PAGE_SIZE;
 			size_t page_end = (offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
 			if (Nirvana::Memory::READ_ONLY & flags) {
-				if (offset % PAGE_SIZE && block_state.page_state [page_begin].protection () & PageState::MASK_ACCESS)
+
+				// Align first page up
+				if (offset % PAGE_SIZE
+					&& (block_state.page_state [page_begin].protection () & PageState::MASK_ACCESS))
 					++page_begin;
+
+				// Align last page down
 				size_t page_last = page_end - 1;
-				if (page_last > page_begin && (offset + size) % PAGE_SIZE && state ().page_state [page_last].protection () & PageState::MASK_ACCESS)
+				if (page_last > page_begin && (offset + size) % PAGE_SIZE
+					&& (block_state.page_state [page_last].protection () & PageState::MASK_ACCESS))
 					page_end = page_last;
 			}
 			if (remap) {
@@ -489,7 +495,8 @@ void Memory::Block::copy_aligned (Block& src_block, void* src, size_t size, unsi
 
 			} else {
 				// Manage access to copied pages
-				while (page_begin < page_end && block_state.page_state [page_begin].protection () == copied_pages_state) {
+				while (page_begin < page_end
+					&& block_state.page_state [page_begin].protection () == copied_pages_state) {
 					++page_begin;
 				}
 				if (page_begin < page_end) {
@@ -510,25 +517,34 @@ fallback:
 
 void Memory::Block::adjust_protection (const DWORD page_protection [PAGES_PER_BLOCK])
 {
-	const DWORD* pp = page_protection, * const ppe = pp + PAGES_PER_BLOCK;
-	do {
-		// Not accessible pages were not committed on remap, skip them
-		do {
-			if (PageState::MASK_ACCESS & *pp)
-				break;
-		} while (ppe > ++pp);
+	const Windows::BlockState& block_state = state ();
+	size_t page = 0;
 
-		if (pp < ppe) {
-			const DWORD* begin = pp;
-			DWORD protection = *pp;
-			for (++pp; pp < ppe; ++pp) {
-				if (protection != *pp)
-					break;
-			}
-			protect ((begin - page_protection) * PAGE_SIZE, (pp - begin) * PAGE_SIZE, protection);
-			invalidate_state ();
+	do {
+		// Skip not committed pages
+		while (!block_state.page_state [page].is_committed ()) {
+			assert (!(PageState::MASK_ACCESS & page_protection [page]));
+			++page;
 		}
-	} while (pp < ppe);
+		if (page == PAGES_PER_BLOCK)
+			break;
+
+		// Get range of pages with the same protection
+		const size_t start_page = page;
+		DWORD protection = page_protection [page];
+		assert (protection);
+		for (++page; page < PAGES_PER_BLOCK; ++page) {
+			if (protection != page_protection [page])
+				break;
+			if (!block_state.page_state [page].is_committed ()) {
+				assert (!(PageState::MASK_ACCESS & protection));
+				break;
+			}
+		}
+		protect (start_page * PAGE_SIZE, (page - start_page) * PAGE_SIZE, protection);
+		invalidate_state ();
+
+	} while (page < PAGES_PER_BLOCK && block_state.page_state [page].is_committed ());
 }
 
 void Memory::Block::copy_unaligned (size_t offset, size_t size, const void* src, unsigned flags)
