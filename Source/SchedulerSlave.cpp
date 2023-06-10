@@ -114,7 +114,7 @@ void SchedulerSlave::create_item ()
 	}
 }
 
-void SchedulerSlave::delete_item () NIRVANA_NOEXCEPT
+void SchedulerSlave::delete_item () noexcept
 {
 	queue_.delete_item ();
 	try {
@@ -124,7 +124,7 @@ void SchedulerSlave::delete_item () NIRVANA_NOEXCEPT
 	}
 }
 
-void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT
+void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) noexcept
 {
 	try {
 		queue_.insert (deadline, &executor);
@@ -139,7 +139,7 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) NIRVAN
 	}
 }
 
-bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT
+bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept
 {
 	try {
 		if (!queue_.reorder (deadline, &executor, old))
@@ -156,7 +156,7 @@ bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, Dead
 	return true;
 }
 
-void SchedulerSlave::shutdown () NIRVANA_NOEXCEPT
+void SchedulerSlave::shutdown () noexcept
 {
 #ifdef DEBUG_SHUTDOWN
 	Port::Debugger::output_debug_string ("Shutdown 2\n");
@@ -164,13 +164,13 @@ void SchedulerSlave::shutdown () NIRVANA_NOEXCEPT
 	worker_threads_.shutdown ();
 }
 
-void SchedulerSlave::worker_thread_proc () NIRVANA_NOEXCEPT
+void SchedulerSlave::worker_thread_proc () noexcept
 {
 	worker_threads_.thread_proc (*this);
 }
 
 inline
-void SchedulerSlave::core_free () NIRVANA_NOEXCEPT
+void SchedulerSlave::core_free () noexcept
 {
 	try {
 		scheduler_mailslot_.send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CORE_FREE));
@@ -180,7 +180,7 @@ void SchedulerSlave::core_free () NIRVANA_NOEXCEPT
 	}
 }
 
-void SchedulerSlave::execute () NIRVANA_NOEXCEPT
+void SchedulerSlave::execute () noexcept
 {
 	Executor* executor;
 	if (queue_.delete_min (executor))

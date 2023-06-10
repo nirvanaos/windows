@@ -49,13 +49,13 @@ public:
 		singleton_->start ();
 	}
 
-	static void terminate () NIRVANA_NOEXCEPT
+	static void terminate () noexcept
 	{
 		static_cast <Base&> (singleton_).terminate ();
 		singleton_.destruct ();
 	}
 
-	static CompletionPort& completion_port () NIRVANA_NOEXCEPT
+	static CompletionPort& completion_port () noexcept
 	{
 		return singleton_;
 	}

@@ -46,7 +46,7 @@ public:
 
 	/// Stop receiving incoming messages.
 	/// Sending the response messages is still available.
-	static void terminate () NIRVANA_NOEXCEPT;
+	static void terminate () noexcept;
 };
 
 }

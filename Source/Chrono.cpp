@@ -41,7 +41,7 @@ uint64_t Chrono::max_timeout64_;
 void* Chrono::hkey_time_config_;
 void* Chrono::hkey_time_client_;
 
-void Chrono::initialize () NIRVANA_NOEXCEPT
+void Chrono::initialize () noexcept
 {
 	TSC_frequency_ = 0;
 	{
@@ -95,7 +95,7 @@ void Chrono::initialize () NIRVANA_NOEXCEPT
 	timeBeginPeriod (tc.wPeriodMin);
 }
 
-void Chrono::terminate () NIRVANA_NOEXCEPT
+void Chrono::terminate () noexcept
 {
 	TIMECAPS tc;
 	timeGetDevCaps (&tc, sizeof (tc));
@@ -135,7 +135,7 @@ inline bool Chrono::adjustment_in_progress ()
 		return false;
 }
 
-TimeBase::UtcT Chrono::UTC () NIRVANA_NOEXCEPT
+TimeBase::UtcT Chrono::UTC () noexcept
 {
 	FILETIME ft;
 	GetSystemTimePreciseAsFileTime (&ft);
@@ -154,7 +154,7 @@ TimeBase::UtcT Chrono::UTC () NIRVANA_NOEXCEPT
 	return TimeBase::UtcT (ui.QuadPart + Windows::WIN_TIME_OFFSET_SEC * TimeBase::SECOND, inacclo, 0, 0);
 }
 
-TimeBase::UtcT Chrono::system_clock () NIRVANA_NOEXCEPT
+TimeBase::UtcT Chrono::system_clock () noexcept
 {
 	TimeBase::UtcT t = UTC ();
 
@@ -165,7 +165,7 @@ TimeBase::UtcT Chrono::system_clock () NIRVANA_NOEXCEPT
 	return t;
 }
 
-DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT
+DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) noexcept
 {
 	uint64_t dt_timeout = 
 #ifndef NIRVANA_FAST_RESCALE64

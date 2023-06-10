@@ -58,19 +58,19 @@ public:
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();
-	virtual void delete_item () NIRVANA_NOEXCEPT;
-	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
-	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
-	virtual void shutdown () NIRVANA_NOEXCEPT;
+	virtual void delete_item () noexcept;
+	virtual void schedule (DeadlineTime deadline, Executor& executor) noexcept;
+	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept;
+	virtual void shutdown () noexcept;
 
 	// Implementation of SchedulerBase
-	virtual void worker_thread_proc () NIRVANA_NOEXCEPT;
+	virtual void worker_thread_proc () noexcept;
 
 	// Called from worker thread.
-	void execute () NIRVANA_NOEXCEPT;
+	void execute () noexcept;
 
 private:
-	void core_free () NIRVANA_NOEXCEPT;
+	void core_free () noexcept;
 
 	static DWORD WINAPI s_watchdog_thread_proc (void* _this);
 

@@ -65,11 +65,11 @@ protected:
 	void start (CompletionPort& port);
 
 	/// Stop all work.
-	void terminate () NIRVANA_NOEXCEPT
+	void terminate () noexcept
 	{}
 
 	/// Enqueue read request.
-	void enqueue_buffer (OVERLAPPED* ovl) NIRVANA_NOEXCEPT
+	void enqueue_buffer (OVERLAPPED* ovl) noexcept
 	{
 		zero (*ovl);
 		if (!ReadFile (handle_, data (ovl), (DWORD)buffer_size (), nullptr, ovl))

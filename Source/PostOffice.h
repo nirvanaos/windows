@@ -67,7 +67,7 @@ public:
 	}
 
 	/// Terminate the post office work.
-	void terminate () NIRVANA_NOEXCEPT
+	void terminate () noexcept
 	{
 		MailslotReader::terminate ();
 		Pool::terminate ();

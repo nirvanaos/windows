@@ -53,7 +53,7 @@ public:
 	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags);
 	void release (SharedMemPtr p, size_t size);
 
-	static void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT
+	static void get_sizes (PlatformSizes& sizes) noexcept
 	{
 		sizes.allocation_unit = ALLOCATION_GRANULARITY;
 		sizes.block_size = ALLOCATION_GRANULARITY;
@@ -62,14 +62,14 @@ public:
 		sizes.max_size = std::max (std::numeric_limits <size_t>::max (), (size_t)std::numeric_limits <Size>::max ());
 	}
 
-	static void* store_pointer (void* where, SharedMemPtr p) NIRVANA_NOEXCEPT
+	static void* store_pointer (void* where, SharedMemPtr p) noexcept
 	{
 		Address* ptr = (Address*)where;
 		*ptr = (Address)p;
 		return ptr + 1;
 	}
 
-	static void* store_size (void* where, size_t size) NIRVANA_NOEXCEPT
+	static void* store_size (void* where, size_t size) noexcept
 	{
 		Size* ptr = (Size*)where;
 		*ptr = (Size)size;

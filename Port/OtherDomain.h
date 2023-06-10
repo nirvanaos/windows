@@ -49,12 +49,12 @@ public:
 	}
 
 protected:
-	HANDLE process () const NIRVANA_NOEXCEPT
+	HANDLE process () const noexcept
 	{
 		return process_;
 	}
 
-	bool is_64_bit () const NIRVANA_NOEXCEPT;
+	bool is_64_bit () const noexcept;
 
 protected:
 	OtherDomainBase (ProtDomainId domain_id);
@@ -80,17 +80,17 @@ public:
 	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags);
 	void release (SharedMemPtr p, size_t size);
 
-	static void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT
+	static void get_sizes (PlatformSizes& sizes) noexcept
 	{
 		Space::get_sizes (sizes);
 	}
 
-	static void* store_pointer (void* where, SharedMemPtr p) NIRVANA_NOEXCEPT
+	static void* store_pointer (void* where, SharedMemPtr p) noexcept
 	{
 		return Space::store_pointer (where, p);
 	}
 
-	static void* store_size (void* where, size_t size) NIRVANA_NOEXCEPT
+	static void* store_size (void* where, size_t size) noexcept
 	{
 		return Space::store_size (where, size);
 	}
@@ -108,9 +108,9 @@ public:
 	virtual SharedMemPtr reserve (size_t size) = 0;
 	virtual SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags) = 0;
 	virtual void release (SharedMemPtr p, size_t size) = 0;
-	virtual void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT = 0;
-	virtual void* store_pointer (void* where, SharedMemPtr p) NIRVANA_NOEXCEPT = 0;
-	virtual void* store_size (void* where, size_t size) NIRVANA_NOEXCEPT = 0;
+	virtual void get_sizes (PlatformSizes& sizes) noexcept = 0;
+	virtual void* store_pointer (void* where, SharedMemPtr p) noexcept = 0;
+	virtual void* store_size (void* where, size_t size) noexcept = 0;
 
 	virtual ~OtherDomain ()
 	{}
@@ -140,17 +140,17 @@ public:
 		implementation_->release (p, size);
 	}
 
-	void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT
+	void get_sizes (PlatformSizes& sizes) noexcept
 	{
 		implementation_->get_sizes (sizes);
 	}
 
-	void* store_pointer (void* where, SharedMemPtr p) NIRVANA_NOEXCEPT
+	void* store_pointer (void* where, SharedMemPtr p) noexcept
 	{
 		return implementation_->store_pointer (where, p);
 	}
 
-	void* store_size (void* where, size_t size) NIRVANA_NOEXCEPT
+	void* store_size (void* where, size_t size) noexcept
 	{
 		return implementation_->store_size (where, size);
 	}

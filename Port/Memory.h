@@ -46,8 +46,8 @@ class Memory
 	static const size_t ALLOCATION_GRANULARITY = PAGE_SIZE * PAGES_PER_BLOCK;
 
 public:
-	static bool initialize () NIRVANA_NOEXCEPT;
-	static void terminate () NIRVANA_NOEXCEPT;
+	static bool initialize () noexcept;
+	static void terminate () noexcept;
 
 	static const size_t ALLOCATION_UNIT = ALLOCATION_GRANULARITY;
 	static const size_t SHARING_UNIT = PAGE_SIZE;
@@ -116,7 +116,7 @@ private:
 
 	static void protect (void* address, size_t size, uint32_t protection);
 
-	static void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) NIRVANA_NOEXCEPT;
+	static void query (const void* address, MEMORY_BASIC_INFORMATION& mbi) noexcept;
 
 	static uint32_t check_committed (void* ptr, size_t size, uint32_t& type);
 

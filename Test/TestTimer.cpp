@@ -49,7 +49,7 @@ public:
 	{}
 
 protected:
-	virtual void signal () NIRVANA_NOEXCEPT
+	virtual void signal () noexcept
 	{
 		++signalled_;
 	}

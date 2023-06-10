@@ -38,7 +38,7 @@ void PostOffice::initialize (const StringView& host, uint16_t port)
 	Windows::MessageBroker::initialize ();
 }
 
-void PostOffice::terminate () NIRVANA_NOEXCEPT
+void PostOffice::terminate () noexcept
 {
 	Windows::MessageBroker::terminate ();
 }

@@ -58,7 +58,7 @@ public:
 		return static_cast <SchedulerBase&> (*singleton_);
 	}
 
-	virtual void worker_thread_proc () NIRVANA_NOEXCEPT = 0;
+	virtual void worker_thread_proc () noexcept = 0;
 
 	void on_error (int err);
 

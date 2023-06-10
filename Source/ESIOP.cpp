@@ -31,7 +31,7 @@ using namespace Nirvana::Core::Windows;
 
 namespace ESIOP {
 
-void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) NIRVANA_NOEXCEPT
+void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) noexcept
 {
 	try {
 		Mailslot ms;

@@ -36,7 +36,7 @@ namespace Core {
 namespace Windows {
 
 inline
-int nirvana (int argc, char* argv [], char* envp []) NIRVANA_NOEXCEPT
+int nirvana (int argc, char* argv [], char* envp []) noexcept
 {
 	try {
 		if (argc > 1) {

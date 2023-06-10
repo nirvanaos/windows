@@ -40,14 +40,14 @@ const uint16_t SystemInfo::supported_platforms_ [SUPPORTED_PLATFORM_CNT] = {
 	NIRVANA_PLATFORM_I386
 };
 
-void SystemInfo::initialize () NIRVANA_NOEXCEPT
+void SystemInfo::initialize () noexcept
 {
 	::SYSTEM_INFO si;
 	::GetSystemInfo (&si);
 	hardware_concurrency_ = si.dwNumberOfProcessors;
 }
 
-bool SystemInfo::get_OLF_section (Section& section) NIRVANA_NOEXCEPT
+bool SystemInfo::get_OLF_section (Section& section) noexcept
 {
 	PortableExecutable pe (GetModuleHandleW (nullptr));
 	return pe.find_OLF_section (section);

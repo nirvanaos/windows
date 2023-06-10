@@ -44,32 +44,32 @@ private:
 	BufferPool& operator = (const BufferPool&) = delete;
 
 public:
-	BufferPool (size_t buffer_count, size_t buffer_size) NIRVANA_NOEXCEPT;
-	~BufferPool () NIRVANA_NOEXCEPT;
+	BufferPool (size_t buffer_count, size_t buffer_size) noexcept;
+	~BufferPool () noexcept;
 
 	/// Returns data buffer pointer for specified OVERLAPPED pointer.
-	static void* data (OVERLAPPED* ovl) NIRVANA_NOEXCEPT
+	static void* data (OVERLAPPED* ovl) noexcept
 	{
 		return ovl + 1;
 	}
 
 protected:
-	size_t buffer_size () const NIRVANA_NOEXCEPT
+	size_t buffer_size () const noexcept
 	{
 		return buffer_size_;
 	}
 
-	OVERLAPPED* begin () const NIRVANA_NOEXCEPT
+	OVERLAPPED* begin () const noexcept
 	{
 		return begin_;
 	}
 
-	OVERLAPPED* end () const NIRVANA_NOEXCEPT
+	OVERLAPPED* end () const noexcept
 	{
 		return end_;
 	}
 
-	OVERLAPPED* next (OVERLAPPED* ovl) const NIRVANA_NOEXCEPT
+	OVERLAPPED* next (OVERLAPPED* ovl) const noexcept
 	{
 		return (OVERLAPPED*)((BYTE*)data (ovl) + buffer_size_);
 	}

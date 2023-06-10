@@ -47,7 +47,7 @@ public:
 	}
 
 	/// Release active item space.
-	static void delete_item () NIRVANA_NOEXCEPT
+	static void delete_item () noexcept
 	{
 		if (singleton_)
 			singleton_->delete_item ();
@@ -57,7 +57,7 @@ public:
 	/// 
 	/// \param deadline Deadline.
 	/// \param executor Executor.
-	static void schedule (const DeadlineTime& deadline, Executor& executor) NIRVANA_NOEXCEPT
+	static void schedule (const DeadlineTime& deadline, Executor& executor) noexcept
 	{
 		singleton_->schedule (deadline, executor);
 	}
@@ -68,13 +68,13 @@ public:
 	/// \param executor Executor.
 	/// \param old Old deadline.
 	/// \returns `true` if the executor was found and rescheduled. `false` if executor with old deadline was not found.
-	static bool reschedule (const DeadlineTime& deadline, Executor& executor, const DeadlineTime& old) NIRVANA_NOEXCEPT
+	static bool reschedule (const DeadlineTime& deadline, Executor& executor, const DeadlineTime& old) noexcept
 	{
 		return singleton_->reschedule (deadline, executor, old);
 	}
 
 	/// Initiate shutdown for the current domain.
-	static void shutdown () NIRVANA_NOEXCEPT
+	static void shutdown () noexcept
 	{
 		singleton_->shutdown ();
 	}

@@ -49,7 +49,7 @@ FileAccess::~FileAccess ()
 		CloseHandle (handle_);
 }
 
-void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
+void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
 {
 	IO_Result result{ size, 0 };
 	if (error)
@@ -57,7 +57,7 @@ void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIR
 	Request::from_overlapped (*ovl).signal (result);
 }
 
-void FileAccess::issue_request (Request& rq) NIRVANA_NOEXCEPT
+void FileAccess::issue_request (Request& rq) noexcept
 {
 	BOOL ret;
 	switch (rq.operation ()) {
@@ -114,7 +114,7 @@ FileAccessDirect::FileAccessDirect (const StringView& path, int flags, Pos& size
 	block_size = 4096; // TODO: Implement
 }
 
-void FileAccessDirect::issue_request (Request& rq) NIRVANA_NOEXCEPT
+void FileAccessDirect::issue_request (Request& rq) noexcept
 {
 	switch (rq.operation ()) {
 		case IO_Request::OP_SET_SIZE:
@@ -139,7 +139,7 @@ void FileAccessDirect::issue_request (Request& rq) NIRVANA_NOEXCEPT
 	Base::issue_request (rq);
 }
 
-void FileAccessDirect::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
+void FileAccessDirect::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
 {
 	Request& rq = Request::from_overlapped (*ovl);
 	switch (rq.operation ()) {

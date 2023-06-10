@@ -29,7 +29,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void* LockableHandle::lock () NIRVANA_NOEXCEPT
+void* LockableHandle::lock () noexcept
 {
 	for (BackOff bo; true; bo ()) {
 		uint32_t cur = val_.load ();
@@ -40,7 +40,7 @@ void* LockableHandle::lock () NIRVANA_NOEXCEPT
 	}
 }
 
-void* LockableHandle::exclusive_lock () NIRVANA_NOEXCEPT
+void* LockableHandle::exclusive_lock () noexcept
 {
 	for (BackOff bo; true; bo ()) {
 		uint32_t cur = val_.load ();

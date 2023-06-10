@@ -53,13 +53,13 @@ const bool PLATFORMS_ENDIAN_DIFFERENT = false;
 typedef uint32_t ProtDomainId;
 
 /// \returns Current protection domain id.
-inline ProtDomainId current_domain_id (void) NIRVANA_NOEXCEPT
+inline ProtDomainId current_domain_id (void) noexcept
 {
 	return GetCurrentProcessId ();
 }
 
 /// \returns System protection domain id.
-inline ProtDomainId sys_domain_id (void) NIRVANA_NOEXCEPT
+inline ProtDomainId sys_domain_id (void) noexcept
 {
 	return Nirvana::Core::Windows::sys_process_id;
 }
@@ -81,7 +81,7 @@ typedef uint32_t SharedMemPtr;
 /// \param domain_id The id of the error message recipient.
 /// \param msg The error message buffer.
 /// \param size The error message size.
-void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) NIRVANA_NOEXCEPT;
+void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) noexcept;
 
 }
 

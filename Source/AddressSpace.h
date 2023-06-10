@@ -55,10 +55,10 @@ class AddressSpace
 	AddressSpace& operator = (const AddressSpace&) = delete;
 public:
 	AddressSpace (uint32_t process_id, HANDLE process_handle);
-	AddressSpace () NIRVANA_NOEXCEPT;
-	bool initialize (uint32_t process_id, HANDLE process_handle) NIRVANA_NOEXCEPT;
+	AddressSpace () noexcept;
+	bool initialize (uint32_t process_id, HANDLE process_handle) noexcept;
 
-	~AddressSpace () NIRVANA_NOEXCEPT;
+	~AddressSpace () noexcept;
 
 	HANDLE process () const
 	{
@@ -70,7 +70,7 @@ public:
 	typedef std::conditional_t <x64, int64_t, int32_t> SSize;
 	typedef std::conditional_t <sizeof (void*) == ADDRESS_SIZE, uint8_t*, Size> Address;
 
-	Address end () const NIRVANA_NOEXCEPT
+	Address end () const noexcept
 	{
 		return (Address)(directory_size_ * (Size)Port::Memory::ALLOCATION_UNIT);
 	}
@@ -82,7 +82,7 @@ public:
 		return *p;
 	}
 
-	BlockInfo* allocated_block (Address address) NIRVANA_NOEXCEPT
+	BlockInfo* allocated_block (Address address) noexcept
 	{
 		BlockInfo* p = block_ptr (address, false);
 		if (p && !p->mapping)
@@ -197,12 +197,12 @@ private:
 
 	BlockInfo* block_ptr (Address address, bool commit);
 
-	static Address address (void* addr) NIRVANA_NOEXCEPT
+	static Address address (void* addr) noexcept
 	{
 		return (Address)(uint64_t)addr;
 	}
 
-	static Address address (uint64_t addr) NIRVANA_NOEXCEPT
+	static Address address (uint64_t addr) noexcept
 	{
 		return (Address)addr;
 	}

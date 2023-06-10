@@ -416,18 +416,20 @@ void Memory::Block::copy_aligned (Block& src_block, void* src, size_t size, unsi
 	if ((flags & Nirvana::Memory::SIMPLE_COPY) && has_data (offset, size, PageState::MASK_NO_WRITE))
 		throw_NO_PERMISSION ();
 
-	bool remap = false;
+	bool remap = true;
 	bool src_remap = false;
-	if ((offset || size < ALLOCATION_GRANULARITY) && INVALID_HANDLE_VALUE != mapping ()) {
+	if (INVALID_HANDLE_VALUE != mapping ()) {
 		if (CompareObjectHandles (mapping (), src_block.mapping ())) {
+			// Source and target handles are the same
 			if (src_block.need_remap_to_share (offset, size)) {
 				if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
 					goto fallback;
 				else
 					src_remap = true;
-			} else if (!need_remap_to_share (offset, size))
-				goto manage_protection;
-			else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
+			} else if (!need_remap_to_share (offset, size)) {
+				remap = false; // Current mapping is OK
+				// But we have to check and change protection if need
+			} else if (has_data_outside_of (offset, size, PageState::MASK_UNMAPPED))
 				goto fallback;
 		} else if (has_data_outside_of (offset, size))
 			goto fallback;
@@ -439,26 +441,10 @@ void Memory::Block::copy_aligned (Block& src_block, void* src, size_t size, unsi
 	if (src_remap)
 		src_block.remap ();
 
-	// Virtual copy.
-	if (!(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
+	// Virtual copy or virtual move?
+	if (remap && !(flags & Nirvana::Memory::SRC_DECOMMIT))	// Memory::SRC_RELEASE includes flag DECOMMIT.
 		src_block.prepare_to_share_no_remap (offset, size);
 
-	{
-		HANDLE src_mapping = src_block.mapping ();
-		assert (src_mapping && INVALID_HANDLE_VALUE != src_mapping);
-		assert (address () != src_block.address ());
-
-		HANDLE cur_mapping = mapping ();
-		if (INVALID_HANDLE_VALUE == cur_mapping)
-			remap = true;
-		else if (!CompareObjectHandles (cur_mapping, src_mapping)) {
-			// Change mapping
-			assert (!has_data_outside_of (offset, size, PageState::MASK_UNMAPPED)); // was checked above
-			remap = true;
-		}
-	}
-
-manage_protection:
 	{
 		bool move = src_block.can_move (offset, size, flags);
 
@@ -688,7 +674,7 @@ bool Memory::Block::is_private (size_t offset, size_t size)
 	return true;
 }
 
-inline void Memory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi) NIRVANA_NOEXCEPT
+inline void Memory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi) noexcept
 {
 	verify (VirtualQuery (address, &mbi, sizeof (mbi)));
 }
@@ -1273,7 +1259,7 @@ static LPTOP_LEVEL_EXCEPTION_FILTER unhandled_exception_handler;
 
 namespace Port {
 
-bool Memory::initialize () NIRVANA_NOEXCEPT
+bool Memory::initialize () noexcept
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 #ifdef _DEBUG
@@ -1294,7 +1280,7 @@ bool Memory::initialize () NIRVANA_NOEXCEPT
 	return true;
 }
 
-void Memory::terminate () NIRVANA_NOEXCEPT
+void Memory::terminate () noexcept
 {
 	DebugLog::terminate ();
 	SetUnhandledExceptionFilter (unhandled_exception_handler);

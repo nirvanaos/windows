@@ -55,7 +55,7 @@ class ExecContext
 	/// Members called from Core.
 public:
 	/// \returns Current execution context.
-	static Core::ExecContext* current () NIRVANA_NOEXCEPT
+	static Core::ExecContext* current () noexcept
 	{
 		return (Core::ExecContext*)FlsGetValue (current_);
 	}
@@ -74,7 +74,7 @@ public:
 
 protected:
 	/// Switch to this context.
-	void switch_to () NIRVANA_NOEXCEPT
+	void switch_to () noexcept
 	{
 		assert (fiber_);
 		SwitchToFiber (fiber_);
@@ -83,30 +83,30 @@ protected:
 	///@}
 
 public:
-	void convert_to_fiber () NIRVANA_NOEXCEPT;
-	void convert_to_thread () NIRVANA_NOEXCEPT;
+	void convert_to_fiber () noexcept;
+	void convert_to_thread () noexcept;
 
-	void attach (void* fiber) NIRVANA_NOEXCEPT
+	void attach (void* fiber) noexcept
 	{
 		assert (!fiber_);
 		fiber_ = fiber;
 	}
 
-	void* detach () NIRVANA_NOEXCEPT
+	void* detach () noexcept
 	{
 		void* f = fiber_;
 		fiber_ = nullptr;
 		return f;
 	}
 
-	static bool initialize () NIRVANA_NOEXCEPT;
-	static void terminate () NIRVANA_NOEXCEPT;
+	static bool initialize () noexcept;
+	static void terminate () noexcept;
 
-	static void current (Core::ExecContext* context) NIRVANA_NOEXCEPT;
+	static void current (Core::ExecContext* context) noexcept;
 
 	static void main_fiber_proc ();
 
-	static void* main_fiber () NIRVANA_NOEXCEPT
+	static void* main_fiber () noexcept
 	{
 		return main_fiber_;
 	}

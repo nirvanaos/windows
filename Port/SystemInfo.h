@@ -39,14 +39,14 @@ namespace Port {
 class SystemInfo
 {
 public:
-	static void initialize () NIRVANA_NOEXCEPT;
+	static void initialize () noexcept;
 
-	static unsigned int hardware_concurrency () NIRVANA_NOEXCEPT
+	static unsigned int hardware_concurrency () noexcept
 	{
 		return hardware_concurrency_;
 	}
 
-	static bool get_OLF_section (Section& section) NIRVANA_NOEXCEPT;
+	static bool get_OLF_section (Section& section) noexcept;
 
 	static const size_t SUPPORTED_PLATFORM_CNT =
 #if HOST_PLATFORM == NIRVANA_PLATFORM_X64

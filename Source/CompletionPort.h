@@ -65,13 +65,13 @@ public:
 	}
 
 	/// Post an I/O completion packet to an I/O completion port.
-	void post (CompletionPortReceiver& receiver, OVERLAPPED* param, DWORD size) NIRVANA_NOEXCEPT
+	void post (CompletionPortReceiver& receiver, OVERLAPPED* param, DWORD size) noexcept
 	{
 		verify (PostQueuedCompletionStatus (completion_port_, size, (ULONG_PTR)&receiver, param));
 	}
 
 	/// On close completion port all threads will return with `ERROR_ABANDONED_WAIT_0` error code.
-	void terminate () NIRVANA_NOEXCEPT
+	void terminate () noexcept
 	{
 		HANDLE port = completion_port_;
 		completion_port_ = nullptr;

@@ -107,19 +107,19 @@ public:
 
 	// Implementation of SchedulerAbstract.
 	virtual void create_item ();
-	virtual void delete_item () NIRVANA_NOEXCEPT;
-	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT;
-	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT;
-	virtual void shutdown () NIRVANA_NOEXCEPT;
+	virtual void delete_item () noexcept;
+	virtual void schedule (DeadlineTime deadline, Executor& executor) noexcept;
+	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept;
+	virtual void shutdown () noexcept;
 
 	// Implementation of SchedulerBase
-	virtual void worker_thread_proc () NIRVANA_NOEXCEPT;
+	virtual void worker_thread_proc () noexcept;
 
 	/// Process mailslot message.
-	void received (void* data, DWORD size) NIRVANA_NOEXCEPT;
+	void received (void* data, DWORD size) noexcept;
 
 	/// Called by SchedulerImpl
-	void execute (SchedulerItem& item) NIRVANA_NOEXCEPT
+	void execute (SchedulerItem& item) noexcept
 	{
 		if (item.is_semaphore ()) {
 			if (!ReleaseSemaphore (item.semaphore (), 1, nullptr)) {
@@ -141,13 +141,13 @@ private:
 		public CompletionPortReceiver
 	{
 	public:
-		void execute (Executor& executor) NIRVANA_NOEXCEPT
+		void execute (Executor& executor) noexcept
 		{
 			post (*this, reinterpret_cast <OVERLAPPED*> (&executor), 0);
 		}
 
 	private:
-		virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
+		virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept;
 
 	}
 	worker_threads_;
@@ -157,7 +157,7 @@ private:
 };
 
 inline
-void SchedulerMaster::received (void* data, DWORD size) NIRVANA_NOEXCEPT
+void SchedulerMaster::received (void* data, DWORD size) noexcept
 {
 	switch (size) {
 		case sizeof (SchedulerMessage::Tagged):

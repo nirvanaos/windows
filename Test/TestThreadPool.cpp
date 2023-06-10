@@ -219,7 +219,7 @@ public:
 	}
 
 private:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
 	{
 		static_cast <IO_WaitList*> (ovl)->release (error);
 	}

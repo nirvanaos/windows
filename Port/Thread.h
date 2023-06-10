@@ -56,7 +56,7 @@ public:
 	/// \returns If thread class is derived from Core::Thread
 	/// returns a pointer of the current Core::Thread object.
 	/// Otherwise returns nullptr.
-	static Core::Thread* current () NIRVANA_NOEXCEPT
+	static Core::Thread* current () noexcept
 	{
 		return (Core::Thread*)TlsGetValue (current_);
 	}
@@ -68,7 +68,7 @@ public:
 	/// variable in Core::Thread class and updated for each
 	/// ExecContext::switch_to() call. So context() can be
 	/// implemented as Thread::current ().port ().context_.
-	static Core::ExecContext* context () NIRVANA_NOEXCEPT
+	static Core::ExecContext* context () noexcept
 	{
 		return ExecContext::current ();
 	}
@@ -79,8 +79,8 @@ public:
 	///@}
 
 public:
-	static bool initialize () NIRVANA_NOEXCEPT;
-	static void terminate () NIRVANA_NOEXCEPT;
+	static bool initialize () noexcept;
+	static void terminate () noexcept;
 
 	static void current (Core::Thread* core_thread);
 
@@ -91,7 +91,7 @@ public:
 	}
 
 protected:
-	Thread () NIRVANA_NOEXCEPT :
+	Thread () noexcept :
 		handle_ (nullptr)
 	{}
 

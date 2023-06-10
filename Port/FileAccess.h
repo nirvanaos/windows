@@ -59,7 +59,7 @@ protected:
 
 		void* hEvent;
 
-		Overlapped () NIRVANA_NOEXCEPT
+		Overlapped () noexcept
 		{
 			zero (*this);
 		}
@@ -70,29 +70,29 @@ protected:
 		public IO_Request
 	{
 	public:
-		Request (Operation op, void* buf, uint32_t size) NIRVANA_NOEXCEPT :
+		Request (Operation op, void* buf, uint32_t size) noexcept :
 			IO_Request (op)
 		{
 			Internal = (uintptr_t)buf;
 			InternalHigh = size;
 		}
 
-		void* buffer () const NIRVANA_NOEXCEPT
+		void* buffer () const noexcept
 		{
 			return (void*)Internal;
 		}
 
-		uint32_t size () const NIRVANA_NOEXCEPT
+		uint32_t size () const noexcept
 		{
 			return (uint32_t)InternalHigh;
 		}
 
-		operator _OVERLAPPED* () NIRVANA_NOEXCEPT
+		operator _OVERLAPPED* () noexcept
 		{
 			return &reinterpret_cast <_OVERLAPPED&> (static_cast <Overlapped&> (*this));
 		}
 
-		static Request& from_overlapped (_OVERLAPPED& ovl) NIRVANA_NOEXCEPT
+		static Request& from_overlapped (_OVERLAPPED& ovl) noexcept
 		{
 			return static_cast <Request&> (reinterpret_cast <Overlapped&> (ovl));
 		}
@@ -105,10 +105,10 @@ protected:
 	void open (const StringView& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
 	~FileAccess ();
 
-	void issue_request (Request& rq) NIRVANA_NOEXCEPT;
+	void issue_request (Request& rq) noexcept;
 
 protected:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept;
 
 protected:
 	void* handle_;
@@ -142,7 +142,7 @@ protected:
 		/// \param offset R/W start offset. Must be aligned on the block boundary.
 		/// \param buf R/W buffer.
 		/// \param size R/W byte count. Must be aligned on the block boundary.
-		Request (Operation op, Pos offset, void* buf, Size size) NIRVANA_NOEXCEPT :
+		Request (Operation op, Pos offset, void* buf, Size size) noexcept :
 			Base (op, buf, size)
 		{
 			Offset.Offset = (uint32_t)offset;
@@ -154,7 +154,7 @@ protected:
 			return ((uint64_t)Offset.OffsetHigh << 32) || Offset.Offset;
 		}
 
-		static Request& from_overlapped (_OVERLAPPED& ovl) NIRVANA_NOEXCEPT
+		static Request& from_overlapped (_OVERLAPPED& ovl) noexcept
 		{
 			return static_cast <Request&> (reinterpret_cast <Overlapped&> (ovl));
 		}
@@ -172,10 +172,10 @@ protected:
 	/// Issues the I/O request to the host or kernel.
 	/// 
 	/// \param rq The `Request` object.
-	void issue_request (Request& rq) NIRVANA_NOEXCEPT;
+	void issue_request (Request& rq) noexcept;
 
 private:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT;
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept;
 
 };
 

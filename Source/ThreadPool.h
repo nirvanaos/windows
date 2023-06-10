@@ -47,7 +47,7 @@ class ThreadPool :
 	typedef SharedAllocator <Worker> Allocator;
 
 public:
-	static unsigned int thread_count () NIRVANA_NOEXCEPT
+	static unsigned int thread_count () noexcept
 	{
 		return Master::thread_count ();
 	}
@@ -81,7 +81,7 @@ public:
 		allocator.deallocate (threads_, thread_count ());
 	}
 
-	Worker* threads () NIRVANA_NOEXCEPT
+	Worker* threads () noexcept
 	{
 		return threads_;
 	}
@@ -96,14 +96,14 @@ public:
 	}
 
 	//! Terminate threads.
-	void terminate () NIRVANA_NOEXCEPT;
+	void terminate () noexcept;
 
 private:
 	Worker* threads_;
 };
 
 template <class Master, class Worker>
-void ThreadPool <Master, Worker>::terminate () NIRVANA_NOEXCEPT
+void ThreadPool <Master, Worker>::terminate () noexcept
 {
 	Master::terminate ();
 	for (Worker* p = threads_, *end = p + thread_count (); p != end; ++p) {

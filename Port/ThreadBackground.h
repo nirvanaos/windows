@@ -48,10 +48,10 @@ protected:
 	void start ();
 
 	/// Continue execution.
-	void resume () NIRVANA_NOEXCEPT;
+	void resume () noexcept;
 
 	/// Stop thread
-	void finish () NIRVANA_NOEXCEPT
+	void finish () noexcept
 	{
 		finish_ = true;
 		resume ();

@@ -42,12 +42,12 @@ namespace Port {
 class Module
 {
 public:
-	void* address () const NIRVANA_NOEXCEPT
+	void* address () const noexcept
 	{
 		return module_;
 	}
 
-	const Section& metadata () const NIRVANA_NOEXCEPT
+	const Section& metadata () const noexcept
 	{
 		return metadata_;
 	}

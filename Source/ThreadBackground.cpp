@@ -69,7 +69,7 @@ void ThreadBackground::start ()
 	Thread::create (this, Windows::BACKGROUND_THREAD_PRIORITY);
 }
 
-void ThreadBackground::resume () NIRVANA_NOEXCEPT
+void ThreadBackground::resume () noexcept
 {
 	verify (SetEvent (event_));
 }

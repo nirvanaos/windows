@@ -140,7 +140,7 @@ void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT perio
 	SetThreadpoolTimer (timer_, (FILETIME*)&dt, (DWORD)period, 0);
 }
 
-void Timer::cancel () NIRVANA_NOEXCEPT
+void Timer::cancel () noexcept
 {
 	if (pool_.initialized)
 		SetThreadpoolTimer (timer_, nullptr, 0, 0);

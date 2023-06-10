@@ -103,7 +103,7 @@ void ExecContext::main_fiber_proc ()
 	}
 }
 
-void ExecContext::convert_to_fiber () NIRVANA_NOEXCEPT
+void ExecContext::convert_to_fiber () noexcept
 {
 	assert (!fiber_);
 	// If dwFlags parameter is zero, the floating - point state on x86 systems is not switched and data 

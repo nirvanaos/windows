@@ -77,13 +77,13 @@ extern const char* const wow64_func_names [WOW64_FUNC_CNT];
 
 #endif
 
-inline bool address_space_init () NIRVANA_NOEXCEPT
+inline bool address_space_init () noexcept
 {
 	local_address_space.construct ();
 	return local_address_space->initialize (GetCurrentProcessId (), GetCurrentProcess ());
 }
 
-inline void address_space_term () NIRVANA_NOEXCEPT
+inline void address_space_term () noexcept
 {
 	local_address_space.destruct ();
 }
@@ -395,7 +395,7 @@ void AddressSpace <x64>::Block::map_copy (HANDLE src_mapping)
 }
 
 template <bool x64> inline
-AddressSpace <x64>::AddressSpace () NIRVANA_NOEXCEPT :
+AddressSpace <x64>::AddressSpace () noexcept :
 	process_ (nullptr),
 	file_ (INVALID_HANDLE_VALUE),
 	mapping_ (nullptr),
@@ -412,7 +412,7 @@ AddressSpace <x64>::AddressSpace (uint32_t process_id, HANDLE process_handle) :
 }
 
 template <bool x64>
-bool AddressSpace <x64>::initialize (uint32_t process_id, HANDLE process_handle) NIRVANA_NOEXCEPT
+bool AddressSpace <x64>::initialize (uint32_t process_id, HANDLE process_handle) noexcept
 {
 	process_ = process_handle;
 
@@ -502,7 +502,7 @@ bool AddressSpace <x64>::initialize (uint32_t process_id, HANDLE process_handle)
 }
 
 template <bool x64>
-AddressSpace <x64>::~AddressSpace () NIRVANA_NOEXCEPT
+AddressSpace <x64>::~AddressSpace () noexcept
 {
 	if (directory_) {
 		if (x64) {

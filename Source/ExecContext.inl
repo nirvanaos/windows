@@ -36,7 +36,7 @@ namespace Core {
 namespace Port {
 
 inline
-bool ExecContext::initialize () NIRVANA_NOEXCEPT
+bool ExecContext::initialize () noexcept
 {
 #ifdef _DEBUG
 	dbg_main_thread_id_ = GetCurrentThreadId ();
@@ -47,7 +47,7 @@ bool ExecContext::initialize () NIRVANA_NOEXCEPT
 }
 
 inline
-void ExecContext::terminate () NIRVANA_NOEXCEPT
+void ExecContext::terminate () noexcept
 {
 	assert (dbg_main_thread_id_ == GetCurrentThreadId ());
 	ConvertFiberToThread ();
@@ -55,13 +55,13 @@ void ExecContext::terminate () NIRVANA_NOEXCEPT
 }
 
 inline
-void ExecContext::current (Core::ExecContext* context) NIRVANA_NOEXCEPT
+void ExecContext::current (Core::ExecContext* context) noexcept
 {
 	FlsSetValue (current_, context);
 }
 
 inline
-void ExecContext::convert_to_thread () NIRVANA_NOEXCEPT
+void ExecContext::convert_to_thread () noexcept
 {
 	assert (fiber_);
 	fiber_ = nullptr;

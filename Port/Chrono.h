@@ -47,13 +47,13 @@ public:
 	/// Current system time.
 	/// NOTE: For the time zone implementation see https://howardhinnant.github.io/date/tz.html
 	/// 
-	static TimeBase::UtcT system_clock () NIRVANA_NOEXCEPT;
+	static TimeBase::UtcT system_clock () noexcept;
 
 	/// Current UTC time.
-	static TimeBase::UtcT UTC () NIRVANA_NOEXCEPT;
+	static TimeBase::UtcT UTC () noexcept;
 
 	/// Duration since system startup in 100 ns intervals.
-	static SteadyTime steady_clock () NIRVANA_NOEXCEPT
+	static SteadyTime steady_clock () noexcept
 	{
 		unsigned __int64 t;
 		QueryInterruptTimePrecise (&t);
@@ -61,13 +61,13 @@ public:
 	}
 
 	/// Duration since system startup.
-	static DeadlineTime deadline_clock () NIRVANA_NOEXCEPT
+	static DeadlineTime deadline_clock () noexcept
 	{
 		return __rdtsc ();
 	}
 
 	/// Deadline clock frequency, Hz.
-	static const DeadlineTime& deadline_clock_frequency () NIRVANA_NOEXCEPT
+	static const DeadlineTime& deadline_clock_frequency () noexcept
 	{
 		return TSC_frequency_;
 	}
@@ -76,7 +76,7 @@ public:
 	/// 
 	/// \param utc UTC time.
 	/// \returns Local deadline time.
-	static DeadlineTime deadline_from_UTC (const TimeBase::UtcT& utc) NIRVANA_NOEXCEPT
+	static DeadlineTime deadline_from_UTC (const TimeBase::UtcT& utc) noexcept
 	{
 		TimeBase::UtcT cur = UTC ();
 		return deadline_clock () + rescale64 (utc.time () - cur.time () + inacc_max (utc, cur),
@@ -87,7 +87,7 @@ public:
 	/// 
 	/// \param deadline Local deadline time.
 	/// \returns UTC time.
-	static TimeBase::UtcT deadline_to_UTC (DeadlineTime deadline) NIRVANA_NOEXCEPT
+	static TimeBase::UtcT deadline_to_UTC (DeadlineTime deadline) noexcept
 	{
 		TimeBase::UtcT utc = UTC ();
 		utc.time (utc.time () + rescale64 (deadline - deadline_clock (), 10000000,
@@ -102,13 +102,13 @@ public:
 	///
 	/// \param timeout A timeout from the current time.
 	/// \return Deadline time as local steady clock value.
-	static DeadlineTime make_deadline (TimeBase::TimeT timeout) NIRVANA_NOEXCEPT;
+	static DeadlineTime make_deadline (TimeBase::TimeT timeout) noexcept;
 
-	static void initialize () NIRVANA_NOEXCEPT;
-	static void terminate () NIRVANA_NOEXCEPT;
+	static void initialize () noexcept;
+	static void terminate () noexcept;
 
 private:
-	static uint64_t inacc_max (const TimeBase::UtcT& t1, const TimeBase::UtcT& t2) NIRVANA_NOEXCEPT
+	static uint64_t inacc_max (const TimeBase::UtcT& t1, const TimeBase::UtcT& t2) noexcept
 	{
 		if (t1.inacchi () > t2.inacchi ())
 			return ((uint64_t)t1.inacchi () << 32) | t1.inacclo ();

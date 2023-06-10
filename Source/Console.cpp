@@ -41,7 +41,7 @@ Console::Console ()
 	handle_ = GetStdHandle (STD_OUTPUT_HANDLE);
 }
 
-void Console::write (const char* text, size_t len) const NIRVANA_NOEXCEPT
+void Console::write (const char* text, size_t len) const noexcept
 {
 	if (handle_) {
 		DWORD cb;

@@ -41,41 +41,41 @@ namespace Windows {
 class LockableHandle
 {
 public:
-	void init_invalid () NIRVANA_NOEXCEPT
+	void init_invalid () noexcept
 	{
 		// Must be null and locked exclusively
 		assert (val_ == SPIN_MASK);
 		val_ = INVALID_VAL;
 	}
 
-	operator bool () const NIRVANA_NOEXCEPT
+	operator bool () const noexcept
 	{
 		return (val_ & ~SPIN_MASK) != 0;
 	}
 
-	void* lock () NIRVANA_NOEXCEPT;
+	void* lock () noexcept;
 
-	void unlock () NIRVANA_NOEXCEPT
+	void unlock () noexcept
 	{
 		assert (val_ & SPIN_MASK);
 		--val_;
 	}
 
-	void* exclusive_lock () NIRVANA_NOEXCEPT;
+	void* exclusive_lock () noexcept;
 
-	void* handle () const NIRVANA_NOEXCEPT
+	void* handle () const noexcept
 	{
 		return val2handle (val_);
 	}
 
-	void set_and_unlock (void* handle) NIRVANA_NOEXCEPT
+	void set_and_unlock (void* handle) noexcept
 	{
 		// Must be exclusive locked
 		assert ((val_ & SPIN_MASK) == SPIN_MASK);
 		val_ = handle2val (handle);
 	}
 
-	HANDLE reset_and_unlock () NIRVANA_NOEXCEPT
+	HANDLE reset_and_unlock () noexcept
 	{
 		// Must be exclusive locked
 		assert ((val_ & SPIN_MASK) == SPIN_MASK);
@@ -84,13 +84,13 @@ public:
 		return h;
 	}
 
-	void exclusive_unlock () NIRVANA_NOEXCEPT
+	void exclusive_unlock () noexcept
 	{
 		assert ((val_ & SPIN_MASK) == SPIN_MASK);
 		val_.fetch_sub (SPIN_MASK, std::memory_order_release);
 	}
 
-	void reset_on_failure () NIRVANA_NOEXCEPT
+	void reset_on_failure () noexcept
 	{
 		val_ = 0;
 	}
@@ -113,7 +113,7 @@ private:
 
 	static const uintptr_t INVALID_HANDLE = (uintptr_t)~0;
 
-	static uint32_t handle2val (void* handle) NIRVANA_NOEXCEPT
+	static uint32_t handle2val (void* handle) noexcept
 	{
 		if (INVALID_HANDLE == (uintptr_t)handle)
 			return INVALID_VAL;
@@ -124,7 +124,7 @@ private:
 		}
 	}
 
-	static void* val2handle (uint32_t val) NIRVANA_NOEXCEPT
+	static void* val2handle (uint32_t val) noexcept
 	{
 		return INVALID_VAL == val ? (void*)INVALID_HANDLE : (void*)(uintptr_t)(val >> SHIFT_BITS);
 	}

@@ -41,10 +41,10 @@ class NIRVANA_NOVTABLE SchedulerAbstract
 {
 public:
 	virtual void create_item () = 0;
-	virtual void delete_item () NIRVANA_NOEXCEPT = 0;
-	virtual void schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT = 0;
-	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT = 0;
-	virtual void shutdown () NIRVANA_NOEXCEPT = 0;
+	virtual void delete_item () noexcept = 0;
+	virtual void schedule (DeadlineTime deadline, Executor& executor) noexcept = 0;
+	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept = 0;
+	virtual void shutdown () noexcept = 0;
 };
 
 }

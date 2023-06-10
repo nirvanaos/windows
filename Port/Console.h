@@ -39,7 +39,7 @@ class Console
 protected:
 	Console ();
 
-	void write (const char* text, size_t len) const NIRVANA_NOEXCEPT;
+	void write (const char* text, size_t len) const noexcept;
 
 private:
 	void* handle_;

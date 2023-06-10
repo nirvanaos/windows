@@ -105,12 +105,12 @@ void SchedulerMaster::create_item ()
 	Base::create_item ();
 }
 
-void SchedulerMaster::delete_item () NIRVANA_NOEXCEPT
+void SchedulerMaster::delete_item () noexcept
 {
 	Base::delete_item ();
 }
 
-void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) NIRVANA_NOEXCEPT
+void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) noexcept
 {
 	try {
 		Base::schedule (deadline, executor);
@@ -119,7 +119,7 @@ void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) NIRVA
 	}
 }
 
-bool SchedulerMaster::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) NIRVANA_NOEXCEPT
+bool SchedulerMaster::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept
 {
 	try {
 		if (Base::reschedule (deadline, executor, old))
@@ -130,7 +130,7 @@ bool SchedulerMaster::reschedule (DeadlineTime deadline, Executor& executor, Dea
 	return false;
 }
 
-void SchedulerMaster::shutdown () NIRVANA_NOEXCEPT
+void SchedulerMaster::shutdown () noexcept
 {
 #ifdef DEBUG_SHUTDOWN
 	Port::Debugger::output_debug_string ("Shutdown 2\n");
@@ -138,12 +138,12 @@ void SchedulerMaster::shutdown () NIRVANA_NOEXCEPT
 	worker_threads_.shutdown ();
 }
 
-void SchedulerMaster::worker_thread_proc () NIRVANA_NOEXCEPT
+void SchedulerMaster::worker_thread_proc () noexcept
 {
 	worker_threads_.thread_proc ();
 }
 
-void SchedulerMaster::WorkerThreads::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) NIRVANA_NOEXCEPT
+void SchedulerMaster::WorkerThreads::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
 {
 	Executor* executor = reinterpret_cast <Executor*> (ovl);
 	ThreadWorker::execute (*executor);

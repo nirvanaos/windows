@@ -81,7 +81,7 @@ public:
 		ResetEvent (handles_ [SHUTDOWN_EVENT]);
 	}
 
-	void terminate () NIRVANA_NOEXCEPT
+	void terminate () noexcept
 	{
 		SetEvent (handles_ [SHUTDOWN_EVENT]);
 	}

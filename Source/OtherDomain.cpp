@@ -21,7 +21,7 @@ OtherDomainBase::~OtherDomainBase ()
 		CloseHandle (process_);
 }
 
-inline bool OtherDomainBase::is_64_bit () const NIRVANA_NOEXCEPT
+inline bool OtherDomainBase::is_64_bit () const noexcept
 {
 	bool x64 =
 #ifdef _WIN64
@@ -91,17 +91,17 @@ public:
 		Space::release (p, size);
 	}
 
-	virtual void get_sizes (PlatformSizes& sizes) NIRVANA_NOEXCEPT override
+	virtual void get_sizes (PlatformSizes& sizes) noexcept override
 	{
 		Space::get_sizes (sizes);
 	}
 
-	virtual void* store_pointer (void* where, SharedMemPtr p) NIRVANA_NOEXCEPT override
+	virtual void* store_pointer (void* where, SharedMemPtr p) noexcept override
 	{
 		return Space::store_pointer (where, p);
 	}
 
-	virtual void* store_size (void* where, size_t size) NIRVANA_NOEXCEPT override
+	virtual void* store_size (void* where, size_t size) noexcept override
 	{
 		return Space::store_size (where, size);
 	}
