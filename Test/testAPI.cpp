@@ -981,27 +981,31 @@ TEST_F (TestAPI, OtherProcess)
 TEST_F (TestAPI, CommitProblem)
 {
 	HANDLE hm = new_mapping ();
-	void* p = MapViewOfFile3 (hm, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READWRITE, nullptr, 0);
+	void* p = MapViewOfFile3 (hm, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0,
+		PAGE_READWRITE, nullptr, 0);
 	ASSERT_TRUE (p);
 	ASSERT_TRUE (VirtualAlloc (p, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
 	DWORD old;
 	ASSERT_TRUE (VirtualProtect (p, PAGE_SIZE, PAGE_WRITECOPY, &old));
 	HANDLE hm1 = dup_mapping (hm);
-	void* p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_WRITECOPY, nullptr, 0);
+	void* p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0,
+		PAGE_WRITECOPY, nullptr, 0);
 	// We can not commit PAGE_READWRITE if mapping is PAGE_WRITECOPY
 	EXPECT_FALSE (VirtualAlloc ((BYTE*)p1 + PAGE_SIZE, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
 	UnmapViewOfFile (p1);
 	CloseHandle (hm1);
 
 	hm1 = dup_mapping (hm);
-	p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READONLY, nullptr, 0);
+	p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0,
+		PAGE_READONLY, nullptr, 0);
 	// We can not commit PAGE_READWRITE if mapping is PAGE_READONLY
 	EXPECT_FALSE (VirtualAlloc ((BYTE*)p1 + PAGE_SIZE, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
 	UnmapViewOfFile (p1);
 	CloseHandle (hm1);
 
 	hm1 = dup_mapping (hm);
-	p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0, PAGE_READWRITE, nullptr, 0);
+	p1 = MapViewOfFile3 (hm1, GetCurrentProcess (), nullptr, 0, ALLOCATION_GRANULARITY, 0,
+		PAGE_READWRITE, nullptr, 0);
 	ASSERT_TRUE (VirtualProtect (p1, PAGE_SIZE, PAGE_WRITECOPY, &old));
 	EXPECT_TRUE (VirtualAlloc ((BYTE*)p1 + PAGE_SIZE, PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE));
 	UnmapViewOfFile (p1);
@@ -1009,6 +1013,27 @@ TEST_F (TestAPI, CommitProblem)
 
 	UnmapViewOfFile (p);
 	CloseHandle (hm);
+}
+
+TEST_F (TestAPI, FinalName)
+{
+	WCHAR path [MAX_PATH + 1];
+	GetModuleFileNameW (nullptr, path, (DWORD)std::size (path));
+	HANDLE h = CreateFileW (path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL, nullptr);
+	ASSERT_NE (h, INVALID_HANDLE_VALUE);
+
+	WCHAR fn [MAX_PATH + 1];
+	EXPECT_TRUE (GetFinalPathNameByHandleW (h, fn, (DWORD)std::size (fn), 0));
+	CloseHandle (h);
+
+	*wcsrchr (path, L'\\') = L'\0';
+	h = CreateFileW (path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+		FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+	ASSERT_NE (h, INVALID_HANDLE_VALUE);
+
+	EXPECT_TRUE (GetFinalPathNameByHandleW (h, fn, (DWORD)std::size (fn), 0));
+	CloseHandle (h);
 }
 
 }
