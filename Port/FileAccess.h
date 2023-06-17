@@ -30,12 +30,10 @@
 
 #include <Nirvana/Nirvana.h>
 #include <IO_Request.h>
-#include <StringView.h>
 #include "../Source/CompletionPortReceiver.h"
 
 namespace Nirvana {
 namespace Core {
-
 namespace Windows {
 
 class FileAccess :
@@ -102,7 +100,7 @@ protected:
 		handle_ ((void*)-1)
 	{}
 
-	void open (const StringView& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
+	void open (const IDL::Sequence <uint8_t>& id, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
 	~FileAccess ();
 
 	void issue_request (Request& rq) noexcept;
@@ -162,12 +160,12 @@ protected:
 
 	/// Constructor.
 	/// 
-	/// \param path File name, UTF-8 encoded.
+	/// \param id File unique id.
 	/// \param flags Creation flags.
-	/// \param[out] size File size.
-	/// \param[out] block_size Block (sector) size. 
+	/// \param [out] size File size.
+	/// \param [out] block_size Block (sector) size. 
 	/// \throw RuntimeError.
-	FileAccessDirect (const StringView& path, int flags, Pos& size, Size& block_size);
+	FileAccessDirect (const IDL::Sequence <uint8_t>& id, int flags, Pos& size, Size& block_size);
 
 	/// Issues the I/O request to the host or kernel.
 	/// 

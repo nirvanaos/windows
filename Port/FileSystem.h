@@ -55,6 +55,11 @@ public:
 		PortableServer::ServantBase::_ptr_type servant)
 	{}
 
+	static const Nirvana::Core::Windows::WinWChar* id_to_path (const PortableServer::ObjectId& id) noexcept
+	{
+		return ((const Nirvana::Core::Windows::WinWChar*)id.data ()) + 1;
+	}
+
 private:
 	static PortableServer::ObjectId get_var (const IDL::String&, bool& may_cache);
 

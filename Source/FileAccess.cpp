@@ -24,6 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/FileAccess.h"
+#include "../Port/FileSystem.h"
 #include "MessageBroker.h"
 #include "error2errno.h"
 #include <Nirvana/RuntimeError.h>
@@ -33,11 +34,10 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void FileAccess::open (const StringView& path, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes)
+void FileAccess::open (const IDL::Sequence <uint8_t>& id, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes)
 {
-	StringW wpath;
-	utf8_to_wide (path, wpath);
-	handle_ = CreateFileW (wpath.c_str (), access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
+	handle_ = CreateFileW (FS::Core::Port::FileSystem::id_to_path (id),
+		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
 	if (INVALID_HANDLE_VALUE == handle_)
 		throw RuntimeError (error2errno (GetLastError ()));
 	MessageBroker::completion_port ().add_receiver (handle_, *this);
@@ -84,7 +84,7 @@ using namespace Windows;
 
 namespace Port {
 
-FileAccessDirect::FileAccessDirect (const StringView& path, int flags, Pos& size, Size& block_size)
+FileAccessDirect::FileAccessDirect (const IDL::Sequence <uint8_t>& id, int flags, Pos& size, Size& block_size)
 {
 	uint32_t creation;
 	if (flags & O_CREAT) {
@@ -100,7 +100,7 @@ FileAccessDirect::FileAccessDirect (const StringView& path, int flags, Pos& size
 	} else
 		creation = OPEN_EXISTING;
 
-	open (path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation, FILE_FLAG_OVERLAPPED
+	open (id, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation, FILE_FLAG_OVERLAPPED
 		| FILE_ATTRIBUTE_NORMAL
 		| FILE_FLAG_NO_BUFFERING
 		| FILE_FLAG_WRITE_THROUGH
