@@ -30,7 +30,7 @@
 
 #include <CORBA/Server.h>
 #include <Nirvana/FS_s.h>
-#include <NameService/FileSystemRoots.h>
+#include <NameService/Roots.h>
 #include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
