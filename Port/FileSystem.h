@@ -28,51 +28,50 @@
 #define NIRVANA_CORE_PORT_FILESYSTEM_H_
 #pragma once
 
-#include <Nirvana/FS.h>
 #include <CORBA/Server.h>
-#include <CORBA/CosNaming.h>
+#include <Nirvana/FS_s.h>
+#include <NameService/FileSystemRoots.h>
+#include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
+namespace FS {
 namespace Core {
 namespace Port {
-
-class Dir
-{
-protected:
-	Dir (const PortableServer::ObjectId& id);
-
-	class Iterator
-	{
-	public:
-		Iterator (Dir& dir);
-		~Iterator ();
-
-		Iterator& (Iterator&& src) :
-			handle_ (src.handle)
-		{
-			handle_ = src.handle_;
-			src.handle_ = nullptr;
-			return *this;
-		}
-
-		bool next (Cos::Name::Binding& binding);
-
-	private:
-		void* handle_;
-	};
-
-private:
-	void* handle_;
-};
 
 class FileSystem
 {
 public:
-	static ::PortableServer::ObjectId get_unique_id (const CosNaming::Name& name);
+	static Roots get_roots ();
+	static PortableServer::ObjectId get_unique_id (const CosNaming::Name& name);
 
-	static CosNaming::BindingType get_binding_type (PortableServer::ObjectId& id);
+	static CosNaming::BindingType get_binding_type (const PortableServer::ObjectId& id)
+	{
+		return (CosNaming::BindingType)*(const uint16_t*)id.data ();
+	}
+	
+	static PortableServer::ServantBase::_ref_type incarnate (const PortableServer::ObjectId& id);
+
+	static void etherealize (const PortableServer::ObjectId& id,
+		PortableServer::ServantBase::_ptr_type servant)
+	{}
+
+private:
+	static PortableServer::ObjectId get_var (const IDL::String&, bool& may_cache);
+
+	static PortableServer::ObjectId path_to_id (CosNaming::BindingType type,
+		const Nirvana::Core::Windows::WinWChar* path, size_t len);
+
+private:
+	struct Root
+	{
+		const char* dir;
+		GetRootId factory;
+	};
+	
+	static const Root roots_ [];
 };
 
+}
 }
 }
 }
