@@ -1020,7 +1020,7 @@ TEST_F (TestAPI, FinalName)
 	WCHAR path [MAX_PATH + 1];
 	GetModuleFileNameW (nullptr, path, (DWORD)std::size (path));
 	HANDLE h = CreateFileW (path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL, nullptr);
+		FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 	ASSERT_NE (h, INVALID_HANDLE_VALUE);
 
 	WCHAR fn [MAX_PATH + 1];

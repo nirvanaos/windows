@@ -28,43 +28,49 @@
 #define NIRVANA_CORE_PORT_FILESYSTEM_H_
 #pragma once
 
-#include <CORBA/Server.h>
-#include <Nirvana/FS_s.h>
 #include <NameService/Roots.h>
+#include <Nirvana/File.h>
 #include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
-namespace FS {
 namespace Core {
+
+namespace Windows {
+class DirItem;
+}
+
 namespace Port {
 
 class FileSystem
 {
 public:
 	static Roots get_roots ();
-	static PortableServer::ObjectId get_unique_id (const CosNaming::Name& name);
 
-	static CosNaming::BindingType get_binding_type (const PortableServer::ObjectId& id)
-	{
-		return (CosNaming::BindingType)*(const uint16_t*)id.data ();
-	}
-	
-	static PortableServer::ServantBase::_ref_type incarnate (const PortableServer::ObjectId& id);
+	static PortableServer::ServantBase::_ref_type incarnate (const DirItemId& id);
 
-	static void etherealize (const PortableServer::ObjectId& id,
-		PortableServer::ServantBase::_ptr_type servant)
+	static void etherealize (const DirItemId& id, PortableServer::ServantBase::_ptr_type servant)
 	{}
 
-	static const Nirvana::Core::Windows::WinWChar* id_to_path (const PortableServer::ObjectId& id) noexcept
+	static Nirvana::DirItem::FileType get_item_type (const DirItemId& id) noexcept
 	{
-		return ((const Nirvana::Core::Windows::WinWChar*)id.data ()) + 1;
+		return (Nirvana::DirItem::FileType)*(const Windows::WinWChar*)id.data ();
+	}
+	
+	static DirItemId path_to_id (const Windows::WinWChar* path, Nirvana::DirItem::FileType type =
+		Nirvana::DirItem::FileType::unknown);
+
+	static const Windows::WinWChar* id_to_path (const DirItemId& id) noexcept
+	{
+		return ((const Windows::WinWChar*)id.data ()) + 1;
+	}
+
+	static size_t path_len (const DirItemId& id) noexcept
+	{
+		return id.size () / 2 - 2;
 	}
 
 private:
-	static PortableServer::ObjectId get_var (const IDL::String&, bool& may_cache);
-
-	static PortableServer::ObjectId path_to_id (CosNaming::BindingType type,
-		const Nirvana::Core::Windows::WinWChar* path, size_t len);
+	static DirItemId get_var (const IDL::String&, bool& may_cache);
 
 private:
 	struct Root
@@ -76,7 +82,6 @@ private:
 	static const Root roots_ [];
 };
 
-}
 }
 }
 }

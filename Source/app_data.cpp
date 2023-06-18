@@ -50,6 +50,8 @@ size_t get_app_data_path (WCHAR* path, size_t size, bool create) noexcept
 			DWORD err = GetLastError ();
 			if (ERROR_ALREADY_EXISTS != err)
 				return 0;
+			if (!(GetFileAttributesW (path) & FILE_ATTRIBUTE_DIRECTORY))
+				return 0;
 		}
 	}
 	static const WCHAR term [] = L"\\";
@@ -66,9 +68,10 @@ size_t create_app_data_folder (const WCHAR* path, WCHAR* end, const WCHAR* folde
 		*end = L'\0';
 		if (!CreateDirectoryW (path, nullptr)) {
 			DWORD err = GetLastError ();
-			if (ERROR_ALREADY_EXISTS != err) {
+			if (ERROR_ALREADY_EXISTS != err)
 				return 0;
-			}
+			if (!(GetFileAttributesW (path) & FILE_ATTRIBUTE_DIRECTORY))
+				return 0;
 		}
 		if (slash == folder_end)
 			break;

@@ -24,29 +24,28 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_FS_ITEM_H_
-#define NIRVANA_CORE_WINDOWS_FS_ITEM_H_
+#ifndef NIRVANA_CORE_WINDOWS_DIRITEM_H_
+#define NIRVANA_CORE_WINDOWS_DIRITEM_H_
 #pragma once
 
-#include <CORBA/Server.h>
-#include <Nirvana/FS.h>
 #include "../Port/FileSystem.h"
 
 struct _WIN32_FILE_ATTRIBUTE_DATA;
 
 namespace Nirvana {
-namespace FS {
+namespace Core {
 namespace Windows {
 
-// File system item: interface Nirvana::FS::Item
-class FS_Item
+// File system item: interface Nirvana::DirItem
+class DirItem
 {
-protected:
-	FS_Item (const PortableServer::ObjectId& id) :
-		id_ (id)
-	{}
+public:
+	Nirvana::DirItem::FileType type () const noexcept
+	{
+		return Port::FileSystem::get_item_type (id_);
+	}
 
-	const PortableServer::ObjectId& id () const noexcept
+	const DirItemId& id () const noexcept
 	{
 		return id_;
 	}
@@ -63,18 +62,25 @@ protected:
 		// TODO: Implement
 	}
 
-protected:
-	typedef Nirvana::Core::Windows::WinWChar WinWChar;
-
-	const WinWChar* path () const noexcept
+	const Windows::WinWChar* path () const noexcept
 	{
-		return Nirvana::FS::Core::Port::FileSystem::id_to_path (id_);
+		return Nirvana::Core::Port::FileSystem::id_to_path (id_);
 	}
+
+	size_t path_len () const noexcept
+	{
+		return Nirvana::Core::Port::FileSystem::path_len (id_);
+	}
+
+protected:
+	DirItem (const DirItemId& id) :
+		id_ (id)
+	{}
 
 	void get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const;
 
 private:
-	PortableServer::ObjectId id_;
+	DirItemId id_;
 };
 
 }

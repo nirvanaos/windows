@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "error2errno.h"
-#include <winerror.h>
+#include "win32.h"
 #include <algorithm>
 #include <assert.h>
 
@@ -122,6 +122,11 @@ int error2errno (unsigned err, int default_errno)
       return p->e;
   }
   return default_errno;
+}
+
+NIRVANA_NORETURN void throw_last_error ()
+{
+  throw RuntimeError (error2errno (GetLastError ()));
 }
 
 }

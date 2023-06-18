@@ -24,30 +24,28 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_FS_CORE_PORT_FILE_H_
-#define NIRVANA_FS_CORE_PORT_FILE_H_
+#ifndef NIRVANA_CORE_PORT_FILE_H_
+#define NIRVANA_CORE_PORT_FILE_H_
 #pragma once
 
-#include "../Source/FS_Item.h"
+#include "../Source/DirItem.h"
 
 namespace Nirvana {
-namespace FS {
 namespace Core {
 namespace Port {
 
-class File : public Nirvana::FS::Windows::FS_Item
+class File : public Windows::DirItem
 {
-	typedef Nirvana::FS::Windows::FS_Item Base;
+	typedef Windows::DirItem Base;
 
 protected:
-	File (const PortableServer::ObjectId& id) :
+	File (const DirItemId& id) :
 		Base (id)
 	{}
 
 	uint64_t size () const;
 };
 
-}
 }
 }
 }

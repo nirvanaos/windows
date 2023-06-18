@@ -27,7 +27,6 @@
 #include "win32.h"
 
 namespace Nirvana {
-namespace FS {
 namespace Core {
 namespace Port {
 
@@ -43,7 +42,6 @@ uint64_t File::size () const
 	return ui.QuadPart;
 }
 
-}
 }
 }
 }

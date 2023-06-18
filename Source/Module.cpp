@@ -63,7 +63,7 @@ Module::Module (const StringView& file)
 	void* mod = LoadLibraryW (temp_path_.c_str ());
 	try {
 		if (!mod)
-			throw RuntimeError (error2errno (GetLastError ()));
+			throw_last_error ();
 		Nirvana::Core::PortableExecutable pe (mod);
 		if (!pe.find_OLF_section (metadata_))
 			throw RuntimeError (ENOEXEC);

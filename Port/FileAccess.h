@@ -29,6 +29,7 @@
 #pragma once
 
 #include <Nirvana/Nirvana.h>
+#include "File.h"
 #include <IO_Request.h>
 #include "../Source/CompletionPortReceiver.h"
 
@@ -100,7 +101,7 @@ protected:
 		handle_ ((void*)-1)
 	{}
 
-	void open (const IDL::Sequence <uint8_t>& id, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
+	void open (const Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
 	~FileAccess ();
 
 	void issue_request (Request& rq) noexcept;
@@ -160,12 +161,12 @@ protected:
 
 	/// Constructor.
 	/// 
-	/// \param id File unique id.
+	/// \param file A file.
 	/// \param flags Creation flags.
 	/// \param [out] size File size.
 	/// \param [out] block_size Block (sector) size. 
 	/// \throw RuntimeError.
-	FileAccessDirect (const IDL::Sequence <uint8_t>& id, int flags, Pos& size, Size& block_size);
+	FileAccessDirect (const File& file, int flags, Pos& size, Size& block_size);
 
 	/// Issues the I/O request to the host or kernel.
 	/// 

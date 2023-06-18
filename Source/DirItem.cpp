@@ -23,24 +23,21 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "FS_Item.h"
+#include "DirItem.h"
 #include "win32.h"
 #include "error2errno.h"
 
 namespace Nirvana {
-
-using namespace Core::Windows;
-
-namespace FS {
+namespace Core {
 namespace Windows {
 
-void FS_Item::get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const
+void DirItem::get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const
 {
 	if (!GetFileAttributesExW (path (), GetFileExInfoStandard, &att))
 		throw RuntimeError (error2errno (GetLastError ()));
 }
 
-void FS_Item::get_file_times (FileTimes& times) const
+void DirItem::get_file_times (FileTimes& times) const
 {
 	WIN32_FILE_ATTRIBUTE_DATA att;
 	get_attributes (att);

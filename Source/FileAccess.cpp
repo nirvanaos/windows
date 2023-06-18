@@ -34,12 +34,13 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void FileAccess::open (const IDL::Sequence <uint8_t>& id, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes)
+void FileAccess::open (const Port::File& file, uint32_t access, uint32_t share_mode,
+	uint32_t creation_disposition, uint32_t flags_and_attributes)
 {
-	handle_ = CreateFileW (FS::Core::Port::FileSystem::id_to_path (id),
+	handle_ = CreateFileW (file.path (),
 		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
 	if (INVALID_HANDLE_VALUE == handle_)
-		throw RuntimeError (error2errno (GetLastError ()));
+		throw_last_error ();
 	MessageBroker::completion_port ().add_receiver (handle_, *this);
 }
 
@@ -84,7 +85,7 @@ using namespace Windows;
 
 namespace Port {
 
-FileAccessDirect::FileAccessDirect (const IDL::Sequence <uint8_t>& id, int flags, Pos& size, Size& block_size)
+FileAccessDirect::FileAccessDirect (const File& file, int flags, Pos& size, Size& block_size)
 {
 	uint32_t creation;
 	if (flags & O_CREAT) {
@@ -100,7 +101,7 @@ FileAccessDirect::FileAccessDirect (const IDL::Sequence <uint8_t>& id, int flags
 	} else
 		creation = OPEN_EXISTING;
 
-	open (id, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation, FILE_FLAG_OVERLAPPED
+	open (file, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation, FILE_FLAG_OVERLAPPED
 		| FILE_ATTRIBUTE_NORMAL
 		| FILE_FLAG_NO_BUFFERING
 		| FILE_FLAG_WRITE_THROUGH
@@ -108,7 +109,7 @@ FileAccessDirect::FileAccessDirect (const IDL::Sequence <uint8_t>& id, int flags
 
 	LARGE_INTEGER li;
 	if (!GetFileSizeEx (handle_, &li))
-		throw RuntimeError (error2errno (GetLastError ()));
+		throw_last_error ();
 	size = li.QuadPart;
 
 	block_size = 4096; // TODO: Implement

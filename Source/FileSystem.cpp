@@ -25,14 +25,15 @@
 */
 #include "../Port/FileSystem.h"
 #include "app_data.h"
-#include <algorithm>
+#include "error2errno.h"
+#include <NameService/Dir.h>
+#include <NameService/File.h>
 
 namespace Nirvana {
-
-using namespace Core::Windows;
-
-namespace FS {
 namespace Core {
+
+using namespace Windows;
+
 namespace Port {
 
 const FileSystem::Root FileSystem::roots_ [] = {
@@ -48,30 +49,63 @@ Roots FileSystem::get_roots ()
 	return roots;
 }
 
-PortableServer::ObjectId FileSystem::get_var (const IDL::String&, bool& may_cache)
+DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)
 {
-	WCHAR path [MAX_PATH + 1];
+	WinWChar path [MAX_PATH + 1];
 	size_t cc = get_app_data_folder (path, std::size (path), WINWCS ("var"), true);
 	may_cache = true;
-	return path_to_id (CosNaming::BindingType::ncontext, path, cc);
+	return path_to_id (path, Nirvana::DirItem::FileType::directory);
 }
 
-PortableServer::ObjectId FileSystem::path_to_id (CosNaming::BindingType type, const WinWChar* path, size_t len)
+DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::DirItem::FileType type)
 {
-	PortableServer::ObjectId id;
-	id.resize (len + 2 * sizeof (WCHAR));
-	WCHAR* p = (WCHAR*)id.data ();
-	*(p++) = (WCHAR)type;
-	std::copy (path, path + len + 1, p);
+	DirItemId id;
+
+	// Get final path name
+	HANDLE h = CreateFileW (path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+		FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+	if (INVALID_HANDLE_VALUE == h)
+		throw_last_error ();
+
+	try {
+		DWORD cc = GetFinalPathNameByHandleW (h, nullptr, 0, 0);
+		if (!cc)
+			throw_last_error ();
+		id.resize ((cc + 1) * sizeof (WinWChar));
+		verify (GetFinalPathNameByHandleW (h, (WinWChar*) (id.data () + 2), cc, 0));
+
+		if (Nirvana::DirItem::FileType::unknown == type) {
+			BY_HANDLE_FILE_INFORMATION bhfi;
+			if (!GetFileInformationByHandle (h, &bhfi))
+				throw_last_error ();
+			if (bhfi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+				type = Nirvana::DirItem::FileType::directory;
+			else
+				type = Nirvana::DirItem::FileType::regular;
+		}
+	} catch (...) {
+		CloseHandle (h);
+		throw;
+	}
+	CloseHandle (h);
+	*((WinWChar*)id.data ()) = (WinWChar)type;
 	return id;
 }
 
-PortableServer::ServantBase::_ref_type FileSystem::incarnate (const PortableServer::ObjectId& id)
+PortableServer::ServantBase::_ref_type FileSystem::incarnate (const DirItemId& id)
 {
-	throw CORBA::NO_IMPLEMENT ();
+	switch (get_item_type (id)) {
+	case Nirvana::DirItem::FileType::directory:
+		return CORBA::make_reference <Nirvana::Core::Dir> (std::ref (id));
+
+	case Nirvana::DirItem::FileType::regular:
+		return CORBA::make_reference <Nirvana::Core::File> (std::ref (id));
+
+	default:
+		throw CORBA::BAD_PARAM ();
+	}
 }
 
-}
 }
 }
 }

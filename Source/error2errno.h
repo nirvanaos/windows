@@ -28,6 +28,7 @@
 #define NIRVANA_CORE_WINDOWS_ERROR2ERRNO_H_
 #pragma once
 
+#include <Nirvana/Nirvana.h>
 #include <errno.h>
 
 namespace Nirvana {
@@ -39,6 +40,8 @@ namespace Windows {
 /// \param default_errno Default error code for return.
 /// \returns             POSIX error code.
 int error2errno (unsigned err, int default_errno = EINVAL);
+
+NIRVANA_NORETURN void throw_last_error ();
 
 }
 }
