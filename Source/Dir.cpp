@@ -247,6 +247,14 @@ private:
 	HANDLE handle_;
 };
 
+std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const
+{
+	StringW pattern = get_path ();
+	pattern += WINWCS ("\\*.*");
+
+	return std::make_unique <Iterator> (pattern.c_str ());
+}
+
 }
 }
 }
