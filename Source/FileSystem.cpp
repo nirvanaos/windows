@@ -28,6 +28,7 @@
 #include "error2errno.h"
 #include <NameService/Dir.h>
 #include <NameService/File.h>
+#include "Dir_var.h"
 
 namespace Nirvana {
 namespace Core {
@@ -51,10 +52,8 @@ Roots FileSystem::get_roots ()
 
 DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)
 {
-	WinWChar path [MAX_PATH + 1];
-	size_t cc = get_app_data_folder (path, std::size (path), WINWCS ("var"), true);
 	may_cache = true;
-	return path_to_id (path, Nirvana::DirItem::FileType::directory);
+	return make_special_id (SpecialDir::var);
 }
 
 DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::DirItem::FileType type)
@@ -92,8 +91,24 @@ DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::DirItem::FileTy
 	return id;
 }
 
+DirItemId FileSystem::make_special_id (SpecialDir dir)
+{
+	DirItemId id (4);
+	WinWChar* p = (WinWChar*)id.data ();
+	*(p++) = (WinWChar)Nirvana::DirItem::FileType::directory;
+	*(p++) = (WinWChar)dir;
+	return id;
+}
+
 PortableServer::ServantBase::_ref_type FileSystem::incarnate (const DirItemId& id)
 {
+	SpecialDir sd = is_special_dir (id);
+	if (sd != SpecialDir::END) {
+		WinWChar path [MAX_PATH + 1];
+		get_app_data_folder (path, std::size (path), WINWCS ("var"), true);
+		DirItemId id = path_to_id (path, Nirvana::DirItem::FileType::directory);
+		return CORBA::make_reference <Windows::Dir_var> (std::ref (id));
+	}
 	switch (get_item_type (id)) {
 	case Nirvana::DirItem::FileType::directory:
 		return CORBA::make_reference <Nirvana::Core::Dir> (std::ref (id));

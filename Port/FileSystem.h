@@ -72,6 +72,24 @@ public:
 private:
 	static DirItemId get_var (const IDL::String&, bool& may_cache);
 
+	enum class SpecialDir
+	{
+		var,
+		mnt,
+
+		END
+	};
+
+	static DirItemId make_special_id (SpecialDir dir);
+
+	static SpecialDir is_special_dir (const DirItemId& id) noexcept
+	{
+		if (id.size () == 4 && get_item_type (id) == Nirvana::DirItem::FileType::directory)
+			return (SpecialDir)((const Windows::WinWChar*)id.data ()) [1];
+		else
+			return SpecialDir::END;
+	}
+
 private:
 	struct Root
 	{

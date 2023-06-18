@@ -57,9 +57,9 @@ public:
 		return FileSystem::path_to_id (check_path (n, 0).c_str ());
 	}
 
-	virtual void unbind (CosNaming::Name& n) const;
-	virtual DirItemId create_dir (CosNaming::Name& n) const;
-	virtual DirItemId get_new_file_id (CosNaming::Name& n) const;
+	void unbind (CosNaming::Name& n) const;
+	DirItemId create_dir (CosNaming::Name& n) const;
+	DirItemId get_new_file_id (CosNaming::Name& n) const;
 
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 
@@ -68,26 +68,25 @@ protected:
 		Base (id)
 	{}
 
-private:
-	class Iterator;
+	Windows::StringW check_path (CosNaming::Name& n, size_t rem_cnt) const;
+	Windows::StringW create_path (CosNaming::Name& n, size_t rem_cnt, size_t& created_begin) const;
 
 	static Windows::StringW to_wstring (CosNaming::Istring name);
 	
+	virtual Windows::StringW get_path (CosNaming::Name& n) const;
 	Windows::StringW get_path () const;
+
 	static void append_path (Windows::StringW& path, CosNaming::Istring name);
 
-	Windows::StringW check_path (CosNaming::Name& n, size_t rem_cnt) const;
+	void remove_created_path (Windows::StringW& path, size_t created_begin) const noexcept;
 
-	Windows::StringW create_path (CosNaming::Name& n, size_t rem_cnt, CosNaming::Name& created) const;
-
-	void remove_created_path (CosNaming::Name& created) const noexcept;
-
+	static const unsigned FLAG_REBIND = 0x80000000;
+	static const unsigned FLAG_DIRECTORY = 0x00000001;
 	void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const;
 
-	static const unsigned FLAG_REBIND    = 0x80000000;
-	static const unsigned FLAG_DIRECTORY = 0x00000001;
-
 	static void unbind (const Windows::WinWChar* path, uint32_t att);
+
+	Windows::StringW get_pattern () const;
 };
 
 }

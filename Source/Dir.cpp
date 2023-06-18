@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/Dir.h"
-#include <NameService/Iterator.h>
+#include "DirIterator.h"
 #include "win32.h"
 #include "error2errno.h"
 
@@ -37,6 +37,11 @@ namespace Core {
 using namespace Windows;
 
 namespace Port {
+
+StringW Dir::get_path (CosNaming::Name& n) const
+{
+	return get_path ();
+}
 
 StringW Dir::get_path () const
 {
@@ -64,7 +69,7 @@ void Dir::append_path (StringW& path, Istring name)
 
 StringW Dir::check_path (Name& n, size_t rem_cnt) const
 {
-	StringW path = get_path ();
+	StringW path = get_path (n);
 	while (n.size () > rem_cnt) {
 		append_path (path, to_string (n.front ()));
 		DWORD att = GetFileAttributesW (path.c_str ());
@@ -80,10 +85,12 @@ StringW Dir::check_path (Name& n, size_t rem_cnt) const
 	return path;
 }
 
-StringW Dir::create_path (Name& n, size_t rem_cnt, Name& created) const
+StringW Dir::create_path (Name& n, size_t rem_cnt, size_t& created_begin) const
 {
-	StringW path = get_path ();
+	StringW path = get_path (n);
+	size_t created_start = 0;
 	while (n.size () > rem_cnt) {
+		size_t len = path.size ();
 		append_path (path, to_string (n.front ()));
 		if (!CreateDirectoryW (path.c_str (), nullptr)) {
 			DWORD err = GetLastError ();
@@ -91,33 +98,27 @@ StringW Dir::create_path (Name& n, size_t rem_cnt, Name& created) const
 				throw RuntimeError (error2errno (err));
 			if (!(GetFileAttributesW (path.c_str ()) & FILE_ATTRIBUTE_DIRECTORY))
 				throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
-		} else
-			created.push_back (std::move (n.front ()));
+		} else if (!created_start)
+			created_start = len;
 		n.erase (n.begin ());
 	}
+	created_begin = created_start;
 	return path;
 }
 
-void Dir::remove_created_path (Name& created) const noexcept
+void Dir::remove_created_path (Windows::StringW& path, size_t created_begin) const noexcept
 {
-	size_t folder_cnt = created.size ();
-	if (!created.empty ()) {
-		StringW path = get_path ();
-		for (auto& nc : created) {
-			append_path (path, to_string (std::move (nc)));
-		}
-		do {
-			RemoveDirectoryW (path.c_str ());
-			path.resize (path.rfind ('\\'));
-		} while (--folder_cnt);
+	while (path.size () > created_begin) {
+		RemoveDirectoryW (path.c_str ());
+		path.resize (path.rfind ('\\'));
 	}
 }
 
 void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 {
 	// Create symbolic link
-	Name created;
-	StringW path = create_path (n, 1, created);
+	size_t created_begin;
+	StringW path = create_path (n, 1, created_begin);
 
 	try {
 		append_path (path, to_string (std::move (n.back ())));
@@ -134,7 +135,7 @@ void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 			throw RuntimeError (error2errno (GetLastError ()));
 
 	} catch (...) {
-		remove_created_path (created);
+		remove_created_path (path, created_begin);
 		throw;
 	}
 }
@@ -164,8 +165,8 @@ void Dir::unbind (Name& n) const
 
 DirItemId Dir::create_dir (Name& n) const
 {
-	Name created;
-	StringW path = create_path (n, 1, created);
+	size_t created_begin;
+	StringW path = create_path (n, 1, created_begin);
 
 	try {
 		append_path (path, to_string (std::move (n.back ())));
@@ -181,7 +182,7 @@ DirItemId Dir::create_dir (Name& n) const
 		return FileSystem::path_to_id (path.c_str (), Nirvana::DirItem::FileType::directory);
 
 	} catch (...) {
-		remove_created_path (created);
+		remove_created_path (path, created_begin);
 		throw;
 	}
 }
@@ -201,58 +202,13 @@ DirItemId Dir::get_new_file_id (Name& n) const
 	return id;
 }
 
-class Dir::Iterator : public CosNaming::Core::Iterator
+StringW Dir::get_pattern () const
 {
-public:
-	Iterator (const WinWChar* pattern) :
-		handle_ (INVALID_HANDLE_VALUE)
-	{
-		handle_ = FindFirstFileExW (pattern, FindExInfoBasic, &data_, FindExSearchNameMatch, nullptr, 0);
-		if (INVALID_HANDLE_VALUE == handle_)
-			throw_last_error ();
-	}
-
-	~Iterator ()
-	{
-		if (INVALID_HANDLE_VALUE != handle_)
-			FindClose (handle_);
-	}
-
-	virtual bool end () const noexcept override
-	{
-		return INVALID_HANDLE_VALUE == handle_;
-	}
-
-	virtual bool next_one (Binding& b) override
-	{
-		if (INVALID_HANDLE_VALUE != handle_) {
-			wide_to_utf8 ((const WinWChar*)data_.cFileName, b.name);
-
-			if (data_.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-				b.type = BindingType::ncontext;
-			else
-				b.type = BindingType::nobject;
-
-			if (!FindNextFileW (handle_, &data_)) {
-				FindClose (handle_);
-				handle_ = INVALID_HANDLE_VALUE;
-			}
-			return true;
-		}
-		return false;
-	}
-
-private:
-	WIN32_FIND_DATAW data_;
-	HANDLE handle_;
-};
-
+	return get_path () + WINWCS ("\\*.*");
+}
 std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const
 {
-	StringW pattern = get_path ();
-	pattern += WINWCS ("\\*.*");
-
-	return std::make_unique <Iterator> (pattern.c_str ());
+	return std::make_unique <DirIterator> (get_pattern ().c_str ());
 }
 
 }
