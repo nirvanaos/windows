@@ -44,6 +44,7 @@ const FileSystem::Root FileSystem::roots_ [] = {
 Roots FileSystem::get_roots ()
 {
 	Roots roots;
+	roots.reserve (std::size (roots_));
 	for (const Root* p = roots_; p != std::end (roots_); ++p) {
 		roots.push_back ({ p->dir, p->factory });
 	}
