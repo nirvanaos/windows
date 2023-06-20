@@ -38,6 +38,28 @@ DirIterator::DirIterator (const WinWChar* pattern) :
 	handle_ = FindFirstFileExW (pattern, FindExInfoBasic, &data_, FindExSearchNameMatch, nullptr, 0);
 	if (INVALID_HANDLE_VALUE == handle_)
 		throw_last_error ();
+	while (false_item ()) {
+		if (!move_next ())
+			break;
+	}
+}
+
+bool DirIterator::move_next () noexcept
+{
+	if (!FindNextFileW (handle_, &data_)) {
+		FindClose (handle_);
+		handle_ = INVALID_HANDLE_VALUE;
+		return false;
+	}
+	return true;
+}
+
+bool DirIterator::false_item () const noexcept
+{
+	assert (!end ());
+	return ('.' == data_.cFileName [0]
+			&& ('\0' == data_.cFileName [1] || ('.' == data_.cFileName [1])
+				&& '\0' == data_.cFileName [2]));
 }
 
 bool DirIterator::next_one (Binding& b)
@@ -50,14 +72,10 @@ bool DirIterator::next_one (Binding& b)
 		else
 			b.type = BindingType::nobject;
 
-		skip:
-		if (!FindNextFileW (handle_, &data_)) {
-			FindClose (handle_);
-			handle_ = INVALID_HANDLE_VALUE;
-		} else if ('.' == data_.cFileName [0]
-			&& ('\0' == data_.cFileName [1]
-				|| ('.' == data_.cFileName [1] && '\0' == data_.cFileName [2])))
-			goto skip;
+		while (move_next ()) {
+			if (!false_item ())
+				break;
+		}
 
 		return true;
 	}

@@ -31,6 +31,10 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+DirItem::DirItem (const DirItemId& id) :
+	id_ (id)
+{}
+
 void DirItem::get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const
 {
 	if (!GetFileAttributesExW (path (), GetFileExInfoStandard, &att))

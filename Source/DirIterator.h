@@ -55,6 +55,10 @@ public:
 	virtual bool next_one (Binding& b) override;
 
 private:
+	bool move_next () noexcept;
+	bool false_item () const noexcept;
+
+private:
 	WIN32_FIND_DATAW data_;
 	HANDLE handle_;
 };
