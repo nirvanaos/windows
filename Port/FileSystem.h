@@ -48,7 +48,7 @@ public:
 
 	static PortableServer::ServantBase::_ref_type incarnate (const DirItemId& id);
 
-	static void etherealize (const DirItemId& id, PortableServer::ServantBase::_ptr_type servant)
+	static void etherealize (const DirItemId& id, CORBA::Object::_ptr_type servant)
 	{}
 
 	static Nirvana::DirItem::FileType get_item_type (const DirItemId& id) noexcept
