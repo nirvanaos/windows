@@ -56,10 +56,9 @@ bool DirIterator::move_next () noexcept
 
 bool DirIterator::false_item () const noexcept
 {
-	assert (!end ());
-	return ('.' == data_.cFileName [0]
-			&& ('\0' == data_.cFileName [1] || ('.' == data_.cFileName [1])
-				&& '\0' == data_.cFileName [2]));
+	assert (INVALID_HANDLE_VALUE != handle_);
+	return '.' == data_.cFileName [0]
+			&& ('\0' == data_.cFileName [1] || ('.' == data_.cFileName [1] && '\0' == data_.cFileName [2]));
 }
 
 bool DirIterator::next_one (Binding& b)
