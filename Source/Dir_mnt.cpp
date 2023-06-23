@@ -57,17 +57,20 @@ StringW Dir_mnt::get_path (Name& n) const
 	assert (!n.empty ());
 	const NameComponent& nc = n.front ();
 	if (!nc.kind ().empty () || nc.id ().size () != 2 || nc.id () [1] != ':')
-		NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
-	WCHAR drive_letter = nc.id () [0];
+		throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+	char drive_letter = nc.id () [0];
 	if ('a' <= drive_letter && drive_letter <= 'z')
 		drive_letter += 'A' - 'a';
-	WCHAR path [4] = WINWCS ("A:\\");
-	path [0] = drive_letter;
-	DWORD att = GetFileAttributesW (path);
-	if (0xFFFFFFFF == att)
+	if ('A' <= drive_letter && drive_letter <= 'Z') {
+		WCHAR path [4] = WINWCS ("A:\\");
+		path [0] = drive_letter;
+		DWORD att = GetFileAttributesW (path);
+		if (0xFFFFFFFF == att)
+			throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+		n.erase (n.begin ());
+		return StringW (path, 2);
+	} else
 		throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
-	n.erase (n.begin ());
-	return StringW (path, 2);
 }
 
 void Dir_mnt::unlink (Name& n) const

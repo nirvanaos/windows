@@ -207,6 +207,7 @@ StringW Dir::get_pattern () const
 {
 	return get_path () + WINWCS ("\\*.*");
 }
+
 std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const
 {
 	return std::make_unique <DirIterator> (get_pattern ().c_str ());
