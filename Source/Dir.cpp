@@ -40,6 +40,7 @@ namespace Port {
 
 StringW Dir::get_path (CosNaming::Name& n) const
 {
+	assert (!n.empty ());
 	return get_path ();
 }
 
@@ -128,7 +129,7 @@ void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 
 			DWORD att = GetFileAttributesW (path.c_str ());
 			if (0xFFFFFFFF != att)
-				unbind (path.c_str (), att);
+				unlink (path.c_str (), att);
 		}
 
 		if (!CreateSymbolicLinkW (path.c_str (), FileSystem::id_to_path (target), flags))
@@ -140,7 +141,7 @@ void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 	}
 }
 
-void Dir::unbind (const WinWChar* path, uint32_t att)
+void Dir::unlink (const WinWChar* path, uint32_t att)
 {
 	BOOL ok;
 	if (FILE_ATTRIBUTE_DIRECTORY & att)
@@ -151,7 +152,7 @@ void Dir::unbind (const WinWChar* path, uint32_t att)
 		throw_last_error (); 
 }
 
-void Dir::unbind (Name& n) const
+void Dir::unlink (Name& n) const
 {
 	StringW path = check_path (n, 1);
 	append_path (path, to_string (n.back ()));
@@ -160,7 +161,7 @@ void Dir::unbind (Name& n) const
 	if (0xFFFFFFFF == att)
 		throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
 
-	unbind (path.c_str (), att);
+	unlink (path.c_str (), att);
 }
 
 DirItemId Dir::create_dir (Name& n) const

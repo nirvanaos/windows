@@ -74,6 +74,9 @@ public:
 
 protected:
 	DirItem (const DirItemId& id);
+	
+	DirItem ()
+	{}
 
 	void get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const;
 

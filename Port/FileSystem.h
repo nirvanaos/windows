@@ -71,6 +71,7 @@ public:
 
 private:
 	static DirItemId get_var (const IDL::String&, bool& may_cache);
+	static DirItemId get_mnt (const IDL::String&, bool& may_cache);
 
 	enum class SpecialDir
 	{

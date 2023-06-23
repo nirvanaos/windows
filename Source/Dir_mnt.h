@@ -24,8 +24,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_DIR_VAR_H_
-#define NIRVANA_CORE_WINDOWS_DIR_VAR_H_
+#ifndef NIRVANA_CORE_WINDOWS_DIR_MNT_H_
+#define NIRVANA_CORE_WINDOWS_DIR_MNT_H_
 #pragma once
 
 #include <NameService/Dir.h>
@@ -34,13 +34,12 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class Dir_var : public Nirvana::Core::Dir
+class Dir_mnt : public Nirvana::Core::Dir
 {
 	typedef Nirvana::Core::Dir Base;
 
 public:
-	Dir_var (const DirItemId& id) :
-		Base (id)
+	Dir_mnt ()
 	{}
 
 	virtual StringW get_path (CosNaming::Name& n) const override;
@@ -48,9 +47,6 @@ public:
 	virtual void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const override;
 	virtual DirItemId create_dir (CosNaming::Name& n) const override;
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
-
-private:
-	static bool is_tmp (const CosNaming::NameComponent& nc);
 };
 
 }

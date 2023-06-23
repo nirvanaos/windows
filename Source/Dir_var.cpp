@@ -28,23 +28,51 @@
 #include "error2errno.h"
 #include "DirIteratorEx.h"
 
+using namespace CosNaming;
+
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-StringW Dir_var::get_path (CosNaming::Name& n) const
+bool Dir_var::is_tmp (const NameComponent& nc)
+{
+	return nc.id () == "tmp" && nc.kind ().empty ();
+}
+
+StringW Dir_var::get_path (Name& n) const
 {
 	assert (!n.empty ());
-	if (n.front ().id () == "tmp" && n.front ().kind ().empty ()) {
+	if (is_tmp (n.front ())) {
 		n.erase (n.begin ());
 		WinWChar buf [MAX_PATH + 1];
 		DWORD cc = GetTempPathW ((DWORD)std::size (buf), buf);
 		if (!cc)
 			throw_last_error ();
 
-		return Windows::StringW (buf, cc - 1);
+		return StringW (buf, cc - 1);
 	} else
 		return Base::get_path ();
+}
+
+void Dir_var::unlink (Name& n) const
+{
+	if (n.size () == 1 && is_tmp (n.front ()))
+		throw RuntimeError (EACCES);
+	Base::unlink (n);
+}
+
+void Dir_var::create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const
+{
+	if (n.size () == 1 && is_tmp (n.front ()))
+		throw RuntimeError (EACCES);
+	Base::create_link (n, target, flags);
+}
+
+DirItemId Dir_var::create_dir (CosNaming::Name& n) const
+{
+	if (n.size () == 1 && is_tmp (n.front ()))
+		throw RuntimeError (EACCES);
+	return Base::create_dir (n);
 }
 
 std::unique_ptr <CosNaming::Core::Iterator> Dir_var::make_iterator () const

@@ -57,8 +57,8 @@ public:
 		return FileSystem::path_to_id (check_path (n, 0).c_str ());
 	}
 
-	void unbind (CosNaming::Name& n) const;
-	DirItemId create_dir (CosNaming::Name& n) const;
+	virtual void unlink (CosNaming::Name& n) const;
+	virtual DirItemId create_dir (CosNaming::Name& n) const;
 	DirItemId get_new_file_id (CosNaming::Name& n) const;
 
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
@@ -66,6 +66,9 @@ public:
 protected:
 	Dir (const DirItemId& id) :
 		Base (id)
+	{}
+
+	Dir ()
 	{}
 
 	Windows::StringW check_path (CosNaming::Name& n, size_t rem_cnt) const;
@@ -82,9 +85,9 @@ protected:
 
 	static const unsigned FLAG_REBIND = 0x80000000;
 	static const unsigned FLAG_DIRECTORY = 0x00000001;
-	void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const;
+	virtual void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const;
 
-	static void unbind (const Windows::WinWChar* path, uint32_t att);
+	static void unlink (const Windows::WinWChar* path, uint32_t att);
 
 	Windows::StringW get_pattern () const;
 };

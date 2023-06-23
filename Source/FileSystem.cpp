@@ -29,6 +29,7 @@
 #include <NameService/Dir.h>
 #include <NameService/File.h>
 #include "Dir_var.h"
+#include "Dir_mnt.h"
 
 namespace Nirvana {
 namespace Core {
@@ -38,7 +39,8 @@ using namespace Windows;
 namespace Port {
 
 const FileSystem::Root FileSystem::roots_ [] = {
-	{ "var", get_var }
+	{ "var", get_var },
+	{ "mnt", get_mnt }
 };
 
 Roots FileSystem::get_roots ()
@@ -55,6 +57,12 @@ DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)
 {
 	may_cache = true;
 	return make_special_id (SpecialDir::var);
+}
+
+DirItemId FileSystem::get_mnt (const IDL::String&, bool& may_cache)
+{
+	may_cache = true;
+	return make_special_id (SpecialDir::mnt);
 }
 
 DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::DirItem::FileType type)
@@ -103,13 +111,18 @@ DirItemId FileSystem::make_special_id (SpecialDir dir)
 
 PortableServer::ServantBase::_ref_type FileSystem::incarnate (const DirItemId& id)
 {
-	SpecialDir sd = is_special_dir (id);
-	if (sd != SpecialDir::END) {
+	switch (is_special_dir (id)) {
+	case SpecialDir::var: {
 		WinWChar path [MAX_PATH + 1];
 		get_app_data_folder (path, std::size (path), WINWCS ("var"), true);
 		DirItemId id = path_to_id (path, Nirvana::DirItem::FileType::directory);
 		return CORBA::make_reference <Windows::Dir_var> (std::ref (id));
 	}
+	case SpecialDir::mnt: {
+		return CORBA::make_reference <Windows::Dir_mnt> ();
+	}
+	}
+
 	switch (get_item_type (id)) {
 	case Nirvana::DirItem::FileType::directory:
 		return CORBA::make_reference <Nirvana::Core::Dir> (std::ref (id));
