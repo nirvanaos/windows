@@ -42,7 +42,7 @@ bool ExecContext::initialize () noexcept
 	dbg_main_thread_id_ = GetCurrentThreadId ();
 #endif
 	current_ = FlsAlloc (nullptr);
-	main_fiber_ = ConvertThreadToFiber (nullptr);
+	main_fiber_ = ConvertThreadToFiberEx (nullptr, FIBER_FLAG_FLOAT_SWITCH);
 	return main_fiber_ != nullptr;
 }
 

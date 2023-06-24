@@ -93,7 +93,8 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	if (!(terminate_event_ = CreateEventW (nullptr, TRUE, FALSE, nullptr)))
 		throw_INITIALIZE ();
 
-	if (!(watchdog_thread_ = CreateThread (nullptr, 0x10000, s_watchdog_thread_proc, this, 0, nullptr)))
+	if (!(watchdog_thread_ = CreateThread (nullptr, NEUTRAL_FIBER_STACK_RESERVE, s_watchdog_thread_proc,
+		this, STACK_SIZE_PARAM_IS_A_RESERVATION, nullptr)))
 		throw_INITIALIZE ();
 
 	ProcessStartMessage process_start { GetCurrentProcessId (), executor_id_ };

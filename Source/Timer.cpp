@@ -43,7 +43,11 @@ struct Timer::Pool
 		thread_pool = CreateThreadpool (nullptr);
 		assert (thread_pool);
 
-		TP_POOL_STACK_INFORMATION si { Windows::NEUTRAL_FIBER_STACK_SIZE, Windows::NEUTRAL_FIBER_STACK_SIZE };
+		TP_POOL_STACK_INFORMATION si {
+			Windows::NEUTRAL_FIBER_STACK_RESERVE,
+			Windows::NEUTRAL_FIBER_STACK_COMMIT
+		};
+
 		verify (SetThreadpoolStackInformation (thread_pool, &si));
 		SetThreadpoolThreadMaximum (thread_pool, Port::SystemInfo::hardware_concurrency ());
 		verify (SetThreadpoolThreadMinimum (thread_pool, 0));

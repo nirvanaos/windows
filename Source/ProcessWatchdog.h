@@ -53,15 +53,21 @@ public:
 
 	bool start ()
 	{
-		mailslot_ = CreateMailslotW (WATCHDOG_MAILSLOT_NAME, sizeof (ProcessStartMessage), MAILSLOT_WAIT_FOREVER, nullptr);
+		mailslot_ = CreateMailslotW (WATCHDOG_MAILSLOT_NAME, sizeof (ProcessStartMessage),
+			MAILSLOT_WAIT_FOREVER, nullptr);
+
 		if (INVALID_HANDLE_VALUE == mailslot_)
 			return false;
+
 		semaphore_handles_.reserve (16 - 2);
 		wait_handles_.reserve (16);
 		wait_handles_.push_back (CreateEventW (nullptr, TRUE, FALSE, nullptr));
 		wait_handles_.push_back (CreateEventW (nullptr, TRUE, FALSE, nullptr));
 		terminate_event_ = wait_handles_.back ();
-		thread_ = CreateThread (nullptr, 0x10000, s_thread_proc, this, 0, nullptr);
+		
+		thread_ = CreateThread (nullptr, NEUTRAL_FIBER_STACK_RESERVE, s_thread_proc, this,
+			STACK_SIZE_PARAM_IS_A_RESERVATION, nullptr);
+
 		return true;
 	}
 

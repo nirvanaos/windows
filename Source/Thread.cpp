@@ -34,7 +34,8 @@ unsigned long Thread::current_;
 void Thread::create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority)
 {
 	assert (!handle_);
-	handle_ = CreateThread (nullptr, Windows::NEUTRAL_FIBER_STACK_SIZE, thread_proc, param, 0, nullptr);
+	handle_ = CreateThread (nullptr, Windows::NEUTRAL_FIBER_STACK_RESERVE, thread_proc, param,
+		STACK_SIZE_PARAM_IS_A_RESERVATION, nullptr);
 	if (!handle_)
 		throw_NO_MEMORY ();
 	if (THREAD_PRIORITY_NORMAL != priority)

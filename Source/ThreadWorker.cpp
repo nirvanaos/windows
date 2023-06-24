@@ -67,14 +67,16 @@ void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* para
 	SwitchToFiber (Port::ExecContext::main_fiber ());
 }
 
-void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline, ThreadWorker* other_workers, size_t other_worker_cnt)
+void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline, ThreadWorker* other_workers,
+	size_t other_worker_cnt)
 {
 	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
 	Port::Thread::current (&thread);
 
 	// Create fiber for neutral context
 	MainNeutralFiberParam param { startup, deadline, other_workers, other_worker_cnt };
-	void* worker_fiber = CreateFiber (Windows::NEUTRAL_FIBER_STACK_SIZE, (LPFIBER_START_ROUTINE)main_neutral_fiber_proc, &param);
+	void* worker_fiber = CreateFiberEx (NEUTRAL_FIBER_STACK_COMMIT, NEUTRAL_FIBER_STACK_RESERVE, 0,
+		(LPFIBER_START_ROUTINE)main_neutral_fiber_proc, &param);
 	if (!worker_fiber)
 		throw_NO_MEMORY ();
 	thread.neutral_context ().port ().attach (worker_fiber); // worker_fiber will be deleted in the neutral context destructor
