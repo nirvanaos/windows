@@ -53,6 +53,9 @@ bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo) noexcept
 				} else
 					siginfo.si_code = SEGV_MAPERR;
 			}
+#ifdef NIRVANA_C17
+			[[fallthrough]];
+#endif
 		case EXCEPTION_GUARD_PAGE:
 		case EXCEPTION_IN_PAGE_ERROR:
 			siginfo.si_signo = SIGSEGV;
