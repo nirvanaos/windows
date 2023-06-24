@@ -139,7 +139,7 @@ void DebugLog::write (const char* text, size_t len) noexcept
 	}
 }
 
-void report_unhandled (_EXCEPTION_POINTERS* pex)
+void report_unhandled (EXCEPTION_POINTERS* pex)
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 
@@ -207,6 +207,16 @@ void report_unhandled (_EXCEPTION_POINTERS* pex)
 	if (frame_cnt == std::size (stack))
 		log << "More stack frames...\n";
 #endif
+}
+
+long __stdcall unhandled_exception_filter (EXCEPTION_POINTERS* pex)
+{
+	report_unhandled (pex);
+
+	// Do not display message box
+	DebugLog::terminate ();
+	ExitProcess (pex->ExceptionRecord->ExceptionCode);
+	return EXCEPTION_EXECUTE_HANDLER;
 }
 
 }

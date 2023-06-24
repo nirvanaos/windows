@@ -23,52 +23,32 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_INITIALIZE_H_
-#define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
+#ifndef NIRVANA_CORE_WINDOWS_EX_HANDLER_H_
+#define NIRVANA_CORE_WINDOWS_EX_HANDLER_H_
 #pragma once
 
-#include <initterm.h>
-#include "Thread.inl"
-#include "ErrConsole.h"
-#include "../Port/SystemInfo.h"
-#include "../Port/Chrono.h"
-#include "ex_handler.h"
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-inline
-bool initialize (void)
+long __stdcall exception_filter (EXCEPTION_POINTERS* pex);
+long __stdcall unhandled_exception_filter (EXCEPTION_POINTERS* pex);
+
+extern void* exception_handler;
+extern LPTOP_LEVEL_EXCEPTION_FILTER unhandled_exception_handler;
+
+inline void ex_handler_install () noexcept
 {
-  Port::SystemInfo::initialize ();
-  Port::Chrono::initialize ();
-  if (!(
-    Heap::initialize ()
-    && Port::Thread::initialize ()
-    && initialize0 ()
-    )) {
-    ErrConsole () << "INITIALIZE" << '\n';
-    return false;
-  }
-
-  ex_handler_install ();
-
-  return true;
+	exception_handler = AddVectoredExceptionHandler (TRUE, &exception_filter);
+	unhandled_exception_handler = SetUnhandledExceptionFilter (&unhandled_exception_filter);
 }
 
-inline
-void terminate (void) noexcept
+inline void ex_handler_remove () noexcept
 {
-  ex_handler_remove ();
-
-  terminate0 ();
-  _cexit ();
-#ifdef _DEBUG
-  Port::Chrono::terminate ();
-  Port::Thread::terminate ();
-  Heap::terminate ();
-#endif
+	RemoveVectoredExceptionHandler (exception_handler);
+	SetUnhandledExceptionFilter (unhandled_exception_handler);
 }
 
 }

@@ -1212,19 +1212,7 @@ bool Memory::is_copy (const void* p, const void* plocal, size_t size)
 
 namespace Windows {
 
-void report_unhandled (_EXCEPTION_POINTERS* pex);
-
-long __stdcall unhandled_exception_filter (_EXCEPTION_POINTERS* pex)
-{
-	report_unhandled (pex);
-
-	// Do not display message box
-	DebugLog::terminate ();
-	ExitProcess (pex->ExceptionRecord->ExceptionCode);
-	return EXCEPTION_EXECUTE_HANDLER;
-}
-
-long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
+long __stdcall exception_filter (EXCEPTION_POINTERS* pex)
 {
 	DWORD exc = pex->ExceptionRecord->ExceptionCode;
 	if (
@@ -1268,15 +1256,13 @@ long __stdcall exception_filter (_EXCEPTION_POINTERS* pex)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-static void* exception_handler;
-static LPTOP_LEVEL_EXCEPTION_FILTER unhandled_exception_handler;
-
 } // namespace Windows
 
 namespace Port {
 
 bool Memory::initialize () noexcept
 {
+	/*
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 #ifdef _DEBUG
 	if (!IsDebuggerPresent ()) {
@@ -1288,19 +1274,16 @@ bool Memory::initialize () noexcept
 		_CrtSetReportFile (_CRT_ASSERT, _CRTDBG_FILE_STDERR);
 	}
 #endif
+*/
 	DebugLog::initialize ();
 	if (!address_space_init ())
 		return false;
-	exception_handler = AddVectoredExceptionHandler (TRUE, &exception_filter);
-	unhandled_exception_handler = SetUnhandledExceptionFilter (&unhandled_exception_filter);
 	return true;
 }
 
 void Memory::terminate () noexcept
 {
 	DebugLog::terminate ();
-	SetUnhandledExceptionFilter (unhandled_exception_handler);
-	RemoveVectoredExceptionHandler (exception_handler);
 	address_space_term ();
 }
 

@@ -32,7 +32,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool ex2signal (_EXCEPTION_POINTERS* pex, siginfo_t& siginfo) noexcept
+bool ex2signal (EXCEPTION_POINTERS* pex, siginfo_t& siginfo) noexcept
 {
 	zero (siginfo);
 

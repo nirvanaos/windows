@@ -23,56 +23,16 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_INITIALIZE_H_
-#define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
-#pragma once
-
-#include <initterm.h>
-#include "Thread.inl"
-#include "ErrConsole.h"
-#include "../Port/SystemInfo.h"
-#include "../Port/Chrono.h"
 #include "ex_handler.h"
+#include "DebugLog.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-inline
-bool initialize (void)
-{
-  Port::SystemInfo::initialize ();
-  Port::Chrono::initialize ();
-  if (!(
-    Heap::initialize ()
-    && Port::Thread::initialize ()
-    && initialize0 ()
-    )) {
-    ErrConsole () << "INITIALIZE" << '\n';
-    return false;
-  }
-
-  ex_handler_install ();
-
-  return true;
-}
-
-inline
-void terminate (void) noexcept
-{
-  ex_handler_remove ();
-
-  terminate0 ();
-  _cexit ();
-#ifdef _DEBUG
-  Port::Chrono::terminate ();
-  Port::Thread::terminate ();
-  Heap::terminate ();
-#endif
-}
+void* exception_handler;
+LPTOP_LEVEL_EXCEPTION_FILTER unhandled_exception_handler;
 
 }
 }
 }
-
-#endif

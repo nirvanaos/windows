@@ -27,10 +27,10 @@
 #define NIRVANA_CORE_WINDOWS_START_H_
 #pragma once
 
-#include "initialize.h"
 #include "CmdLineParser.h"
 #include <corecrt_startup.h>
 #include <vcstartup_internal.h>
+#include "initialize.h"
 
 namespace Nirvana {
 namespace Core {
@@ -95,7 +95,6 @@ int start ()
     CmdLineParser cmdline;
     ret = mainfn (cmdline.argc (), cmdline.argv (), cmdline.envp ());
   }
-  _cexit ();
   terminate ();
   return ret;
 }
