@@ -51,7 +51,7 @@ ExecContext::ExecContext (bool neutral) :
 			main_fiber_context_ = core_context;
 			fiber_ = main_fiber_;
 		} else {
-			fiber_ = CreateFiber (0, (LPFIBER_START_ROUTINE)fiber_proc, core_context);
+			fiber_ = CreateFiberEx (0, 0, FIBER_FLAG_FLOAT_SWITCH, (LPFIBER_START_ROUTINE)fiber_proc, core_context);
 			if (!fiber_)
 				throw CORBA::NO_MEMORY ();
 		}
@@ -61,11 +61,12 @@ ExecContext::ExecContext (bool neutral) :
 ExecContext::~ExecContext ()
 {
 	if (fiber_) {
-		assert (fiber_ != GetCurrentFiber ());
 		if (fiber_ == main_fiber_)
 			main_fiber_allocated_.clear ();
-		else
+		else {
+			assert (fiber_ != GetCurrentFiber ());
 			DeleteFiber (fiber_);
+		}
 	}
 }
 
