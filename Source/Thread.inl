@@ -38,7 +38,8 @@ namespace Port {
 inline
 bool Thread::initialize () noexcept
 {
-	current_ = TlsAlloc ();
+	if (TLS_OUT_OF_INDEXES == (current_ = TlsAlloc ()))
+		return false;
 	return ExecContext::initialize ();
 }
 

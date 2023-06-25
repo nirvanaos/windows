@@ -29,10 +29,8 @@
 
 #include "Thread.inl"
 #include "ErrConsole.h"
-#include "DebugLog.h"
 #include "../Port/SystemInfo.h"
 #include "../Port/Chrono.h"
-#include "ex_handler.h"
 
 namespace Nirvana {
 namespace Core {
@@ -41,21 +39,6 @@ namespace Windows {
 inline
 bool initialize_windows (void)
 {
-  SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
-
-#ifdef _DEBUG
-  if (!IsDebuggerPresent ()) {
-    _CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile (_CRT_ERROR, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile (_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-  }
-#endif
-
-  DebugLog::initialize ();
-
   Port::SystemInfo::initialize ();
   Port::Chrono::initialize ();
   if (!(Port::Thread::initialize () && Heap::initialize ())) {
@@ -63,23 +46,15 @@ bool initialize_windows (void)
     return false;
   }
 
-  ex_handler_install ();
-
   return true;
 }
 
 inline
 void terminate_windows (void) noexcept
 {
-  ex_handler_remove ();
-
-#ifdef _DEBUG
   Heap::terminate ();
-  Port::Chrono::terminate ();
   Port::Thread::terminate ();
-#endif
-
-  DebugLog::terminate ();
+  Port::Chrono::terminate ();
 }
 
 }

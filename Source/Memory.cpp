@@ -29,6 +29,7 @@
 #include <signal.h>
 #include "ex2signal.h"
 #include <winternl.h>
+#include "DebugLog.h"
 
 #ifdef _DEBUG
 #include <DbgHelp.h>
@@ -1255,18 +1256,51 @@ long __stdcall exception_filter (EXCEPTION_POINTERS* pex)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
+long __stdcall unhandled_exception_filter (EXCEPTION_POINTERS* pex);
+
 } // namespace Windows
 
 namespace Port {
 
+void* Memory::exception_handler_;
+
 bool Memory::initialize () noexcept
 {
-	return address_space_init ();
+	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
+
+#ifdef _DEBUG
+	if (!IsDebuggerPresent ()) {
+		_CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);
+		_CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile (_CRT_ERROR, _CRTDBG_FILE_STDERR);
+		_CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile (_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+	}
+#endif
+
+	SetUnhandledExceptionFilter (&unhandled_exception_filter);
+
+	DebugLog::initialize ();
+
+	if (!address_space_init ())
+		return false;
+	
+	if (!(exception_handler_ = AddVectoredExceptionHandler (TRUE, &exception_filter)))
+		return false;
+	
+	return true;
 }
 
 void Memory::terminate () noexcept
 {
+	RemoveVectoredExceptionHandler (exception_handler_);
+	
 	address_space_term ();
+
+	DebugLog::terminate ();
+
+	SetUnhandledExceptionFilter (nullptr);
 }
 
 }

@@ -124,6 +124,8 @@ private:
 
 	// Create new mapping
 	static HANDLE new_mapping ();
+
+	static void* exception_handler_;
 };
 
 }
