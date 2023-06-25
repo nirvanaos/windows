@@ -213,10 +213,10 @@ long __stdcall unhandled_exception_filter (EXCEPTION_POINTERS* pex)
 {
 	report_unhandled (pex);
 
-	// Do not display message box
 	DebugLog::terminate ();
+	// Do not display message box
 	ExitProcess (pex->ExceptionRecord->ExceptionCode);
-	return EXCEPTION_EXECUTE_HANDLER;
+	return EXCEPTION_CONTINUE_SEARCH;
 }
 
 }

@@ -29,7 +29,6 @@
 #include <signal.h>
 #include "ex2signal.h"
 #include <winternl.h>
-#include "DebugLog.h"
 
 #ifdef _DEBUG
 #include <DbgHelp.h>
@@ -1262,27 +1261,11 @@ namespace Port {
 
 bool Memory::initialize () noexcept
 {
-	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
-#ifdef _DEBUG
-	if (!IsDebuggerPresent ()) {
-		_CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
-		_CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);
-		_CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_FILE);
-		_CrtSetReportFile (_CRT_ERROR, _CRTDBG_FILE_STDERR);
-		_CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_FILE);
-		_CrtSetReportFile (_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-	}
-#endif
-
-	DebugLog::initialize ();
-	if (!address_space_init ())
-		return false;
-	return true;
+	return address_space_init ();
 }
 
 void Memory::terminate () noexcept
 {
-	DebugLog::terminate ();
 	address_space_term ();
 }
 
