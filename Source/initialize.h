@@ -27,7 +27,6 @@
 #define NIRVANA_CORE_WINDOWS_INITIALIZE_H_
 #pragma once
 
-#include <initterm.h>
 #include "Thread.inl"
 #include "ErrConsole.h"
 #include "../Port/SystemInfo.h"
@@ -39,15 +38,11 @@ namespace Core {
 namespace Windows {
 
 inline
-bool initialize (void)
+bool initialize_windows (void)
 {
   Port::SystemInfo::initialize ();
   Port::Chrono::initialize ();
-  if (!(
-    Heap::initialize ()
-    && Port::Thread::initialize ()
-    && initialize0 ()
-    )) {
+  if (!(Port::Thread::initialize () && Heap::initialize ())) {
     ErrConsole () << "INITIALIZE" << '\n';
     return false;
   }
@@ -58,16 +53,14 @@ bool initialize (void)
 }
 
 inline
-void terminate (void) noexcept
+void terminate_windows (void) noexcept
 {
   ex_handler_remove ();
 
-  terminate0 ();
-  _cexit ();
 #ifdef _DEBUG
+  Heap::terminate ();
   Port::Chrono::terminate ();
   Port::Thread::terminate ();
-  Heap::terminate ();
 #endif
 }
 

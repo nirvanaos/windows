@@ -42,13 +42,13 @@ extern LPTOP_LEVEL_EXCEPTION_FILTER unhandled_exception_handler;
 inline void ex_handler_install () noexcept
 {
 	exception_handler = AddVectoredExceptionHandler (TRUE, &exception_filter);
-	unhandled_exception_handler = SetUnhandledExceptionFilter (&unhandled_exception_filter);
+	SetUnhandledExceptionFilter (&unhandled_exception_filter);
 }
 
 inline void ex_handler_remove () noexcept
 {
 	RemoveVectoredExceptionHandler (exception_handler);
-	SetUnhandledExceptionFilter (unhandled_exception_handler);
+	SetUnhandledExceptionFilter (nullptr);
 }
 
 }

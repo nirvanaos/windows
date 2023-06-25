@@ -31,7 +31,6 @@ namespace Core {
 namespace Windows {
 
 void* exception_handler;
-LPTOP_LEVEL_EXCEPTION_FILTER unhandled_exception_handler;
 
 }
 }

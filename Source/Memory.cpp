@@ -1262,7 +1262,6 @@ namespace Port {
 
 bool Memory::initialize () noexcept
 {
-	/*
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 #ifdef _DEBUG
 	if (!IsDebuggerPresent ()) {
@@ -1274,7 +1273,7 @@ bool Memory::initialize () noexcept
 		_CrtSetReportFile (_CRT_ASSERT, _CRTDBG_FILE_STDERR);
 	}
 #endif
-*/
+
 	DebugLog::initialize ();
 	if (!address_space_init ())
 		return false;

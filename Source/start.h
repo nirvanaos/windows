@@ -31,6 +31,7 @@
 #include <corecrt_startup.h>
 #include <vcstartup_internal.h>
 #include "initialize.h"
+#include <initterm.h>
 
 namespace Nirvana {
 namespace Core {
@@ -39,7 +40,7 @@ namespace Windows {
 template <int (*mainfn) (int, char**, char**)> inline
 int start ()
 {
-  if (!initialize ())
+  if (!initialize_windows ())
     return -1;
 
   // The /GS security cookie must be initialized before any exception handling
@@ -51,6 +52,8 @@ int start ()
   // Clear the x87 exception flags.
   _asm { fnclex }
 #endif
+
+  Core::initialize0 ();
 
   if (!__scrt_initialize_crt (__scrt_module_type::exe))
     __scrt_fastfail (FAST_FAIL_FATAL_APP_EXIT);
@@ -65,7 +68,8 @@ int start ()
   // Before we begin C++ initialization, set the unhandled exception
   // filter so that unhandled C++ exceptions result in std::terminate
   // being called:
-  // IP: We disable the standard filter and use own: __scrt_set_unhandled_exception_filter ();
+  // __scrt_set_unhandled_exception_filter ();
+  // IP: We disable the standard filter and use own installed in initialize_windows ().
 
   // Initialize C++
   _initterm (__xc_a, __xc_z);
@@ -95,7 +99,12 @@ int start ()
     CmdLineParser cmdline;
     ret = mainfn (cmdline.argc (), cmdline.argv (), cmdline.envp ());
   }
-  terminate ();
+  _cexit ();
+
+  __scrt_uninitialize_crt (true, false);
+  
+  Core::terminate0 ();
+  terminate_windows ();
   return ret;
 }
 
