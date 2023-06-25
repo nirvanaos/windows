@@ -32,6 +32,7 @@
 #include "File.h"
 #include <IO_Request.h>
 #include "../Source/CompletionPortReceiver.h"
+#include <FileAccessBase.h>
 
 namespace Nirvana {
 namespace Core {
@@ -119,7 +120,8 @@ namespace Port {
 
 /// Interface to host (kernel) filesystem driver.
 class FileAccessDirect : 
-	private Nirvana::Core::Windows::FileAccess
+	private Nirvana::Core::Windows::FileAccess,
+	public Core::FileAccessBase
 {
 	typedef Nirvana::Core::Windows::FileAccess Base;
 	typedef Base::Request RequestBase;

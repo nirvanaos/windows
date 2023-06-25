@@ -30,6 +30,7 @@
 #include <NameService/File.h>
 #include "Dir_var.h"
 #include "Dir_mnt.h"
+#include <ShlObj.h>
 
 namespace Nirvana {
 namespace Core {
@@ -39,8 +40,10 @@ using namespace Windows;
 namespace Port {
 
 const FileSystem::Root FileSystem::roots_ [] = {
-	{ "var", get_var },
-	{ "mnt", get_mnt }
+	{ "etc", get_app_data_dir },
+	{ "home", get_home },
+	{ "mnt", get_mnt },
+	{ "var", get_app_data_dir }
 };
 
 Roots FileSystem::get_roots ()
@@ -53,16 +56,37 @@ Roots FileSystem::get_roots ()
 	return roots;
 }
 
-DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)
+DirItemId FileSystem::get_app_data_dir (const IDL::String& name, bool& may_cache)
 {
+	if (!name.size () || name.size () > 3)
+		throw CORBA::BAD_PARAM ();
+
 	may_cache = true;
-	return make_special_id (SpecialDir::var);
+
+	WinWChar wname [4] = { 0 };
+	std::copy (name.begin (), name.end (), wname);
+
+	WinWChar path [MAX_PATH + 1];
+	get_app_data_folder (path, std::size (path), wname, false);
+	return path_to_id (path, Nirvana::DirItem::FileType::directory);
 }
 
 DirItemId FileSystem::get_mnt (const IDL::String&, bool& may_cache)
 {
 	may_cache = true;
 	return make_special_id (SpecialDir::mnt);
+}
+
+DirItemId FileSystem::get_home (const IDL::String&, bool& may_cache)
+{
+	may_cache = false;
+
+	WinWChar path [MAX_PATH];
+	HRESULT result = SHGetFolderPathW (NULL, CSIDL_PROFILE, NULL, 0, path);
+	if (SUCCEEDED (result))
+		return path_to_id (path, Nirvana::DirItem::FileType::directory);
+	else
+		throw CORBA::UNKNOWN ();
 }
 
 DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::DirItem::FileType type)
@@ -111,28 +135,17 @@ DirItemId FileSystem::make_special_id (SpecialDir dir)
 
 PortableServer::ServantBase::_ref_type FileSystem::incarnate (const DirItemId& id)
 {
-	switch (is_special_dir (id)) {
-	case SpecialDir::var: {
-		WinWChar path [MAX_PATH + 1];
-		get_app_data_folder (path, std::size (path), WINWCS ("var"), true);
-		DirItemId id = path_to_id (path, Nirvana::DirItem::FileType::directory);
-		return CORBA::make_reference <Windows::Dir_var> (std::ref (id));
-	}
-	case SpecialDir::mnt: {
-		return CORBA::make_reference <Windows::Dir_mnt> ();
-	}
-	}
+	if (get_item_type (id) == Nirvana::DirItem::FileType::directory) {
+		switch (is_special_dir (id)) {
+		case SpecialDir::mnt:
+			return CORBA::make_reference <Windows::Dir_mnt> ();
+		
+		default:
+			return CORBA::make_reference <Nirvana::Core::Dir> (std::ref (id));
+		}
 
-	switch (get_item_type (id)) {
-	case Nirvana::DirItem::FileType::directory:
-		return CORBA::make_reference <Nirvana::Core::Dir> (std::ref (id));
-
-	case Nirvana::DirItem::FileType::regular:
+	} else
 		return CORBA::make_reference <Nirvana::Core::File> (std::ref (id));
-
-	default:
-		throw CORBA::BAD_PARAM ();
-	}
 }
 
 }

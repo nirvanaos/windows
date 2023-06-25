@@ -29,6 +29,7 @@
 #pragma once
 
 #include <NameService/Roots.h>
+#include <NameService/NamingContextRoot.h>
 #include <Nirvana/File.h>
 #include "../Windows/Source/WinWChar.h"
 
@@ -55,6 +56,47 @@ public:
 	{
 		return (Nirvana::DirItem::FileType)*(const Windows::WinWChar*)id.data ();
 	}
+
+	static CosNaming::Name get_name_from_path (const IDL::String& path)
+	{
+		CosNaming::Name n;
+		const char* s = path.c_str ();
+		const char* begin = s;
+		if (path.size () > 3 && begin [1] == ':' && begin [2] == '\\') {
+
+			char drive = *begin;
+			if ('a' <= drive && drive <= 'z')
+				drive += 'A' - 'a';
+			else if (!('A' <= drive && drive <= 'Z'))
+				throw CosNaming::NamingContext::InvalidName ();
+
+			n.push_back (CosNaming::NameComponent ("/", IDL::String ()));
+			n.push_back (CosNaming::NameComponent ("mnt", IDL::String ()));
+
+			IDL::String drv;
+			drv += drive;
+			drv += ':';
+			n.push_back (CosNaming::NameComponent (drv, IDL::String ()));
+			begin += 3;
+		}
+		
+		for (const char* p = begin; *p; ++p) {
+			if ('\\' == *p) {
+				if (p == begin)
+					++begin; // Skip adjacent backslashes
+				else {
+					n.push_back (CosNaming::Core::NamingContextRoot::to_component (
+						path.substr (begin - s, p - begin)));
+					begin = p + 1;
+				}
+			} else if (strchr ("<>:\"/\\|?*", *p))
+				throw CosNaming::NamingContext::InvalidName ();
+		}
+
+		return n;
+	}
+
+	// For internal use
 	
 	static DirItemId path_to_id (const Windows::WinWChar* path, Nirvana::DirItem::FileType type =
 		Nirvana::DirItem::FileType::unknown);
@@ -70,13 +112,14 @@ public:
 	}
 
 private:
-	static DirItemId get_var (const IDL::String&, bool& may_cache);
+	static DirItemId get_app_data_dir (const IDL::String& name, bool& may_cache);
 	static DirItemId get_mnt (const IDL::String&, bool& may_cache);
+	static DirItemId get_home (const IDL::String&, bool& may_cache);
 
 	enum class SpecialDir
 	{
-		var,
 		mnt,
+		// dev, ...
 
 		END
 	};
