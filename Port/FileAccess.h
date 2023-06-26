@@ -39,7 +39,8 @@ namespace Core {
 namespace Windows {
 
 class FileAccess :
-	protected CompletionPortReceiver
+	protected CompletionPortReceiver,
+	public FileAccessBase
 {
 protected:
 	// The same as Windows OVERLAPPED structure
@@ -102,7 +103,7 @@ protected:
 		handle_ ((void*)-1)
 	{}
 
-	void open (const Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
+	bool open (const Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition, uint32_t flags_and_attributes);
 	~FileAccess ();
 
 	void issue_request (Request& rq) noexcept;
@@ -120,8 +121,7 @@ namespace Port {
 
 /// Interface to host (kernel) filesystem driver.
 class FileAccessDirect : 
-	private Nirvana::Core::Windows::FileAccess,
-	public Core::FileAccessBase
+	private Nirvana::Core::Windows::FileAccess
 {
 	typedef Nirvana::Core::Windows::FileAccess Base;
 	typedef Base::Request RequestBase;
@@ -169,6 +169,11 @@ protected:
 	/// \param [out] block_size Block (sector) size. 
 	/// \throw RuntimeError.
 	FileAccessDirect (const File& file, int flags, Pos& size, Size& block_size);
+
+	unsigned access_mask () const noexcept
+	{
+		return Base::access_mask ();
+	}
 
 	/// Issues the I/O request to the host or kernel.
 	/// 

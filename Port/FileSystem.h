@@ -87,6 +87,8 @@ public:
 			} else if (strchr ("<>:\"/\\|?*", *p))
 				throw CosNaming::NamingContext::InvalidName ();
 		}
+		if (*begin) // Ignore trailing slash
+			n.push_back (CosNaming::Core::NamingContextRoot::to_component (path.substr (begin - s)));
 
 		return n;
 	}

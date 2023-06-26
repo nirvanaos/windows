@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "CompletionPort.h"
-#include <Nirvana/throw_exception.h>
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
@@ -38,7 +38,7 @@ void CompletionPort::create (HANDLE hfile, CompletionPortReceiver* receiver)
 {
 	HANDLE port = CreateIoCompletionPort (hfile, completion_port_, (ULONG_PTR)receiver, thread_count ());
 	if (!port)
-		throw_INTERNAL ();
+		throw_last_error ();
 	assert (completion_port_ == nullptr || completion_port_ == port);
 	completion_port_ = port;
 }

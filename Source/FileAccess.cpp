@@ -28,20 +28,22 @@
 #include "MessageBroker.h"
 #include "error2errno.h"
 #include <Nirvana/RuntimeError.h>
-#include <Nirvana/fnctl.h>
+#include <fnctl.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void FileAccess::open (const Port::File& file, uint32_t access, uint32_t share_mode,
+bool FileAccess::open (const Port::File& file, uint32_t access, uint32_t share_mode,
 	uint32_t creation_disposition, uint32_t flags_and_attributes)
 {
 	handle_ = CreateFileW (file.path ().c_str (),
 		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
 	if (INVALID_HANDLE_VALUE == handle_)
-		throw_last_error ();
+		return false;
 	MessageBroker::completion_port ().add_receiver (handle_, *this);
+	access_mask_ = (access & GENERIC_WRITE) ? AccessMask::READ | AccessMask::WRITE : AccessMask::READ;
+	return true;
 }
 
 FileAccess::~FileAccess ()
@@ -101,16 +103,35 @@ FileAccessDirect::FileAccessDirect (const File& file, int flags, Pos& size, Size
 	} else
 		creation = OPEN_EXISTING;
 
-	open (file, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation, FILE_FLAG_OVERLAPPED
+	if (!open (file, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, creation, FILE_FLAG_OVERLAPPED
 		| FILE_ATTRIBUTE_NORMAL
 		| FILE_FLAG_NO_BUFFERING
-		| FILE_FLAG_WRITE_THROUGH
-	);
+		| FILE_FLAG_WRITE_THROUGH)
+		) {
 
-	LARGE_INTEGER li;
-	if (!GetFileSizeEx (handle_, &li))
-		throw_last_error ();
-	size = li.QuadPart;
+		if (flags & O_ACCMODE)
+			throw_last_error ();
+
+		if (!open (file, GENERIC_READ, FILE_SHARE_READ, creation, FILE_FLAG_OVERLAPPED
+			| FILE_ATTRIBUTE_NORMAL
+			| FILE_FLAG_NO_BUFFERING
+			| FILE_FLAG_WRITE_THROUGH)
+			)
+				throw_last_error ();
+	}
+
+	switch (creation) {
+	case OPEN_ALWAYS:
+	case OPEN_EXISTING: {
+		LARGE_INTEGER li;
+		if (!GetFileSizeEx (handle_, &li))
+			throw_last_error ();
+		size = li.QuadPart;
+	} break;
+
+	default:
+		size = 0;
+	}
 
 	block_size = 4096; // TODO: Implement
 }

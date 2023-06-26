@@ -188,12 +188,16 @@ DirItemId Dir::get_new_file_id (Name& n) const
 	// Create id for parent path
 	DirItemId id = FileSystem::path_to_id (check_path (n, 1).c_str (), Nirvana::DirItem::FileType::regular);
 
-	// Append name
+	// Append file name
 	StringW name = to_wstring (to_string (n.back ()));
-	size_t parent_size = id.size () - sizeof (WinWChar);
-	id.resize (id.size () + name.size () + 1);
+	size_t parent_size = id.size () - sizeof (WinWChar); // Without the zero terminator
+	size_t name_size = name.size ();
+	id.resize (id.size () + name_size * sizeof (WinWChar) + sizeof (WinWChar));
 	const WinWChar* src = name.data ();
-	std::copy (src, src + name.size () + 1, (WinWChar*)(id.data () + parent_size));
+	WinWChar* dst = (WinWChar*)(id.data () + parent_size);
+	assert (!*dst);
+	*(dst++) = '\\';
+	std::copy (src, src + name_size + 1, dst);
 
 	return id;
 }
