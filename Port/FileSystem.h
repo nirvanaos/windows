@@ -35,11 +35,6 @@
 
 namespace Nirvana {
 namespace Core {
-
-namespace Windows {
-class DirItem;
-}
-
 namespace Port {
 
 class FileSystem
@@ -113,11 +108,20 @@ public:
 
 private:
 	static DirItemId get_app_data_dir (const IDL::String& name, bool& may_cache);
+	static Windows::StringW get_app_data_dir (const Windows::WinWChar* name);
+	static DirItemId get_var (const IDL::String&, bool& may_cache);
 	static DirItemId get_mnt (const IDL::String&, bool& may_cache);
 	static DirItemId get_home (const IDL::String&, bool& may_cache);
 
+	static Windows::StringW make_path (const DirItemId& id)
+	{
+		return Windows::StringW (id_to_path (id), path_len (id));
+	}
+
+
 	enum class SpecialDir
 	{
+		var,
 		mnt,
 		// dev, ...
 

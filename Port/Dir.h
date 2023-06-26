@@ -28,8 +28,9 @@
 #define NIRVANA_CORE_PORT_DIR_H_
 #pragma once
 
-#include "../Source/DirItem.h"
 #include <NameService/NamingContextRoot.h>
+#include "FileSystem.h"
+#include "../Source/DirItem.h"
 
 namespace Nirvana {
 namespace Core {
@@ -63,9 +64,14 @@ public:
 
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 
+	static Nirvana::DirItem::FileType type () noexcept
+	{
+		return Nirvana::DirItem::FileType::directory;
+	}
+
 protected:
-	Dir (const DirItemId& id) :
-		Base (id)
+	Dir (Windows::StringW&& path) :
+		Base (std::move (path))
 	{}
 
 	Dir ()
@@ -77,7 +83,6 @@ protected:
 	static Windows::StringW to_wstring (CosNaming::Istring name);
 	
 	virtual Windows::StringW get_path (CosNaming::Name& n) const;
-	Windows::StringW get_path () const;
 
 	static void append_path (Windows::StringW& path, CosNaming::Istring name);
 

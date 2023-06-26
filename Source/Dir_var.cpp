@@ -51,7 +51,7 @@ StringW Dir_var::get_path (Name& n) const
 
 		return StringW (buf, cc - 1);
 	} else
-		return Base::get_path ();
+		return Base::path ();
 }
 
 void Dir_var::unlink (Name& n) const

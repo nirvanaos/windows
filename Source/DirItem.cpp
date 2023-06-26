@@ -31,13 +31,13 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-DirItem::DirItem (const DirItemId& id) :
-	id_ (id)
+DirItem::DirItem (StringW&& path) :
+	path_ (std::move (path))
 {}
 
 void DirItem::get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const
 {
-	if (!GetFileAttributesExW (path (), GetFileExInfoStandard, &att))
+	if (!GetFileAttributesExW (path ().c_str (), GetFileExInfoStandard, &att))
 		throw RuntimeError (error2errno (GetLastError ()));
 }
 

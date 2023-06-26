@@ -41,12 +41,7 @@ namespace Port {
 StringW Dir::get_path (CosNaming::Name& n) const
 {
 	assert (!n.empty ());
-	return get_path ();
-}
-
-StringW Dir::get_path () const
-{
-	return StringW (path (), path_len ());
+	return path ();
 }
 
 StringW Dir::to_wstring (Istring name)
@@ -205,7 +200,7 @@ DirItemId Dir::get_new_file_id (Name& n) const
 
 StringW Dir::get_pattern () const
 {
-	return get_path () + WINWCS ("\\*.*");
+	return path () + WINWCS ("\\*.*");
 }
 
 std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const

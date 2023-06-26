@@ -39,8 +39,8 @@ class Dir_var : public Nirvana::Core::Dir
 	typedef Nirvana::Core::Dir Base;
 
 public:
-	Dir_var (const DirItemId& id) :
-		Base (id)
+	Dir_var (StringW&& path) :
+		Base (std::move (path))
 	{}
 
 	virtual StringW get_path (CosNaming::Name& n) const override;

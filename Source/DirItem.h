@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_WINDOWS_DIRITEM_H_
 #pragma once
 
-#include "../Port/FileSystem.h"
+#include "WinWChar.h"
 
 struct _WIN32_FILE_ATTRIBUTE_DATA;
 
@@ -40,16 +40,6 @@ namespace Windows {
 class DirItem
 {
 public:
-	Nirvana::DirItem::FileType type () const noexcept
-	{
-		return Port::FileSystem::get_item_type (id_);
-	}
-
-	const DirItemId& id () const noexcept
-	{
-		return id_;
-	}
-
 	void get_file_times (FileTimes& times) const;
 
 	uint16_t permissions () const
@@ -62,26 +52,21 @@ public:
 		// TODO: Implement
 	}
 
-	const Windows::WinWChar* path () const noexcept
+	const StringW& path () const noexcept
 	{
-		return Nirvana::Core::Port::FileSystem::id_to_path (id_);
-	}
-
-	size_t path_len () const noexcept
-	{
-		return Nirvana::Core::Port::FileSystem::path_len (id_);
+		return path_;
 	}
 
 protected:
-	DirItem (const DirItemId& id);
-	
+	DirItem (StringW&& path);
+
 	DirItem ()
 	{}
 
 	void get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const;
 
 private:
-	DirItemId id_;
+	const StringW path_;
 };
 
 }

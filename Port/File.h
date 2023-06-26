@@ -39,11 +39,16 @@ class File : public Windows::DirItem
 	typedef Windows::DirItem Base;
 
 protected:
-	File (const DirItemId& id) :
-		Base (id)
+	File (Windows::StringW&& path) :
+		Base (std::move (path))
 	{}
 
 	uint64_t size () const;
+
+	Nirvana::DirItem::FileType type ()
+	{
+		return Nirvana::DirItem::FileType::regular;
+	}
 };
 
 }
