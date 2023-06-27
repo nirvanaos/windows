@@ -25,14 +25,18 @@
 */
 #include "../Port/File.h"
 #include "win32.h"
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
+
+using namespace Windows;
+
 namespace Port {
 
 uint64_t File::size () const
 {
-	WIN32_FILE_ATTRIBUTE_DATA att;
+	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
 	ULARGE_INTEGER ui;
 
@@ -40,6 +44,49 @@ uint64_t File::size () const
 	ui.HighPart = att.nFileSizeHigh;
 
 	return ui.QuadPart;
+}
+
+Nirvana::DirItem::FileType File::type () const noexcept
+{
+	if (Nirvana::DirItem::FileType::none == type_) {
+		HANDLE h = get_handle ();
+		if (INVALID_HANDLE_VALUE == h)
+			type_ = Nirvana::DirItem::FileType::not_found;
+		else {
+			switch (GetFileType (h)) {
+			case FILE_TYPE_CHAR:
+				type_ = Nirvana::DirItem::FileType::character;
+				break;
+
+			case FILE_TYPE_DISK:
+				type_ = Nirvana::DirItem::FileType::regular;
+				break;
+
+			case FILE_TYPE_PIPE:
+				type_ = Nirvana::DirItem::FileType::fifo;
+				break;
+
+			default:
+				type_ = Nirvana::DirItem::FileType::unknown;
+			}
+		}
+	}
+
+	return type_;
+}
+
+void* File::open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
+	uint32_t flags_and_attributes) const
+{
+	HANDLE h = CreateFileW (path ().c_str (),
+		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
+/*
+	if (INVALID_HANDLE_VALUE != h && INVALID_HANDLE_VALUE == handle_) {
+		HANDLE cp = GetCurrentProcess ();
+		DuplicateHandle (cp, h, cp, &handle_, FILE_READ_ATTRIBUTES, false, 0);
+	}
+*/
+	return h;
 }
 
 }

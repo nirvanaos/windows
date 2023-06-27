@@ -32,18 +32,48 @@ namespace Core {
 namespace Windows {
 
 DirItem::DirItem (StringW&& path) :
-	path_ (std::move (path))
+	path_ (std::move (path)),
+	handle_ (INVALID_HANDLE_VALUE)
 {}
 
-void DirItem::get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const
+DirItem::DirItem () :
+	handle_ (INVALID_HANDLE_VALUE)
+{}
+
+DirItem::~DirItem ()
 {
-	if (!GetFileAttributesExW (path ().c_str (), GetFileExInfoStandard, &att))
-		throw RuntimeError (error2errno (GetLastError ()));
+	if (INVALID_HANDLE_VALUE != handle_)
+		CloseHandle (handle_);
+}
+
+void* DirItem::get_handle () const noexcept
+{
+	if (INVALID_HANDLE_VALUE == handle_) {
+		handle_ = CreateFileW (path ().c_str (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+			FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+	}
+	return handle_;
+}
+
+void* DirItem::handle () const
+{
+	if (INVALID_HANDLE_VALUE == handle_) {
+		get_handle ();
+		if (INVALID_HANDLE_VALUE == handle_)
+			throw_last_error ();
+	}
+	return handle_;
+}
+
+void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att) const
+{
+	if (!GetFileInformationByHandle (handle (), &att))
+		throw_last_error ();
 }
 
 void DirItem::get_file_times (FileTimes& times) const
 {
-	WIN32_FILE_ATTRIBUTE_DATA att;
+	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
 
 	// TODO: Calculate time inacuracy based on the underlying file fystem type.

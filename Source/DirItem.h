@@ -30,7 +30,7 @@
 
 #include "WinWChar.h"
 
-struct _WIN32_FILE_ATTRIBUTE_DATA;
+struct _BY_HANDLE_FILE_INFORMATION;
 
 namespace Nirvana {
 namespace Core {
@@ -54,16 +54,24 @@ public:
 
 	const StringW& path () const noexcept
 	{
+		assert (!path_.empty ());
 		return path_;
 	}
 
 protected:
 	DirItem (StringW&& path);
+	DirItem ();
 
-	DirItem ()
-	{}
+	~DirItem ();
 
-	void get_attributes (_WIN32_FILE_ATTRIBUTE_DATA& att) const;
+	void* handle () const;
+
+	void* get_handle () const noexcept;
+
+	void get_attributes (_BY_HANDLE_FILE_INFORMATION& att) const;
+
+protected:
+	mutable void* handle_;
 
 private:
 	const StringW path_;

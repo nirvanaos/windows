@@ -64,18 +64,11 @@ public:
 
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 
-	static Nirvana::DirItem::FileType type () noexcept
-	{
-		return Nirvana::DirItem::FileType::directory;
-	}
+	Nirvana::DirItem::FileType type () const noexcept;
 
 protected:
-	Dir (Windows::StringW&& path) :
-		Base (std::move (path))
-	{}
-
-	Dir ()
-	{}
+	Dir (Windows::StringW&& path);
+	Dir ();
 
 	Windows::StringW check_path (CosNaming::Name& n, size_t rem_cnt) const;
 	Windows::StringW create_path (CosNaming::Name& n, size_t rem_cnt, size_t& created_begin) const;
@@ -95,6 +88,9 @@ protected:
 	static void unlink (const Windows::WinWChar* path, uint32_t att);
 
 	Windows::StringW get_pattern () const;
+
+private:
+	mutable Nirvana::DirItem::FileType type_;
 };
 
 }
