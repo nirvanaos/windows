@@ -101,7 +101,7 @@ int start ()
   }
   _cexit ();
 
-  __scrt_uninitialize_crt (true, false);
+  __scrt_uninitialize_crt (false, false);
   
   Core::terminate0 ();
   terminate_windows ();
