@@ -65,8 +65,11 @@ StringW Dir_mnt::get_path (Name& n) const
 		WCHAR path [4] = WINWCS ("A:\\");
 		path [0] = drive_letter;
 		DWORD att = GetFileAttributesW (path);
-		if (0xFFFFFFFF == att)
-			throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+		if (0xFFFFFFFF == att) {
+			DWORD err = GetLastError ();
+			if (ERROR_PATH_NOT_FOUND == err)
+				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+		}
 		n.erase (n.begin ());
 		return StringW (path, 2);
 	} else

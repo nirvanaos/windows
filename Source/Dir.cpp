@@ -92,12 +92,14 @@ StringW Dir::check_path (Name& n, size_t rem_cnt) const
 		append_path (path, to_string (n.front ()));
 		DWORD att = GetFileAttributesW (path.c_str ());
 		NamingContext::NotFoundReason reason = NamingContext::NotFoundReason::not_object;
-		if (0xFFFFFFFF == att)
-			reason = NamingContext::NotFoundReason::missing_node;
-		else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
-			reason = NamingContext::NotFoundReason::not_context;
-		if (reason != NamingContext::NotFoundReason::not_object)
-			throw CosNaming::NamingContext::NotFound (reason, std::move (n));
+		if (0xFFFFFFFF == att) {
+			DWORD err = GetLastError ();
+			if (ERROR_PATH_NOT_FOUND == err)
+				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+			// Access denied - ignore here
+		} else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
+			throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
+
 		n.erase (n.begin ());
 	}
 	return path;
