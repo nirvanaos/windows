@@ -96,7 +96,10 @@ StringW Dir::check_path (Name& n, size_t rem_cnt) const
 			DWORD err = GetLastError ();
 			if (ERROR_PATH_NOT_FOUND == err)
 				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
-			// Access denied - ignore here
+			else if (n.size () == 1)
+				throw RuntimeError (error2errno (err));
+			// If n.size() > 1, then it is only beginning of a path, ignore access denied error.
+			// Maybe we have access to the final directory.
 		} else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
 			throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
 
@@ -105,59 +108,23 @@ StringW Dir::check_path (Name& n, size_t rem_cnt) const
 	return path;
 }
 
-StringW Dir::create_path (Name& n, size_t rem_cnt, size_t& created_begin) const
-{
-	StringW path = get_path (n);
-	size_t created_start = 0;
-	while (n.size () > rem_cnt) {
-		size_t len = path.size ();
-		append_path (path, to_string (n.front ()));
-		if (!CreateDirectoryW (path.c_str (), nullptr)) {
-			DWORD err = GetLastError ();
-			if (ERROR_ALREADY_EXISTS != err)
-				throw RuntimeError (error2errno (err));
-			if (!(GetFileAttributesW (path.c_str ()) & FILE_ATTRIBUTE_DIRECTORY))
-				throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
-		} else if (!created_start)
-			created_start = len;
-		n.erase (n.begin ());
-	}
-	created_begin = created_start;
-	return path;
-}
-
-void Dir::remove_created_path (Windows::StringW& path, size_t created_begin) const noexcept
-{
-	while (path.size () > created_begin) {
-		RemoveDirectoryW (path.c_str ());
-		path.resize (path.rfind ('\\'));
-	}
-}
-
 void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 {
 	// Create symbolic link
-	size_t created_begin;
-	StringW path = create_path (n, 1, created_begin);
+	StringW path = check_path (n, 1);
 
-	try {
-		append_path (path, to_string (std::move (n.back ())));
+	append_path (path, to_string (std::move (n.back ())));
 
-		if (flags & FLAG_REBIND) {
-			flags &= ~FLAG_REBIND;
+	if (flags & FLAG_REBIND) {
+		flags &= ~FLAG_REBIND;
 
-			DWORD att = GetFileAttributesW (path.c_str ());
-			if (0xFFFFFFFF != att)
-				unlink (path.c_str (), att);
-		}
-
-		if (!CreateSymbolicLinkW (path.c_str (), FileSystem::id_to_path (target), flags))
-			throw RuntimeError (error2errno (GetLastError ()));
-
-	} catch (...) {
-		remove_created_path (path, created_begin);
-		throw;
+		DWORD att = GetFileAttributesW (path.c_str ());
+		if (0xFFFFFFFF != att)
+			unlink (path.c_str (), att);
 	}
+
+	if (!CreateSymbolicLinkW (path.c_str (), FileSystem::id_to_path (target), flags))
+		throw RuntimeError (error2errno (GetLastError ()));
 }
 
 void Dir::unlink (const WinWChar* path, uint32_t att)
@@ -185,26 +152,19 @@ void Dir::unlink (Name& n) const
 
 DirItemId Dir::create_dir (Name& n) const
 {
-	size_t created_begin;
-	StringW path = create_path (n, 1, created_begin);
+	StringW path = check_path (n, 1);
 
-	try {
-		append_path (path, to_string (std::move (n.back ())));
+	append_path (path, to_string (std::move (n.back ())));
 
-		if (!CreateDirectoryW (path.c_str (), nullptr)) {
-			DWORD err = GetLastError ();
-			if (ERROR_ALREADY_EXISTS == err)
-				throw NamingContext::AlreadyBound ();
-			else
-				throw RuntimeError (error2errno (err));
-		}
-
-		return FileSystem::path_to_id (path.c_str (), Nirvana::DirItem::FileType::directory);
-
-	} catch (...) {
-		remove_created_path (path, created_begin);
-		throw;
+	if (!CreateDirectoryW (path.c_str (), nullptr)) {
+		DWORD err = GetLastError ();
+		if (ERROR_ALREADY_EXISTS == err)
+			throw NamingContext::AlreadyBound ();
+		else
+			throw RuntimeError (error2errno (err));
 	}
+
+	return FileSystem::path_to_id (path.c_str (), Nirvana::DirItem::FileType::directory);
 }
 
 DirItemId Dir::get_new_file_id (Name& n) const

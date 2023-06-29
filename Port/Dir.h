@@ -71,15 +71,12 @@ protected:
 	Dir ();
 
 	Windows::StringW check_path (CosNaming::Name& n, size_t rem_cnt) const;
-	Windows::StringW create_path (CosNaming::Name& n, size_t rem_cnt, size_t& created_begin) const;
 
 	static Windows::StringW to_wstring (CosNaming::Istring name);
 	
 	virtual Windows::StringW get_path (CosNaming::Name& n) const;
 
 	static void append_path (Windows::StringW& path, CosNaming::Istring name);
-
-	void remove_created_path (Windows::StringW& path, size_t created_begin) const noexcept;
 
 	static const unsigned FLAG_REBIND = 0x80000000;
 	static const unsigned FLAG_DIRECTORY = 0x00000001;
