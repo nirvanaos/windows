@@ -32,8 +32,8 @@ namespace Core {
 namespace Windows {
 
 DirItem::DirItem (StringW&& path) :
-	path_ (std::move (path)),
-	handle_ (INVALID_HANDLE_VALUE)
+	handle_ (INVALID_HANDLE_VALUE),
+	path_ (std::move (path))
 {}
 
 DirItem::DirItem () :
