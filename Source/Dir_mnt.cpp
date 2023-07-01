@@ -70,10 +70,6 @@ StringW Dir_mnt::get_path (Name& n) const
 			DWORD err = GetLastError ();
 			if (ERROR_PATH_NOT_FOUND == err)
 				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
-			else if (n.size () == 1)
-				throw RuntimeError (error2errno (err));
-			// If n.size() > 1, then it is only beginning of a path, ignore access denied error.
-			// Maybe we have access to the final directory.
 		}
 		n.erase (n.begin ());
 		return StringW (path, 2);

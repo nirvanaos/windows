@@ -124,9 +124,33 @@ int error2errno (unsigned err, int default_errno)
   return default_errno;
 }
 
+NIRVANA_NORETURN void throw_win_error (unsigned err)
+{
+  switch (err) {
+
+  case ERROR_ACCESS_DENIED:
+    throw CORBA::NO_PERMISSION ();
+
+  case ERROR_NOT_ENOUGH_MEMORY:
+    throw CORBA::NO_MEMORY ();
+
+  case ERROR_INVALID_PARAMETER:
+    throw CORBA::BAD_PARAM ();
+
+  case ERROR_CALL_NOT_IMPLEMENTED:
+    throw CORBA::NO_IMPLEMENT ();
+
+  case ERROR_TIMEOUT:
+    throw CORBA::TIMEOUT ();
+
+  default:
+    RuntimeError (error2errno (err));
+  }
+}
+
 NIRVANA_NORETURN void throw_last_error ()
 {
-  throw RuntimeError (error2errno (GetLastError ()));
+  throw_win_error (GetLastError ());
 }
 
 }

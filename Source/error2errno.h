@@ -41,6 +41,7 @@ namespace Windows {
 /// \returns             POSIX error code.
 int error2errno (unsigned err, int default_errno = EINVAL);
 
+NIRVANA_NORETURN void throw_win_error (unsigned err);
 NIRVANA_NORETURN void throw_last_error ();
 
 }

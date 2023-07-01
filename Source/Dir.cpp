@@ -96,10 +96,6 @@ StringW Dir::check_path (Name& n, size_t rem_cnt) const
 			DWORD err = GetLastError ();
 			if (ERROR_PATH_NOT_FOUND == err)
 				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
-			else if (n.size () == 1)
-				throw RuntimeError (error2errno (err));
-			// If n.size() > 1, then it is only beginning of a path, ignore access denied error.
-			// Maybe we have access to the final directory.
 		} else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
 			throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
 
@@ -124,7 +120,7 @@ void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 	}
 
 	if (!CreateSymbolicLinkW (path.c_str (), FileSystem::id_to_path (target), flags))
-		throw RuntimeError (error2errno (GetLastError ()));
+		throw_last_error ();
 }
 
 void Dir::unlink (const WinWChar* path, uint32_t att)
@@ -144,8 +140,13 @@ void Dir::unlink (Name& n) const
 	append_path (path, to_string (n.back ()));
 
 	DWORD att = GetFileAttributesW (path.c_str ());
-	if (0xFFFFFFFF == att)
-		throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+	if (0xFFFFFFFF == att) {
+		DWORD err = GetLastError ();
+		if (ERROR_FILE_NOT_FOUND == err || ERROR_PATH_NOT_FOUND == err)
+			throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+		else
+			throw_win_error (err);
+	}
 
 	unlink (path.c_str (), att);
 }
@@ -161,7 +162,7 @@ DirItemId Dir::create_dir (Name& n) const
 		if (ERROR_ALREADY_EXISTS == err)
 			throw NamingContext::AlreadyBound ();
 		else
-			throw RuntimeError (error2errno (err));
+			throw_win_error (err);
 	}
 
 	return FileSystem::path_to_id (path.c_str (), Nirvana::DirItem::FileType::directory);

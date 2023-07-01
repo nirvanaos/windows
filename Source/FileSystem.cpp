@@ -106,33 +106,53 @@ DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::DirItem::FileTy
 {
 	DirItemId id;
 
-	// Get final path name
-	HANDLE h = CreateFileW (path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-		FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-	if (INVALID_HANDLE_VALUE == h)
-		throw_last_error ();
+	assert (path [0] && path [1]);
+	if (!path [2]) {
 
-	try {
-		DWORD cc = GetFinalPathNameByHandleW (h, nullptr, 0, 0);
-		if (!cc)
+		// Drive
+		assert ('A' <= path [0] && path [0] <= 'Z');
+		assert (':' == path [1]);
+		if (Nirvana::DirItem::FileType::unknown == type)
+			type = Nirvana::DirItem::FileType::directory;
+		assert (type == Nirvana::DirItem::FileType::directory);
+		id.resize (4 * sizeof (WinWChar));
+		WinWChar* dst = (WinWChar*)id.data () + 1;
+		dst [0] = path [0];
+		dst [1] = path [1];
+		dst [2] = 0;
+
+	} else {
+
+		// Get final path name
+		HANDLE h = CreateFileW (path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+			FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+		if (INVALID_HANDLE_VALUE == h)
 			throw_last_error ();
-		id.resize ((cc + 1) * sizeof (WinWChar));
-		verify (GetFinalPathNameByHandleW (h, (WinWChar*) (id.data () + 2), cc, 0));
 
-		if (Nirvana::DirItem::FileType::unknown == type) {
-			BY_HANDLE_FILE_INFORMATION bhfi;
-			if (!GetFileInformationByHandle (h, &bhfi))
+		try {
+			DWORD cc = GetFinalPathNameByHandleW (h, nullptr, 0, 0);
+			if (!cc)
 				throw_last_error ();
-			if (bhfi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-				type = Nirvana::DirItem::FileType::directory;
-			else
-				type = Nirvana::DirItem::FileType::regular;
+			id.resize ((cc + 1) * sizeof (WinWChar));
+			verify (GetFinalPathNameByHandleW (h, (WinWChar*)(id.data () + 2), cc, 0));
+
+			if (Nirvana::DirItem::FileType::unknown == type) {
+				BY_HANDLE_FILE_INFORMATION bhfi;
+				if (!GetFileInformationByHandle (h, &bhfi))
+					throw_last_error ();
+				if (bhfi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+					type = Nirvana::DirItem::FileType::directory;
+				else
+					type = Nirvana::DirItem::FileType::regular;
+			}
+		} catch (...) {
+			CloseHandle (h);
+			throw;
 		}
-	} catch (...) {
 		CloseHandle (h);
-		throw;
 	}
-	CloseHandle (h);
+
+	// Save file type as first WinWChar
 	*((WinWChar*)id.data ()) = (WinWChar)type;
 	return id;
 }

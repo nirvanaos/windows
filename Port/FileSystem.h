@@ -120,7 +120,6 @@ private:
 		return Windows::StringW (id_to_path (id), path_len (id));
 	}
 
-
 	enum class SpecialDir
 	{
 		var,
