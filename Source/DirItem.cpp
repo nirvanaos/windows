@@ -31,13 +31,24 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+const DirItem::FileSystemTraits DirItem::file_systems_ [FS_UNKNOWN] = {
+	{ WINWCS ("FAT"), { 10 * TimeBase::MILLISECOND, 1 * TimeBase::DAY, 2 * TimeBase::SECOND } },
+	{ WINWCS ("NTFS"), { 10 * TimeBase::MILLISECOND, 1 * TimeBase::HOUR, 2 * TimeBase::SECOND } }
+};
+
 DirItem::DirItem (StringW&& path) :
+	path_ (std::move (path)),
 	handle_ (INVALID_HANDLE_VALUE),
-	path_ (std::move (path))
+	file_system_type_ (FS_UNKNOWN),
+	file_system_flags_ (0),
+	max_component_len_ (0)
 {}
 
 DirItem::DirItem () :
-	handle_ (INVALID_HANDLE_VALUE)
+	handle_ (INVALID_HANDLE_VALUE),
+	file_system_type_ (FS_UNKNOWN),
+	file_system_flags_ (0),
+	max_component_len_ (0)
 {}
 
 DirItem::~DirItem ()
@@ -51,6 +62,20 @@ void* DirItem::get_handle () const noexcept
 	if (INVALID_HANDLE_VALUE == handle_) {
 		handle_ = CreateFileW (path ().c_str (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
 			FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+
+		if (INVALID_HANDLE_VALUE != handle_) {
+			WinWChar buf [MAX_PATH + 1];
+			if (GetVolumeInformationByHandleW (handle_, nullptr, 0, nullptr, &max_component_len_, &file_system_flags_,
+				buf, (DWORD)std::size (buf))
+				) {
+				for (const FileSystemTraits* pfs = file_systems_; pfs != std::end (file_systems_); ++pfs) {
+					if (!wcscmp (pfs->name, buf)) {
+						file_system_type_ = (FileSystemType)(pfs - file_systems_);
+						break;
+					}
+				}
+			}
+		}
 	}
 	return handle_;
 }
@@ -90,6 +115,16 @@ void DirItem::get_file_times (FileTimes& times) const
 	ui.LowPart = att.ftLastWriteTime.dwLowDateTime;
 	ui.HighPart = att.ftLastWriteTime.dwHighDateTime;
 	times.last_write_time (TimeBase::UtcT (ui.QuadPart + WIN_TIME_OFFSET_SEC * TimeBase::SECOND, 0, 0, 0));
+
+	if (file_system_type_ < FS_UNKNOWN) {
+		const FileSystemTraits& fst = file_systems_ [file_system_type_];
+		times.creation_time ().inacchi ((uint32_t)fst.time_inaccuracy.creation);
+		times.creation_time ().inacclo ((uint16_t)(fst.time_inaccuracy.creation >> 32));
+		times.last_access_time ().inacchi ((uint32_t)fst.time_inaccuracy.last_access);
+		times.last_access_time ().inacclo ((uint16_t)(fst.time_inaccuracy.last_access >> 32));
+		times.last_write_time ().inacchi ((uint32_t)fst.time_inaccuracy.last_write);
+		times.last_write_time ().inacclo ((uint16_t)(fst.time_inaccuracy.last_write >> 32));
+	}
 }
 
 }

@@ -70,11 +70,39 @@ protected:
 
 	void get_attributes (_BY_HANDLE_FILE_INFORMATION& att) const;
 
-protected:
-	mutable void* handle_;
+	enum FileSystemType
+	{
+		FS_FAT,
+		FS_NTFS,
+		FS_UNKNOWN
+	};
+
+	FileSystemType file_system_type () const noexcept
+	{
+		return file_system_type_;
+	}
 
 private:
 	const StringW path_;
+	mutable void* handle_;
+	mutable FileSystemType file_system_type_;
+	mutable unsigned long file_system_flags_;
+	mutable unsigned long max_component_len_;
+
+	typedef uint64_t TimeInaccuracy;
+
+	struct FileSystemTimeInaccuracy
+	{
+		TimeInaccuracy creation, last_access, last_write;
+	};
+
+	struct FileSystemTraits
+	{
+		const WinWChar* name;
+		FileSystemTimeInaccuracy time_inaccuracy;
+	};
+
+	static const FileSystemTraits file_systems_ [FS_UNKNOWN];
 };
 
 }
