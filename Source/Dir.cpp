@@ -41,24 +41,21 @@ namespace Port {
 Dir::Dir (StringW&& path) :
 	Base (std::move (path)),
 	type_ (Nirvana::DirItem::FileType::none)
-{}
+{
+	HANDLE h = get_handle ();
+	if (INVALID_HANDLE_VALUE == h) {
+		DWORD err = GetLastError ();
+		if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
+			type_ = Nirvana::DirItem::FileType::not_found;
+		else
+			throw_win_error (err);
+	} else
+		type_ = Nirvana::DirItem::FileType::directory;
+}
 
 Dir::Dir () :
 	type_ (Nirvana::DirItem::FileType::directory)
 {}
-
-Nirvana::DirItem::FileType Dir::type () const noexcept
-{
-	if (Nirvana::DirItem::FileType::none == type_) {
-		HANDLE h = get_handle ();
-		if (INVALID_HANDLE_VALUE == h)
-			type_ = Nirvana::DirItem::FileType::not_found;
-		else
-			type_ = Nirvana::DirItem::FileType::directory;
-	}
-
-	return type_;
-}
 
 StringW Dir::get_path (CosNaming::Name& n) const
 {
