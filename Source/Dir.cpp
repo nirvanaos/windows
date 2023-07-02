@@ -42,13 +42,14 @@ Dir::Dir (StringW&& path) :
 	Base (std::move (path)),
 	type_ (Nirvana::DirItem::FileType::none)
 {
+	// Do not throw user exceptions in file system object constructors.
 	HANDLE h = get_handle ();
 	if (INVALID_HANDLE_VALUE == h) {
 		DWORD err = GetLastError ();
 		if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
 			type_ = Nirvana::DirItem::FileType::not_found;
 		else
-			throw RuntimeError (error2errno (GetLastError ()));
+			throw_win_error_sys (err); // System exceptions only.
 	} else
 		type_ = Nirvana::DirItem::FileType::directory;
 }
