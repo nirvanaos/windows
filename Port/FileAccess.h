@@ -170,7 +170,7 @@ protected:
 	/// \param [out] size File size.
 	/// \param [out] block_size Block (sector) size. 
 	/// \throw RuntimeError.
-	FileAccessDirect (const File& file, int flags, Pos& size, Size& block_size);
+	FileAccessDirect (const File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size);
 
 	unsigned access_mask () const noexcept
 	{

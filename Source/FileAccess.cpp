@@ -86,7 +86,7 @@ using namespace Windows;
 
 namespace Port {
 
-FileAccessDirect::FileAccessDirect (const File& file, int flags, Pos& size, Size& block_size)
+FileAccessDirect::FileAccessDirect (const File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size)
 {
 	uint32_t creation;
 	if (flags & O_CREAT) {
