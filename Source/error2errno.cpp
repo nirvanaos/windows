@@ -124,7 +124,7 @@ int error2errno (unsigned err, int default_errno)
   return default_errno;
 }
 
-NIRVANA_NORETURN void throw_win_error (unsigned err)
+NIRVANA_NORETURN void throw_win_error_sys (unsigned err)
 {
   switch (err) {
 
@@ -144,13 +144,13 @@ NIRVANA_NORETURN void throw_win_error (unsigned err)
     throw CORBA::TIMEOUT ();
 
   default:
-    RuntimeError (error2errno (err));
+    throw CORBA::INTERNAL (make_minor_errno (error2errno (err)));
   }
 }
 
 NIRVANA_NORETURN void throw_last_error ()
 {
-  throw_win_error (GetLastError ());
+  throw RuntimeError (error2errno (GetLastError ()));
 }
 
 }

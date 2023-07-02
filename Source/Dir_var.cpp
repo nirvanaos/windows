@@ -47,7 +47,7 @@ StringW Dir_var::get_path (Name& n) const
 		WinWChar buf [MAX_PATH + 1];
 		DWORD cc = GetTempPathW ((DWORD)std::size (buf), buf);
 		if (!cc)
-			throw_last_error ();
+			throw_win_error_sys (GetLastError ());
 
 		return StringW (buf, cc - 1);
 	} else
@@ -57,21 +57,21 @@ StringW Dir_var::get_path (Name& n) const
 void Dir_var::unlink (Name& n) const
 {
 	if (n.size () == 1 && is_tmp (n.front ()))
-		throw RuntimeError (EACCES);
+		throw CORBA::NO_PERMISSION ();
 	Base::unlink (n);
 }
 
 void Dir_var::create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const
 {
 	if (n.size () == 1 && is_tmp (n.front ()))
-		throw RuntimeError (EACCES);
+		throw CORBA::INTERNAL (make_minor_errno (EEXIST));
 	Base::create_link (n, target, flags);
 }
 
 DirItemId Dir_var::create_dir (CosNaming::Name& n) const
 {
 	if (n.size () == 1 && is_tmp (n.front ()))
-		throw RuntimeError (EACCES);
+		throw CORBA::INTERNAL (make_minor_errno (EEXIST));
 	return Base::create_dir (n);
 }
 

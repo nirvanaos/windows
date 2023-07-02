@@ -48,7 +48,7 @@ Dir::Dir (StringW&& path) :
 		if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
 			type_ = Nirvana::DirItem::FileType::not_found;
 		else
-			throw_win_error (err);
+			throw RuntimeError (error2errno (GetLastError ()));
 	} else
 		type_ = Nirvana::DirItem::FileType::directory;
 }
@@ -117,7 +117,7 @@ void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 	}
 
 	if (!CreateSymbolicLinkW (path.c_str (), FileSystem::id_to_path (target), flags))
-		throw_last_error ();
+		throw_win_error_sys (GetLastError ());
 }
 
 void Dir::unlink (const WinWChar* path, uint32_t att)
@@ -128,7 +128,7 @@ void Dir::unlink (const WinWChar* path, uint32_t att)
 	else
 		ok = DeleteFileW (path);
 	if (!ok)
-		throw_last_error (); 
+		throw_win_error_sys (GetLastError ());
 }
 
 void Dir::unlink (Name& n) const
@@ -142,7 +142,7 @@ void Dir::unlink (Name& n) const
 		if (ERROR_FILE_NOT_FOUND == err || ERROR_PATH_NOT_FOUND == err)
 			throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
 		else
-			throw_win_error (err);
+			throw_win_error_sys (err);
 	}
 
 	unlink (path.c_str (), att);
@@ -159,7 +159,7 @@ DirItemId Dir::create_dir (Name& n) const
 		if (ERROR_ALREADY_EXISTS == err)
 			throw NamingContext::AlreadyBound ();
 		else
-			throw_win_error (err);
+			throw_win_error_sys (err);
 	}
 
 	return FileSystem::path_to_id (path.c_str (), Nirvana::DirItem::FileType::directory);

@@ -38,11 +38,7 @@ DirIterator::DirIterator (const WinWChar* pattern) :
 	handle_ = FindFirstFileExW (pattern, FindExInfoBasic, &data_, FindExSearchNameMatch, nullptr, 0);
 	if (INVALID_HANDLE_VALUE == handle_) {
 		// We can not throw user exception by the sppecification.
-		DWORD err = GetLastError ();
-		if (ERROR_ACCESS_DENIED == err)
-			throw CORBA::NO_PERMISSION ();
-		else
-			throw CORBA::UNKNOWN ();
+		throw_win_error_sys (GetLastError ());
 	}
 	while (false_item ()) {
 		if (!move_next ())

@@ -80,21 +80,21 @@ StringW Dir_mnt::get_path (Name& n) const
 void Dir_mnt::unlink (Name& n) const
 {
 	if (n.size () <= 1)
-		throw RuntimeError (EACCES);
+		throw CORBA::NO_PERMISSION ();
 	return Base::unlink (n);
 }
 
 void Dir_mnt::create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const
 {
 	if (n.size () <= 1)
-		throw RuntimeError (EACCES);
+		throw CORBA::NO_PERMISSION ();
 	return Base::create_link (n, target, flags);
 }
 
 DirItemId Dir_mnt::create_dir (CosNaming::Name& n) const
 {
 	if (n.size () <= 1)
-		throw RuntimeError (EACCES);
+		throw CORBA::NO_PERMISSION ();
 	return Base::create_dir (n);
 }
 
