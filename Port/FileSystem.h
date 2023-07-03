@@ -47,9 +47,9 @@ public:
 	static void etherealize (const DirItemId& id, CORBA::Object::_ptr_type servant)
 	{}
 
-	static Nirvana::DirItem::FileType get_item_type (const DirItemId& id) noexcept
+	static Nirvana::FileType get_item_type (const DirItemId& id) noexcept
 	{
-		return (Nirvana::DirItem::FileType)*(const Windows::WinWChar*)id.data ();
+		return (Nirvana::FileType)*(const Windows::WinWChar*)id.data ();
 	}
 
 	static CosNaming::Name get_name_from_path (const IDL::String& path)
@@ -95,8 +95,8 @@ public:
 
 	// For internal use
 	
-	static DirItemId path_to_id (const Windows::WinWChar* path, Nirvana::DirItem::FileType type =
-		Nirvana::DirItem::FileType::unknown);
+	static DirItemId path_to_id (const Windows::WinWChar* path, Nirvana::FileType type =
+		Nirvana::FileType::unknown);
 
 	static const Windows::WinWChar* id_to_path (const DirItemId& id) noexcept
 	{
@@ -137,7 +137,7 @@ private:
 
 	static SpecialDir is_special_dir (const DirItemId& id) noexcept
 	{
-		if (id.size () == 4 && get_item_type (id) == Nirvana::DirItem::FileType::directory)
+		if (id.size () == 4 && get_item_type (id) == Nirvana::FileType::directory)
 			return (SpecialDir)((const Windows::WinWChar*)id.data ()) [1];
 		else
 			return SpecialDir::END;

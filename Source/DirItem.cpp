@@ -96,34 +96,37 @@ void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att) const
 		throw_last_error ();
 }
 
-void DirItem::get_file_times (FileTimes& times) const
+inline
+TimeBase::TimeT DirItem::make_time (const _FILETIME& ft) noexcept
+{
+	return make64 (ft.dwLowDateTime, ft.dwHighDateTime) + WIN_TIME_OFFSET_SEC * TimeBase::SECOND;
+}
+
+inline
+void DirItem::set_inacc (TimeBase::UtcT& t, uint64_t inac) noexcept
+{
+	t.inacclo ((uint32_t)inac);
+	t.inacchi ((uint16_t)(inac / 0x100000000));
+}
+
+void DirItem::stat (FileStat& st) const
 {
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
 
-	// TODO: Calculate time inacuracy based on the underlying file fystem type.
-	ULARGE_INTEGER ui;
+	st.ino (make64 (att.nFileIndexLow, att.nFileIndexHigh));
+	st.dev (att.dwVolumeSerialNumber);
+	st.size (make64 (att.nFileSizeLow, att.nFileSizeHigh));
 
-	ui.LowPart = att.ftCreationTime.dwLowDateTime;
-	ui.HighPart = att.ftCreationTime.dwHighDateTime;
-	times.creation_time (TimeBase::UtcT (ui.QuadPart + WIN_TIME_OFFSET_SEC * TimeBase::SECOND, 0, 0, 0));
-	
-	ui.LowPart = att.ftLastAccessTime.dwLowDateTime;
-	ui.HighPart = att.ftLastAccessTime.dwHighDateTime;
-	times.last_access_time (TimeBase::UtcT (ui.QuadPart + WIN_TIME_OFFSET_SEC * TimeBase::SECOND, 0, 0, 0));
-
-	ui.LowPart = att.ftLastWriteTime.dwLowDateTime;
-	ui.HighPart = att.ftLastWriteTime.dwHighDateTime;
-	times.last_write_time (TimeBase::UtcT (ui.QuadPart + WIN_TIME_OFFSET_SEC * TimeBase::SECOND, 0, 0, 0));
+	st.creation_time ().time (make_time (att.ftCreationTime));
+	st.last_access_time ().time (make_time (att.ftLastAccessTime));
+	st.last_write_time ().time (make_time (att.ftLastWriteTime));
 
 	if (file_system_type_ < FS_UNKNOWN) {
 		const FileSystemTraits& fst = file_systems_ [file_system_type_];
-		times.creation_time ().inacchi ((uint32_t)fst.time_inaccuracy.creation);
-		times.creation_time ().inacclo ((uint16_t)(fst.time_inaccuracy.creation >> 32));
-		times.last_access_time ().inacchi ((uint32_t)fst.time_inaccuracy.last_access);
-		times.last_access_time ().inacclo ((uint16_t)(fst.time_inaccuracy.last_access >> 32));
-		times.last_write_time ().inacchi ((uint32_t)fst.time_inaccuracy.last_write);
-		times.last_write_time ().inacclo ((uint16_t)(fst.time_inaccuracy.last_write >> 32));
+		set_inacc (st.creation_time (), fst.time_inaccuracy.creation);
+		set_inacc (st.last_access_time (), fst.time_inaccuracy.last_access);
+		set_inacc (st.last_write_time (), fst.time_inaccuracy.last_write);
 	}
 }
 

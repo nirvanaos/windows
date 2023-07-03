@@ -31,6 +31,7 @@
 #include "WinWChar.h"
 
 struct _BY_HANDLE_FILE_INFORMATION;
+struct _FILETIME;
 
 namespace Nirvana {
 namespace Core {
@@ -40,17 +41,7 @@ namespace Windows {
 class DirItem
 {
 public:
-	void get_file_times (FileTimes& times) const;
-
-	uint16_t permissions () const
-	{
-		return 0; // TODO: Implement
-	}
-
-	void permissions (uint16_t perms)
-	{
-		// TODO: Implement
-	}
+	void stat (FileStat& st) const;
 
 	const StringW& path () const noexcept
 	{
@@ -81,6 +72,15 @@ protected:
 	{
 		return file_system_type_;
 	}
+
+	static uint64_t make64 (uint32_t lo, uint32_t hi) noexcept
+	{
+		return (uint64_t)hi * 0x100000000ui64 + lo;
+	}
+
+	static TimeBase::TimeT make_time (const _FILETIME& ft) noexcept;
+
+	static void set_inacc (TimeBase::UtcT& t, uint64_t inac) noexcept;
 
 private:
 	const StringW path_;

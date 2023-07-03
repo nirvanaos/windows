@@ -40,22 +40,22 @@ namespace Port {
 
 Dir::Dir (StringW&& path) :
 	Base (std::move (path)),
-	type_ (Nirvana::DirItem::FileType::none)
+	type_ (Nirvana::FileType::none)
 {
 	// Do not throw user exceptions in file system object constructors.
 	HANDLE h = get_handle ();
 	if (INVALID_HANDLE_VALUE == h) {
 		DWORD err = GetLastError ();
 		if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
-			type_ = Nirvana::DirItem::FileType::not_found;
+			type_ = Nirvana::FileType::not_found;
 		else
 			throw_win_error_sys (err); // System exceptions only.
 	} else
-		type_ = Nirvana::DirItem::FileType::directory;
+		type_ = Nirvana::FileType::directory;
 }
 
 Dir::Dir () :
-	type_ (Nirvana::DirItem::FileType::directory)
+	type_ (Nirvana::FileType::directory)
 {}
 
 StringW Dir::get_path (CosNaming::Name& n) const
@@ -163,13 +163,13 @@ DirItemId Dir::create_dir (Name& n) const
 			throw_win_error_sys (err);
 	}
 
-	return FileSystem::path_to_id (path.c_str (), Nirvana::DirItem::FileType::directory);
+	return FileSystem::path_to_id (path.c_str (), Nirvana::FileType::directory);
 }
 
 DirItemId Dir::get_new_file_id (Name& n) const
 {
 	// Create id for parent path
-	DirItemId id = FileSystem::path_to_id (check_path (n, 1).c_str (), Nirvana::DirItem::FileType::regular);
+	DirItemId id = FileSystem::path_to_id (check_path (n, 1).c_str (), Nirvana::FileType::regular);
 
 	// Append file name
 	StringW name = to_wstring (to_string (n.back ()));
@@ -187,7 +187,7 @@ DirItemId Dir::get_new_file_id (Name& n) const
 
 StringW Dir::get_pattern () const
 {
-	return path () + WINWCS ("\\*.*");
+	return path () + WINWCS ("\\*");
 }
 
 std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const

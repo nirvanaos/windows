@@ -46,28 +46,28 @@ uint64_t File::size () const
 	return ui.QuadPart;
 }
 
-Nirvana::DirItem::FileType File::type () const noexcept
+Nirvana::FileType File::type () const noexcept
 {
-	if (Nirvana::DirItem::FileType::none == type_) {
+	if (Nirvana::FileType::none == type_) {
 		HANDLE h = get_handle ();
 		if (INVALID_HANDLE_VALUE == h)
-			type_ = Nirvana::DirItem::FileType::not_found;
+			type_ = Nirvana::FileType::not_found;
 		else {
 			switch (GetFileType (h)) {
 			case FILE_TYPE_CHAR:
-				type_ = Nirvana::DirItem::FileType::character;
+				type_ = Nirvana::FileType::character;
 				break;
 
 			case FILE_TYPE_DISK:
-				type_ = Nirvana::DirItem::FileType::regular;
+				type_ = Nirvana::FileType::regular;
 				break;
 
 			case FILE_TYPE_PIPE:
-				type_ = Nirvana::DirItem::FileType::fifo;
+				type_ = Nirvana::FileType::fifo;
 				break;
 
 			default:
-				type_ = Nirvana::DirItem::FileType::unknown;
+				type_ = Nirvana::FileType::unknown;
 			}
 		}
 	}
