@@ -60,13 +60,13 @@ DirItem::~DirItem ()
 void* DirItem::get_handle () const noexcept
 {
 	if (INVALID_HANDLE_VALUE == handle_) {
-		handle_ = CreateFileW (path ().c_str (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-			FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+		handle_ = CreateFileW (path ().c_str (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
 		if (INVALID_HANDLE_VALUE != handle_) {
 			WinWChar buf [MAX_PATH + 1];
-			if (GetVolumeInformationByHandleW (handle_, nullptr, 0, nullptr, &max_component_len_, &file_system_flags_,
-				buf, (DWORD)std::size (buf))
+			if (GetVolumeInformationByHandleW (handle_, nullptr, 0, nullptr, &max_component_len_,
+				&file_system_flags_, buf, (DWORD)std::size (buf))
 				) {
 				for (const FileSystemTraits* pfs = file_systems_; pfs != std::end (file_systems_); ++pfs) {
 					if (!wcscmp (pfs->name, buf)) {

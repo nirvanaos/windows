@@ -45,15 +45,6 @@ bool FileAccess::open (const Port::File& file, uint32_t access, uint32_t share_m
 	return true;
 }
 
-void FileAccess::close () noexcept
-{
-	if (INVALID_HANDLE_VALUE != handle_) {
-		CloseHandle (handle_);
-		handle_ = INVALID_HANDLE_VALUE;
-	}
-
-}
-
 FileAccess::~FileAccess ()
 {
 	if (INVALID_HANDLE_VALUE != handle_)
