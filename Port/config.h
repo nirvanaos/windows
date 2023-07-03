@@ -139,4 +139,6 @@ const bool BUILD_NO_SYS_DOMAIN = HOST_PLATFORM != PLATFORM;
 }
 }
 
+#define DISABLE_LEGACY_SUPPORT() 0
+
 #endif

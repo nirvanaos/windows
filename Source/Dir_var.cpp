@@ -27,6 +27,7 @@
 #include "win32.h"
 #include "error2errno.h"
 #include "DirIteratorEx.h"
+#include <Port/FileSystem.h>
 
 using namespace CosNaming;
 
@@ -43,13 +44,9 @@ StringW Dir_var::get_path (Name& n) const
 {
 	assert (!n.empty ());
 	if (is_tmp (n.front ())) {
+		StringW path = Port::FileSystem::get_temp_path ();
 		n.erase (n.begin ());
-		WinWChar buf [MAX_PATH + 1];
-		DWORD cc = GetTempPathW ((DWORD)std::size (buf), buf);
-		if (!cc)
-			throw_win_error_sys (GetLastError ());
-
-		return StringW (buf, cc - 1);
+		return path;
 	} else
 		return Base::path ();
 }

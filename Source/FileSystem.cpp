@@ -43,6 +43,8 @@ const FileSystem::Root FileSystem::roots_ [] = {
 	{ "etc", get_app_data_dir },
 	{ "home", get_home },
 	{ "mnt", get_mnt },
+	{ "sbin", get_sbin },
+	{ "tmp", get_tmp },
 	{ "var", get_var }
 };
 
@@ -54,52 +56,6 @@ Roots FileSystem::get_roots ()
 		roots.push_back ({ p->dir, p->factory });
 	}
 	return roots;
-}
-
-DirItemId FileSystem::get_app_data_dir (const IDL::String& name, bool& may_cache)
-{
-	if (!name.size () || name.size () > 3)
-		throw CORBA::BAD_PARAM ();
-
-	WinWChar wname [4] = { 0 };
-	std::copy (name.begin (), name.end (), wname);
-
-	WinWChar path [MAX_PATH + 1];
-	get_app_data_folder (path, std::size (path), wname, false);
-
-	may_cache = true;
-	return path_to_id (path, Nirvana::DirItem::FileType::directory);
-}
-
-StringW FileSystem::get_app_data_dir (const WinWChar* name)
-{
-	WinWChar path [MAX_PATH + 1];
-	size_t cc = get_app_data_folder (path, std::size (path), name, false);
-	return StringW (path, cc);
-}
-
-DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)
-{
-	may_cache = true;
-	return make_special_id (SpecialDir::var);
-}
-
-DirItemId FileSystem::get_mnt (const IDL::String&, bool& may_cache)
-{
-	may_cache = true;
-	return make_special_id (SpecialDir::mnt);
-}
-
-DirItemId FileSystem::get_home (const IDL::String&, bool& may_cache)
-{
-	may_cache = false;
-
-	WinWChar path [MAX_PATH];
-	HRESULT result = SHGetFolderPathW (NULL, CSIDL_PROFILE, NULL, 0, path);
-	if (SUCCEEDED (result))
-		return path_to_id (path, Nirvana::DirItem::FileType::directory);
-	else
-		throw CORBA::UNKNOWN ();
 }
 
 DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::DirItem::FileType type)
@@ -182,6 +138,84 @@ PortableServer::ServantBase::_ref_type FileSystem::incarnate (const DirItemId& i
 
 	} else
 		return CORBA::make_reference <Nirvana::Core::File> (make_path (id));
+}
+
+DirItemId FileSystem::get_app_data_dir (const IDL::String& name, bool& may_cache)
+{
+	if (!name.size () || name.size () > 3)
+		throw CORBA::BAD_PARAM ();
+
+	WinWChar wname [4] = { 0 };
+	std::copy (name.begin (), name.end (), wname);
+
+	WinWChar path [MAX_PATH + 1];
+	get_app_data_folder (path, std::size (path), wname, false);
+
+	may_cache = true;
+	return path_to_id (path, Nirvana::DirItem::FileType::directory);
+}
+
+StringW FileSystem::get_app_data_dir (const WinWChar* name)
+{
+	WinWChar path [MAX_PATH + 1];
+	size_t cc = get_app_data_folder (path, std::size (path), name, false);
+	return StringW (path, cc);
+}
+
+DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)
+{
+	may_cache = true;
+	return make_special_id (SpecialDir::var);
+}
+
+DirItemId FileSystem::get_mnt (const IDL::String&, bool& may_cache)
+{
+	may_cache = true;
+	return make_special_id (SpecialDir::mnt);
+}
+
+DirItemId FileSystem::get_home (const IDL::String&, bool& may_cache)
+{
+	may_cache = false;
+
+	WinWChar path [MAX_PATH];
+	HRESULT result = SHGetFolderPathW (NULL, CSIDL_PROFILE, NULL, 0, path);
+	if (SUCCEEDED (result))
+		return path_to_id (path, Nirvana::DirItem::FileType::directory);
+	else
+		throw CORBA::UNKNOWN ();
+}
+
+StringW FileSystem::get_temp_path ()
+{
+	WinWChar buf [MAX_PATH + 1];
+	DWORD cc = GetTempPathW ((DWORD)std::size (buf), buf);
+	if (!cc)
+		throw_win_error_sys (GetLastError ());
+	return StringW (buf, cc - 1);
+}
+
+DirItemId FileSystem::get_tmp (const IDL::String&, bool& may_cache)
+{
+	may_cache = false;
+
+	WinWChar buf [MAX_PATH + 1];
+	DWORD cc = GetTempPathW ((DWORD)std::size (buf), buf);
+	if (!cc)
+		throw_win_error_sys (GetLastError ());
+	return path_to_id (buf, Nirvana::DirItem::FileType::directory);
+}
+
+DirItemId FileSystem::get_sbin (const IDL::String&, bool& may_cache)
+{
+	may_cache = true;
+
+	WinWChar buf [MAX_PATH + 1];
+	DWORD cc = GetModuleFileNameW (nullptr, buf, (DWORD)std::size (buf));
+	if (!cc)
+		throw_win_error_sys (GetLastError ());
+	*wcsrchr (buf, '\\') = 0;
+	return path_to_id (buf, Nirvana::DirItem::FileType::directory);
 }
 
 }
