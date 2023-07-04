@@ -64,11 +64,6 @@ public:
 
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 
-	Nirvana::FileType type () const noexcept
-	{
-		return type_;
-	}
-
 protected:
 	Dir (Windows::StringW&& path);
 	Dir ();
@@ -89,8 +84,6 @@ protected:
 
 	Windows::StringW get_pattern () const;
 
-private:
-	mutable Nirvana::FileType type_;
 };
 
 }

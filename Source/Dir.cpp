@@ -39,8 +39,7 @@ using namespace Windows;
 namespace Port {
 
 Dir::Dir (StringW&& path) :
-	Base (std::move (path)),
-	type_ (Nirvana::FileType::none)
+	Base (std::move (path))
 {
 	// Do not throw user exceptions in file system object constructors.
 	HANDLE h = get_handle ();
@@ -55,7 +54,7 @@ Dir::Dir (StringW&& path) :
 }
 
 Dir::Dir () :
-	type_ (Nirvana::FileType::directory)
+	Base (Nirvana::FileType::directory)
 {}
 
 StringW Dir::get_path (CosNaming::Name& n) const

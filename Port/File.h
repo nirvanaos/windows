@@ -40,20 +40,17 @@ class File : public Windows::DirItem
 
 protected:
 	File (Windows::StringW&& path) :
-		Base (std::move (path)),
-		type_ (Nirvana::FileType::none)
+		Base (std::move (path))
 	{}
 
 	uint64_t size () const;
 
-	Nirvana::FileType type () const noexcept;
+	FileType type () const noexcept;
 
 public:
 	void* open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
 		uint32_t flags_and_attributes) const;
 
-private:
-	mutable Nirvana::FileType type_;
 };
 
 }

@@ -43,17 +43,22 @@ class DirItem
 public:
 	void stat (FileStat& st) const;
 
+	FileType type () const noexcept
+	{
+		return type_;
+	}
+
+protected:
+	DirItem (StringW&& path);
+	DirItem (FileType type);
+
+	~DirItem ();
+
 	const StringW& path () const noexcept
 	{
 		assert (!path_.empty ());
 		return path_;
 	}
-
-protected:
-	DirItem (StringW&& path);
-	DirItem ();
-
-	~DirItem ();
 
 	void* handle () const;
 
@@ -85,6 +90,11 @@ protected:
 private:
 	const StringW path_;
 	mutable void* handle_;
+
+protected:
+	mutable FileType type_;
+
+private:
 	mutable FileSystemType file_system_type_;
 	mutable unsigned long file_system_flags_;
 	mutable unsigned long max_component_len_;

@@ -39,13 +39,15 @@ const DirItem::FileSystemTraits DirItem::file_systems_ [FS_UNKNOWN] = {
 DirItem::DirItem (StringW&& path) :
 	path_ (std::move (path)),
 	handle_ (INVALID_HANDLE_VALUE),
+	type_ (FileType::none),
 	file_system_type_ (FS_UNKNOWN),
 	file_system_flags_ (0),
 	max_component_len_ (0)
 {}
 
-DirItem::DirItem () :
+DirItem::DirItem (FileType type) :
 	handle_ (INVALID_HANDLE_VALUE),
+	type_ (type),
 	file_system_type_ (FS_UNKNOWN),
 	file_system_flags_ (0),
 	max_component_len_ (0)
@@ -60,6 +62,8 @@ DirItem::~DirItem ()
 void* DirItem::get_handle () const noexcept
 {
 	if (INVALID_HANDLE_VALUE == handle_) {
+		assert (FileType::none == type_);
+
 		handle_ = CreateFileW (path ().c_str (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 			nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
@@ -117,7 +121,7 @@ void DirItem::stat (FileStat& st) const
 	st.ino (make64 (att.nFileIndexLow, att.nFileIndexHigh));
 	st.dev (att.dwVolumeSerialNumber);
 	st.size (make64 (att.nFileSizeLow, att.nFileSizeHigh));
-
+	st.nlink (att.nNumberOfLinks);
 	st.creation_time ().time (make_time (att.ftCreationTime));
 	st.last_access_time ().time (make_time (att.ftLastAccessTime));
 	st.last_write_time ().time (make_time (att.ftLastWriteTime));
