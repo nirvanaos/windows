@@ -194,6 +194,15 @@ std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const
 	return std::make_unique <DirIterator> (get_pattern ().c_str ());
 }
 
+void Dir::remove ()
+{
+	if (!special () && FileType::directory == type ()) {
+		if (!RemoveDirectoryW (path ().c_str ()))
+			throw_last_error ();
+		close_handle ();
+	}
+}
+
 }
 }
 }

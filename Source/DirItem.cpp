@@ -62,8 +62,6 @@ DirItem::~DirItem ()
 void* DirItem::get_handle () const noexcept
 {
 	if (INVALID_HANDLE_VALUE == handle_) {
-		assert (FileType::none == type_);
-
 		handle_ = CreateFileW (path ().c_str (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 			nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
@@ -94,6 +92,15 @@ void* DirItem::handle () const
 	return handle_;
 }
 
+void DirItem::close_handle () noexcept
+{
+	if (INVALID_HANDLE_VALUE != handle_) {
+		CloseHandle (handle_);
+		handle_ = INVALID_HANDLE_VALUE;
+	}
+	type_ = FileType::not_found;
+}
+
 void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att) const
 {
 	if (!GetFileInformationByHandle (handle (), &att))
@@ -115,6 +122,9 @@ void DirItem::set_inacc (TimeBase::UtcT& t, uint64_t inac) noexcept
 
 void DirItem::stat (FileStat& st) const
 {
+	if (FileType::not_found == type ())
+		throw RuntimeError (ENOENT);
+
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
 
@@ -122,6 +132,7 @@ void DirItem::stat (FileStat& st) const
 	st.dev (att.dwVolumeSerialNumber);
 	st.size (make64 (att.nFileSizeLow, att.nFileSizeHigh));
 	st.nlink (att.nNumberOfLinks);
+	st.type ((uint16_t)type_);
 	st.creation_time ().time (make_time (att.ftCreationTime));
 	st.last_access_time ().time (make_time (att.ftLastAccessTime));
 	st.last_write_time ().time (make_time (att.ftLastWriteTime));

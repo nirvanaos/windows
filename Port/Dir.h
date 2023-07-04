@@ -64,6 +64,8 @@ public:
 
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 
+	void remove ();
+
 protected:
 	Dir (Windows::StringW&& path);
 	Dir ();

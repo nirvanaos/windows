@@ -38,12 +38,7 @@ uint64_t File::size () const
 {
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
-	ULARGE_INTEGER ui;
-
-	ui.LowPart = att.nFileSizeLow;
-	ui.HighPart = att.nFileSizeHigh;
-
-	return ui.QuadPart;
+	return make64 (att.nFileSizeLow, att.nFileSizeHigh);
 }
 
 FileType File::type () const noexcept
@@ -80,13 +75,22 @@ void* File::open (uint32_t access, uint32_t share_mode, uint32_t creation_dispos
 {
 	HANDLE h = CreateFileW (path ().c_str (),
 		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
-/*
-	if (INVALID_HANDLE_VALUE != h && INVALID_HANDLE_VALUE == handle_) {
-		HANDLE cp = GetCurrentProcess ();
-		DuplicateHandle (cp, h, cp, &handle_, FILE_READ_ATTRIBUTES, false, 0);
+
+	if (INVALID_HANDLE_VALUE == h) {
+		if (GetLastError () == ERROR_FILE_NOT_FOUND)
+			type_ = FileType::not_found;
 	}
-*/
+
 	return h;
+}
+
+void File::remove ()
+{
+	if (FileType::regular == type ()) {
+		if (!DeleteFileW (path ().c_str ()))
+			throw_last_error ();
+		close_handle ();
+	}
 }
 
 }

@@ -60,9 +60,15 @@ protected:
 		return path_;
 	}
 
+	bool special () const noexcept
+	{
+		return path_.empty ();
+	}
+
 	void* handle () const;
 
 	void* get_handle () const noexcept;
+	void close_handle () noexcept;
 
 	void get_attributes (_BY_HANDLE_FILE_INFORMATION& att) const;
 
