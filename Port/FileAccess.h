@@ -105,7 +105,7 @@ protected:
 
 	~FileAccess ();
 
-	bool open (const Port::File& file, uint32_t access, uint32_t share_mode,
+	bool open (Port::File& file, uint32_t access, uint32_t share_mode,
 		uint32_t creation_disposition, uint32_t flags_and_attributes);
 
 	void close () noexcept;
@@ -172,7 +172,7 @@ protected:
 	/// \param [out] size File size.
 	/// \param [out] block_size Block (sector) size. 
 	/// \throw RuntimeError.
-	FileAccessDirect (const File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size);
+	FileAccessDirect (File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size);
 
 	unsigned access_mask () const noexcept
 	{

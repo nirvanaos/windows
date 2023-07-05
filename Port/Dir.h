@@ -52,6 +52,7 @@ public:
 		create_link (n, dir, FLAG_DIRECTORY | (rebind ? FLAG_REBIND : 0));
 	}
 
+	// This method must be const to avoid race condition in iterator.
 	DirItemId resolve_path (CosNaming::Name& n) const
 	{
 		return FileSystem::path_to_id (check_path (n, 0).c_str ());

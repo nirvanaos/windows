@@ -41,7 +41,7 @@ namespace Windows {
 class DirItem
 {
 public:
-	void stat (FileStat& st) const;
+	void stat (FileStat& st);
 
 	FileType type () const noexcept
 	{
@@ -52,6 +52,18 @@ public:
 	{
 		return id_;
 	}
+
+	bool removed () const noexcept
+	{
+		return FileType::not_found == type_;
+	}
+
+	bool _non_existent () const noexcept
+	{
+		return removed ();
+	}
+
+	void check_exist () const;
 
 protected:
 	DirItem (DirItemId&& id);
@@ -85,12 +97,12 @@ protected:
 		return id_.empty ();
 	}
 
-	void* handle () const;
+	void* handle ();
 
-	void* get_handle () const noexcept;
+	void* get_handle () noexcept;
 	void close_handle () noexcept;
 
-	void get_attributes (_BY_HANDLE_FILE_INFORMATION& att) const;
+	void get_attributes (_BY_HANDLE_FILE_INFORMATION& att);
 
 	enum FileSystemType
 	{
@@ -115,15 +127,15 @@ protected:
 
 private:
 	const DirItemId id_;
-	mutable void* handle_;
+	void* handle_;
 
 protected:
-	mutable FileType type_;
+	FileType type_;
 
 private:
-	mutable FileSystemType file_system_type_;
-	mutable unsigned long file_system_flags_;
-	mutable unsigned long max_component_len_;
+	FileSystemType file_system_type_;
+	unsigned long file_system_flags_;
+	unsigned long max_component_len_;
 
 	typedef uint64_t TimeInaccuracy;
 

@@ -34,14 +34,14 @@ using namespace Windows;
 
 namespace Port {
 
-uint64_t File::size () const
+uint64_t File::size ()
 {
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
 	return make64 (att.nFileSizeLow, att.nFileSizeHigh);
 }
 
-FileType File::type () const noexcept
+FileType File::type () noexcept
 {
 	if (FileType::none == type_) {
 		HANDLE h = get_handle ();
@@ -71,7 +71,7 @@ FileType File::type () const noexcept
 }
 
 void* File::open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
-	uint32_t flags_and_attributes) const
+	uint32_t flags_and_attributes)
 {
 	HANDLE h = CreateFileW (path (),
 		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);

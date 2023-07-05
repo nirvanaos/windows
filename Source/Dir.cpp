@@ -205,8 +205,7 @@ void Dir::remove ()
 		if (!RemoveDirectoryW (path ()))
 			throw_last_error ();
 		close_handle ();
-	} else
-		throw RuntimeError (ENOENT);
+	}
 }
 
 }

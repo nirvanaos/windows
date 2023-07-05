@@ -59,7 +59,13 @@ DirItem::~DirItem ()
 		CloseHandle (handle_);
 }
 
-void* DirItem::get_handle () const noexcept
+void DirItem::check_exist () const
+{
+	if (removed ())
+		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
+}
+
+void* DirItem::get_handle () noexcept
 {
 	if (INVALID_HANDLE_VALUE == handle_) {
 		handle_ = CreateFileW (path (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -82,7 +88,7 @@ void* DirItem::get_handle () const noexcept
 	return handle_;
 }
 
-void* DirItem::handle () const
+void* DirItem::handle ()
 {
 	if (INVALID_HANDLE_VALUE == handle_) {
 		get_handle ();
@@ -101,8 +107,10 @@ void DirItem::close_handle () noexcept
 	type_ = FileType::not_found;
 }
 
-void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att) const
+void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att)
 {
+	assert (!removed ());
+
 	if (!GetFileInformationByHandle (handle (), &att))
 		throw_last_error ();
 }
@@ -120,10 +128,9 @@ void DirItem::set_inacc (TimeBase::UtcT& t, uint64_t inac) noexcept
 	t.inacchi ((uint16_t)(inac / 0x100000000));
 }
 
-void DirItem::stat (FileStat& st) const
+void DirItem::stat (FileStat& st)
 {
-	if (FileType::not_found == type ())
-		throw RuntimeError (ENOENT);
+	assert (!removed ());
 
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);

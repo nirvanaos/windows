@@ -34,7 +34,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool FileAccess::open (const Port::File& file, uint32_t access, uint32_t share_mode,
+bool FileAccess::open (Port::File& file, uint32_t access, uint32_t share_mode,
 	uint32_t creation_disposition, uint32_t flags_and_attributes)
 {
 	handle_ = file.open (access, share_mode, creation_disposition, flags_and_attributes);
@@ -86,7 +86,7 @@ using namespace Windows;
 
 namespace Port {
 
-FileAccessDirect::FileAccessDirect (const File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size)
+FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size)
 {
 	uint32_t creation;
 	if (flags & O_CREAT) {

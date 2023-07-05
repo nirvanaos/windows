@@ -43,15 +43,15 @@ protected:
 		Base (DirItemId (id))
 	{}
 
-	uint64_t size () const;
+	uint64_t size ();
 
-	FileType type () const noexcept;
+	FileType type () noexcept;
 
 	void remove ();
 
 public:
 	void* open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
-		uint32_t flags_and_attributes) const;
+		uint32_t flags_and_attributes);
 
 };
 

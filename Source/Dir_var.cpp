@@ -48,7 +48,7 @@ StringW Dir_var::get_path (Name& n) const
 		n.erase (n.begin ());
 		return path;
 	} else
-		return Base::path ();
+		return Base::get_path (n);
 }
 
 void Dir_var::unlink (Name& n) const
