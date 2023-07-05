@@ -36,7 +36,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class DirIterator : public CosNaming::Core::Iterator
+class DirIterator : virtual public CosNaming::Core::Iterator
 {
 public:
 	DirIterator (const WinWChar* pattern);

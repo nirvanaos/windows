@@ -66,7 +66,14 @@ bool DirIterator::false_item () const noexcept
 bool DirIterator::next_one (Binding& b)
 {
 	if (INVALID_HANDLE_VALUE != handle_) {
-		wide_to_utf8 ((const WinWChar*)data_.cFileName, b.name);
+
+		const WinWChar* ext = wcsrchr (data_.cFileName, '.');
+		size_t len = wcslen (data_.cFileName);
+		if (!ext)
+			ext = data_.cFileName + len;
+		wide_to_utf8 (data_.cFileName, ext, b.name.id ());
+		if (*ext)
+			wide_to_utf8 (ext + 1, data_.cFileName + len, b.name.kind ());
 
 		if (data_.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			b.type = BindingType::ncontext;

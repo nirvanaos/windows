@@ -45,7 +45,7 @@ std::unique_ptr <Iterator> Dir_mnt::make_iterator () const
 	char drive [3] = "A:";
 	while (mask) {
 		if (mask & 1)
-			iter->push (drive, BindingType::ncontext);
+			iter->push (NameComponent (drive, IDL::String ()), BindingType::ncontext);
 		++drive [0];
 		mask >>= 1;
 	}

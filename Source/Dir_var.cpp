@@ -75,7 +75,7 @@ DirItemId Dir_var::create_dir (CosNaming::Name& n) const
 std::unique_ptr <CosNaming::Core::Iterator> Dir_var::make_iterator () const
 {
 	std::unique_ptr <DirIteratorEx> iter (std::make_unique <DirIteratorEx> (get_pattern ().c_str ()));
-	iter->push ("tmp");
+	iter->push (NameComponent ("tmp", IDL::String ()), BindingType::ncontext);
 	return iter;
 }
 

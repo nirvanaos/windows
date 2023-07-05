@@ -29,36 +29,27 @@
 #pragma once
 
 #include "DirIterator.h"
+#include <NameService/IteratorStack.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class DirIteratorEx : public DirIterator
+class DirIteratorEx :
+	public DirIterator,
+	public CosNaming::Core::IteratorStack
 {
-	typedef DirIterator Base;
-
 public:
 	DirIteratorEx (const WinWChar* pattern) :
-		Base (pattern)
+		DirIterator (pattern)
 	{}
-
-	void reserve (size_t cnt)
-	{
-		stack_.reserve (cnt);
-	}
-
-	void push (const char* name, CosNaming::BindingType type = CosNaming::BindingType::ncontext);
 
 	virtual bool end () const noexcept override
 	{
-		return Base::end () && stack_.empty ();
+		return DirIterator::end () && CosNaming::Core::IteratorStack::end ();
 	}
 
 	virtual bool next_one (Binding& b) override;
-
-private:
-	std::vector <Binding> stack_;
 };
 
 }

@@ -31,19 +31,11 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-void DirIteratorEx::push (const char* name, BindingType type)
-{
-	stack_.emplace_back (Istring (name), type);
-}
-
 bool DirIteratorEx::next_one (Binding& b)
 {
-	if (!stack_.empty ()) {
-		b = std::move (stack_.back ());
-		stack_.pop_back ();
+	if (DirIterator::next_one (b))
 		return true;
-	}
-	return Base::next_one (b);
+	return CosNaming::Core::IteratorStack::next_one (b);
 }
 
 }
