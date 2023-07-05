@@ -127,17 +127,17 @@ PortableServer::ServantBase::_ref_type FileSystem::incarnate (const DirItemId& i
 	if (get_item_type (id) == Nirvana::FileType::directory) {
 		switch (is_special_dir (id)) {
 		case SpecialDir::var:
-			return CORBA::make_reference <Windows::Dir_var> (get_app_data_dir (WINWCS("var")));
+			return CORBA::make_reference <Windows::Dir_var> (get_app_data_dir_id (WINWCS("var")));
 
 		case SpecialDir::mnt:
 			return CORBA::make_reference <Windows::Dir_mnt> ();
 		
 		default:
-			return CORBA::make_reference <Nirvana::Core::Dir> (make_path (id));
+			return CORBA::make_reference <Nirvana::Core::Dir> (std::ref (id));
 		}
 
 	} else
-		return CORBA::make_reference <Nirvana::Core::File> (make_path (id));
+		return CORBA::make_reference <Nirvana::Core::File> (std::ref (id));
 }
 
 DirItemId FileSystem::get_app_data_dir (const IDL::String& name, bool& may_cache)
@@ -148,18 +148,17 @@ DirItemId FileSystem::get_app_data_dir (const IDL::String& name, bool& may_cache
 	WinWChar wname [4] = { 0 };
 	std::copy (name.begin (), name.end (), wname);
 
-	WinWChar path [MAX_PATH + 1];
-	get_app_data_folder (path, std::size (path), wname, false);
-
 	may_cache = true;
-	return path_to_id (path, Nirvana::FileType::directory);
+	return get_app_data_dir_id (wname);
 }
 
-StringW FileSystem::get_app_data_dir (const WinWChar* name)
+DirItemId FileSystem::get_app_data_dir_id (const WinWChar* name)
 {
 	WinWChar path [MAX_PATH + 1];
 	size_t cc = get_app_data_folder (path, std::size (path), name, false);
-	return StringW (path, cc);
+	if (!cc)
+		throw CORBA::UNKNOWN ();
+	return path_to_id (path);
 }
 
 DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)

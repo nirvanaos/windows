@@ -108,21 +108,21 @@ public:
 		return id.size () / 2 - 2;
 	}
 
+	static Windows::StringW make_path (const DirItemId& id)
+	{
+		return Windows::StringW (id_to_path (id), path_len (id));
+	}
+
 	static Windows::StringW get_temp_path ();
 
 private:
 	static DirItemId get_app_data_dir (const IDL::String& name, bool& may_cache);
-	static Windows::StringW get_app_data_dir (const Windows::WinWChar* name);
+	static DirItemId get_app_data_dir_id (const Windows::WinWChar* name);
 	static DirItemId get_var (const IDL::String&, bool& may_cache);
 	static DirItemId get_mnt (const IDL::String&, bool& may_cache);
 	static DirItemId get_home (const IDL::String&, bool& may_cache);
 	static DirItemId get_sbin (const IDL::String&, bool& may_cache);
 	static DirItemId get_tmp (const IDL::String&, bool& may_cache);
-
-	static Windows::StringW make_path (const DirItemId& id)
-	{
-		return Windows::StringW (id_to_path (id), path_len (id));
-	}
 
 	enum class SpecialDir
 	{

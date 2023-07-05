@@ -36,8 +36,8 @@ const DirItem::FileSystemTraits DirItem::file_systems_ [FS_UNKNOWN] = {
 	{ WINWCS ("NTFS"), { 10 * TimeBase::MILLISECOND, 1 * TimeBase::HOUR, 2 * TimeBase::SECOND } }
 };
 
-DirItem::DirItem (StringW&& path) :
-	path_ (std::move (path)),
+DirItem::DirItem (DirItemId&& id) :
+	id_ (std::move (id)),
 	handle_ (INVALID_HANDLE_VALUE),
 	type_ (FileType::none),
 	file_system_type_ (FS_UNKNOWN),
@@ -62,7 +62,7 @@ DirItem::~DirItem ()
 void* DirItem::get_handle () const noexcept
 {
 	if (INVALID_HANDLE_VALUE == handle_) {
-		handle_ = CreateFileW (path ().c_str (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+		handle_ = CreateFileW (path (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 			nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
 		if (INVALID_HANDLE_VALUE != handle_) {

@@ -79,6 +79,11 @@ std::unique_ptr <CosNaming::Core::Iterator> Dir_var::make_iterator () const
 	return iter;
 }
 
+void Dir_var::remove ()
+{
+	throw RuntimeError (ENOTEMPTY);
+}
+
 }
 }
 }

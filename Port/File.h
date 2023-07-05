@@ -39,8 +39,8 @@ class File : public Windows::DirItem
 	typedef Windows::DirItem Base;
 
 protected:
-	File (Windows::StringW&& path) :
-		Base (std::move (path))
+	File (const DirItemId& id) :
+		Base (DirItemId (id))
 	{}
 
 	uint64_t size () const;

@@ -38,8 +38,8 @@ using namespace Windows;
 
 namespace Port {
 
-Dir::Dir (StringW&& path) :
-	Base (std::move (path))
+Dir::Dir (const DirItemId& id) :
+	Base (DirItemId (id))
 {
 	// Do not throw user exceptions in file system object constructors.
 	HANDLE h = get_handle ();
@@ -60,33 +60,33 @@ Dir::Dir () :
 StringW Dir::get_path (CosNaming::Name& n) const
 {
 	assert (!n.empty ());
-	return path ();
+	return make_path ();
 }
 
-StringW Dir::to_wstring (Istring name)
+void Dir::append_path (StringW& path, const NameComponent& nc)
 {
-	StringW wname;
-	utf8_to_wide (name, wname);
-	for (WinWChar c : wname) {
-		if (c < 32 || wcschr (WINWCS ("<>:\"/\\|?*"), c))
-			throw CosNaming::NamingContext::InvalidName ();
-	}
-	return wname;
-}
+	if (nc.id ().find_first_of ("<>:\"/\\|?*") != Istring::npos
+		|| nc.kind ().find_first_of ("<>:\"/\\|?*.") != Istring::npos)
+		throw CosNaming::NamingContext::InvalidName ();
 
-void Dir::append_path (StringW& path, Istring name)
-{
-	StringW wname = to_wstring (name);
-	path.reserve (path.size () + 1 + wname.size ());
+	size_t size = nc.id ().size () + 1;
+	if (!nc.kind ().empty ())
+		size += nc.kind ().size () + 1;
+	path.reserve (path.size () + size);
 	path += '\\';
-	path += wname;
+	utf8_to_wide (nc.id (), path);
+	if (!nc.kind ().empty ()) {
+		path += '.';
+		utf8_to_wide (nc.kind (), path);
+	}
 }
 
 StringW Dir::check_path (Name& n, size_t rem_cnt) const
 {
+	assert (n.size () >= rem_cnt);
 	StringW path = get_path (n);
 	while (n.size () > rem_cnt) {
-		append_path (path, to_string (n.front ()));
+		append_path (path, n.front ());
 		DWORD att = GetFileAttributesW (path.c_str ());
 		NamingContext::NotFoundReason reason = NamingContext::NotFoundReason::not_object;
 		if (0xFFFFFFFF == att) {
@@ -106,7 +106,7 @@ void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 	// Create symbolic link
 	StringW path = check_path (n, 1);
 
-	append_path (path, to_string (std::move (n.back ())));
+	append_path (path, n.back ());
 
 	if (flags & FLAG_REBIND) {
 		flags &= ~FLAG_REBIND;
@@ -134,7 +134,7 @@ void Dir::unlink (const WinWChar* path, uint32_t att)
 void Dir::unlink (Name& n) const
 {
 	StringW path = check_path (n, 1);
-	append_path (path, to_string (n.back ()));
+	append_path (path, n.back ());
 
 	DWORD att = GetFileAttributesW (path.c_str ());
 	if (0xFFFFFFFF == att) {
@@ -152,7 +152,7 @@ DirItemId Dir::create_dir (Name& n) const
 {
 	StringW path = check_path (n, 1);
 
-	append_path (path, to_string (std::move (n.back ())));
+	append_path (path, n.back ());
 
 	if (!CreateDirectoryW (path.c_str (), nullptr)) {
 		DWORD err = GetLastError ();
@@ -167,18 +167,19 @@ DirItemId Dir::create_dir (Name& n) const
 
 DirItemId Dir::get_new_file_id (Name& n) const
 {
+	StringW path = check_path (n, 1);
 	// Create id for parent path
-	DirItemId id = FileSystem::path_to_id (check_path (n, 1).c_str (), Nirvana::FileType::regular);
+	DirItemId id = FileSystem::path_to_id (path.c_str (), Nirvana::FileType::regular);
 
-	// Append file name
-	StringW name = to_wstring (to_string (n.back ()));
+	// Append file name to id
+	StringW name;
+	append_path (name, n.back ()); // Prefixed with backslash
 	size_t parent_size = id.size () - sizeof (WinWChar); // Without the zero terminator
 	size_t name_size = name.size ();
-	id.resize (id.size () + name_size * sizeof (WinWChar) + sizeof (WinWChar));
+	id.resize (id.size () + name_size * sizeof (WinWChar));
 	const WinWChar* src = name.data ();
 	WinWChar* dst = (WinWChar*)(id.data () + parent_size);
 	assert (!*dst);
-	*(dst++) = '\\';
 	std::copy (src, src + name_size + 1, dst);
 
 	return id;
@@ -186,7 +187,9 @@ DirItemId Dir::get_new_file_id (Name& n) const
 
 StringW Dir::get_pattern () const
 {
-	return path () + WINWCS ("\\*");
+	StringW pat = make_path ();
+	pat += WINWCS ("\\*");
+	return pat;
 }
 
 std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const
@@ -196,11 +199,14 @@ std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const
 
 void Dir::remove ()
 {
-	if (!special () && FileType::directory == type ()) {
-		if (!RemoveDirectoryW (path ().c_str ()))
+	if (special ())
+		throw RuntimeError (ENOTEMPTY);
+	if (FileType::directory == type ()) {
+		if (!RemoveDirectoryW (path ()))
 			throw_last_error ();
 		close_handle ();
-	}
+	} else
+		throw RuntimeError (ENOENT);
 }
 
 }

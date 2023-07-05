@@ -73,7 +73,7 @@ FileType File::type () const noexcept
 void* File::open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
 	uint32_t flags_and_attributes) const
 {
-	HANDLE h = CreateFileW (path ().c_str (),
+	HANDLE h = CreateFileW (path (),
 		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
 
 	if (INVALID_HANDLE_VALUE == h) {
@@ -87,7 +87,7 @@ void* File::open (uint32_t access, uint32_t share_mode, uint32_t creation_dispos
 void File::remove ()
 {
 	if (FileType::regular == type ()) {
-		if (!DeleteFileW (path ().c_str ()))
+		if (!DeleteFileW (path ()))
 			throw_last_error ();
 		close_handle ();
 	}

@@ -39,8 +39,8 @@ class Dir_var : public Nirvana::Core::Dir
 	typedef Nirvana::Core::Dir Base;
 
 public:
-	Dir_var (StringW&& path) :
-		Base (std::move (path))
+	Dir_var (DirItemId&& id) :
+		Base (std::move (id))
 	{}
 
 	virtual StringW get_path (CosNaming::Name& n) const override;
@@ -48,6 +48,7 @@ public:
 	virtual void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const override;
 	virtual DirItemId create_dir (CosNaming::Name& n) const override;
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
+	virtual void remove () override;
 
 private:
 	static bool is_tmp (const CosNaming::NameComponent& nc);

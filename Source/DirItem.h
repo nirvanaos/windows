@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_WINDOWS_DIRITEM_H_
 #pragma once
 
-#include "WinWChar.h"
+#include "../Port/FileSystem.h"
 
 struct _BY_HANDLE_FILE_INFORMATION;
 struct _FILETIME;
@@ -48,21 +48,41 @@ public:
 		return type_;
 	}
 
+	const DirItemId& id () const noexcept
+	{
+		return id_;
+	}
+
 protected:
-	DirItem (StringW&& path);
+	DirItem (DirItemId&& id);
 	DirItem (FileType type);
 
 	~DirItem ();
 
-	const StringW& path () const noexcept
+	const WinWChar* path () const noexcept
 	{
-		assert (!path_.empty ());
-		return path_;
+		if (!id_.empty ())
+			return Port::FileSystem::id_to_path (id_);
+		else
+			return nullptr;
+	}
+
+	StringW make_path () const
+	{
+		return Port::FileSystem::make_path (id_);
+	}
+
+	size_t path_len () const noexcept
+	{
+		if (!id_.empty ())
+			return Port::FileSystem::path_len (id_);
+		else
+			return 0;
 	}
 
 	bool special () const noexcept
 	{
-		return path_.empty ();
+		return id_.empty ();
 	}
 
 	void* handle () const;
@@ -94,7 +114,7 @@ protected:
 	static void set_inacc (TimeBase::UtcT& t, uint64_t inac) noexcept;
 
 private:
-	const StringW path_;
+	const DirItemId id_;
 	mutable void* handle_;
 
 protected:
