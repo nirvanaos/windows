@@ -25,6 +25,7 @@
 */
 #include "DirIterator.h"
 #include "error2errno.h"
+#include <Nirvana/string_conv.h>
 
 using namespace CosNaming;
 

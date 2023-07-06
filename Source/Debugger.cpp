@@ -27,6 +27,7 @@
 #include "WinWChar.h"
 #include "DebugLog.h"
 #include "win32.h"
+#include <Nirvana/string_conv.h>
 
 namespace Nirvana {
 namespace Core {

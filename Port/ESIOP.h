@@ -30,6 +30,8 @@
 #pragma once
 
 #include <Nirvana/Nirvana.h>
+#include <Nirvana/platform.h>
+#include <type_traits>
 
 extern "C" __declspec (dllimport)
 unsigned long __stdcall GetCurrentProcessId (void);
@@ -68,11 +70,9 @@ inline ProtDomainId sys_domain_id (void) noexcept
 /// Sender allocates the message data via OtherMemory interface.
 /// SharedMemPtr size is enough to store memory address
 /// for any supported platform.
-#if HOST_PLATFORM != NIRVANA_PLATFORM_I386
-typedef uint64_t SharedMemPtr;
-#else
-typedef uint32_t SharedMemPtr;
-#endif
+using SharedMemPtr = std::conditional_t <
+Nirvana::HOST_PLATFORM == Nirvana::PLATFORM_I386
+, uint32_t, uint64_t>;
 
 /// If an incoming request can't be processed, the system uses this function
 /// to send ESIOP error message to caller.

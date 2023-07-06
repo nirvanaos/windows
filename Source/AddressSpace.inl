@@ -30,8 +30,9 @@
 #include "Memory.inl"
 #include "app_data.h"
 #include <winioctl.h>
+#include <Nirvana/platform.h>
 
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
+#if !defined (_WIN64)
 
 extern "C" {
 	DWORD64 __cdecl X64Call (DWORD64 func, int argC, ...);
@@ -57,7 +58,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
+#if !defined (_WIN64)
 
 enum WOW64
 {
@@ -88,15 +89,17 @@ inline void address_space_term () noexcept
 	local_address_space.destruct ();
 }
 
-inline bool other_space_init ()
+inline bool other_space_init () noexcept
 {
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
-	DWORD64 ntdll = GetModuleHandle64 (wow64_dll_name);
-	if (!ntdll)
-		return false;
-	for (unsigned i = 0; i < WOW64_FUNC_CNT; ++i) {
-		if (!(wow64_func [i] = GetProcAddress64 (ntdll, wow64_func_names [i])))
+#if !defined (_WIN64)
+	if (HOST_PLATFORM == PLATFORM_X64) {
+		DWORD64 ntdll = GetModuleHandle64 (wow64_dll_name);
+		if (!ntdll)
 			return false;
+		for (unsigned i = 0; i < WOW64_FUNC_CNT; ++i) {
+			if (!(wow64_func [i] = GetProcAddress64 (ntdll, wow64_func_names [i])))
+				return false;
+		}
 	}
 #endif
 	return true;
@@ -105,10 +108,13 @@ inline bool other_space_init ()
 template <bool x64> inline
 void AddressSpace <x64>::query (Address address, MBI& mbi) const
 {
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
-	if (x64) {
+#if !defined (_WIN64)
+	if (x64 && (HOST_PLATFORM == PLATFORM_X64)) {
 		DWORD64 ret = 0;
-		DWORD64 status = X64Call (wow64_func [WOW64_NtQueryVirtualMemory], 6, HANDLE_TO_DWORD64 (process_), address,
+#ifdef _DEBUG
+		DWORD64 status =
+#endif
+			X64Call (wow64_func [WOW64_NtQueryVirtualMemory], 6, HANDLE_TO_DWORD64 (process_), address,
 			(DWORD64)0, PTR_TO_DWORD64 (&mbi), (DWORD64)sizeof (mbi), PTR_TO_DWORD64 (&ret));
 		assert (!status);
 	} else
@@ -124,11 +130,14 @@ void AddressSpace <x64>::Block::protect (size_t offset, size_t size, uint32_t pr
 	assert (size && 0 == size % PAGE_SIZE);
 	assert (offset + size <= ALLOCATION_GRANULARITY);
 	Address addr = (Address)(address () + offset);
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
-	if (x64) {
+#if !defined (_WIN64)
+	if (x64 && (HOST_PLATFORM == PLATFORM_X64)) {
 		DWORD64 tmp_size = size;
 		DWORD64 old;
-		DWORD64 status = X64Call (wow64_func [WOW64_NtProtectVirtualMemory], 5, HANDLE_TO_DWORD64 (space_.process ()),
+#ifdef _DEBUG
+		DWORD64 status = 
+#endif
+		X64Call (wow64_func [WOW64_NtProtectVirtualMemory], 5, HANDLE_TO_DWORD64 (space_.process ()),
 			PTR_TO_DWORD64 (&addr), PTR_TO_DWORD64 (&tmp_size), (DWORD64)protection, PTR_TO_DWORD64 (&old));
 		assert (!status);
 	} else
@@ -143,8 +152,8 @@ template <bool x64> inline
 typename AddressSpace <x64>::Address AddressSpace <x64>::alloc (Address address, size_t size,
 	uint32_t flags, uint32_t protection) const
 {
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
-	if (x64) {
+#if !defined (_WIN64)
+	if (x64 && (HOST_PLATFORM == PLATFORM_X64)) {
 		DWORD64 tmp_addr = (DWORD64)address;
 		DWORD64 tmp_size = size;
 		DWORD64 status = X64Call (wow64_func [WOW64_NtAllocateVirtualMemoryEx], 7, HANDLE_TO_DWORD64 (process_),
@@ -163,8 +172,8 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::alloc (Address address,
 template <bool x64> inline
 bool AddressSpace <x64>::free (Address address, Size size, uint32_t flags) const
 {
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
-	if (x64) {
+#if !defined (_WIN64)
+	if (x64 && (HOST_PLATFORM == PLATFORM_X64)) {
 		DWORD64 tmp_addr = (DWORD64)address;
 		DWORD64 tmp_size = size;
 		DWORD64 status = X64Call (wow64_func [WOW64_NtFreeVirtualMemory], 4, HANDLE_TO_DWORD64 (process_),
@@ -180,8 +189,9 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::map (HANDLE hm, Address
 	size_t size, uint32_t flags) const
 {
 	static const DWORD PROTECTION = PAGE_EXECUTE_READWRITE;
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
-	if (x64) {
+
+#if !defined (_WIN64)
+	if (x64 && (HOST_PLATFORM == PLATFORM_X64)) {
 		DWORD64 tmp_addr = (DWORD64)address;
 		DWORD64 tmp_size = size;
 		DWORD64 status = X64Call (wow64_func [WOW64_NtMapViewOfSectionEx], 9, HANDLE_TO_DWORD64 (hm),
@@ -200,8 +210,8 @@ typename AddressSpace <x64>::Address AddressSpace <x64>::map (HANDLE hm, Address
 template <bool x64> inline
 bool AddressSpace <x64>::unmap (Address address, uint32_t flags) const
 {
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
-	if (x64) {
+#if !defined (_WIN64)
+	if (x64 && (HOST_PLATFORM == PLATFORM_X64)) {
 		DWORD64 status = X64Call (wow64_func [WOW64_NtUnmapViewOfSectionEx], 3, HANDLE_TO_DWORD64 (process_),
 			(DWORD64)address, (DWORD64)flags);
 		return !status;
@@ -766,9 +776,10 @@ void AddressSpace <x64>::check_allocated (Address ptr, size_t size)
 	if (!ptr)
 		throw_BAD_PARAM ();
 
-	for (Address p = ptr, end = p + (Size)size; p < end; p += ALLOCATION_GRANULARITY)
+	for (Address p = ptr, end = p + (Size)size; p < end; p += ALLOCATION_GRANULARITY) {
 		if (!allocated_block (p))
 			throw_BAD_PARAM ();
+	}
 }
 
 }

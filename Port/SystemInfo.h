@@ -29,6 +29,7 @@
 #pragma once
 
 #include <Nirvana/Nirvana.h>
+#include <Nirvana/platform.h>
 #include <Section.h>
 
 namespace Nirvana {
@@ -48,21 +49,16 @@ public:
 
 	static bool get_OLF_section (Section& section) noexcept;
 
-	static const size_t SUPPORTED_PLATFORM_CNT =
-#if HOST_PLATFORM == NIRVANA_PLATFORM_X64
-		2;
-#elif HOST_PLATFORM == NIRVANA_PLATFORM_I386
-		1;
-#else
-#error Unsupported host.
-#endif
+	static_assert (HOST_PLATFORM == PLATFORM_X64 || HOST_PLATFORM == PLATFORM_I386,
+		"Unsupported host");
 
-	static const uint16_t supported_platforms_ [SUPPORTED_PLATFORM_CNT];
+	static const size_t SUPPORTED_PLATFORM_CNT = (HOST_PLATFORM == PLATFORM_X64) ? 2 : 1;
+
+	static const uint16_t* supported_platforms () noexcept;
 
 private:
 	static unsigned int hardware_concurrency_;
 };
-
 
 }
 }

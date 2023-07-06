@@ -27,6 +27,7 @@
 #include "DirIterator.h"
 #include "win32.h"
 #include "error2errno.h"
+#include <Nirvana/string_conv.h>
 
 using namespace CosNaming;
 using CosNaming::Core::NamingContextRoot;
@@ -88,12 +89,11 @@ StringW Dir::check_path (Name& n, size_t rem_cnt) const
 	while (n.size () > rem_cnt) {
 		append_path (path, n.front ());
 		DWORD att = GetFileAttributesW (path.c_str ());
-		NamingContext::NotFoundReason reason = NamingContext::NotFoundReason::not_object;
 		if (0xFFFFFFFF == att) {
 			DWORD err = GetLastError ();
 			if (ERROR_PATH_NOT_FOUND == err)
 				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
-		} else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
+		} else if (n.size () > 1 && !(FILE_ATTRIBUTE_DIRECTORY & att))
 			throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
 
 		n.erase (n.begin ());

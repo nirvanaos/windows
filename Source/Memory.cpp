@@ -47,7 +47,7 @@ namespace Windows {
 
 StaticallyAllocated <AddressSpace <sizeof (void*) == 8> > local_address_space;
 
-#if !defined (_WIN64) && (HOST_PLATFORM == NIRVANA_PLATFORM_X64)
+#if !defined (_WIN64)
 
 DWORD64 wow64_func [WOW64_FUNC_CNT];
 
@@ -754,7 +754,10 @@ void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 
 		if (!(Nirvana::Memory::RESERVED & flags)) {
 			try {
-				uint32_t prot_mask = commit_no_check (ret, size, true);
+#ifdef _DEBUG
+				uint32_t prot_mask = 
+#endif
+					commit_no_check (ret, size, true);
 				assert (!(prot_mask & PageState::MASK_RO));
 			} catch (...) {
 				local_address_space->release ((uint8_t*)ret, size);

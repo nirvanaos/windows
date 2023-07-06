@@ -27,6 +27,7 @@
 #include <PortableExecutable.h>
 #include "win32.h"
 #include "error2errno.h"
+#include <Nirvana/string_conv.h>
 
 namespace Nirvana {
 namespace Core {
