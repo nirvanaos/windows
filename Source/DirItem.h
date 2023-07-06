@@ -125,6 +125,8 @@ protected:
 
 	static void set_inacc (TimeBase::UtcT& t, uint64_t inac) noexcept;
 
+	uint32_t error_check_exist ();
+
 private:
 	const DirItemId id_;
 	void* handle_;

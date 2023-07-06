@@ -111,8 +111,20 @@ void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att)
 {
 	assert (!removed ());
 
-	if (!GetFileInformationByHandle (handle (), &att))
-		throw_last_error ();
+	if (!GetFileInformationByHandle (handle (), &att)) {
+		DWORD err = error_check_exist ();
+		throw RuntimeError (error2errno (err));
+	}
+}
+
+uint32_t DirItem::error_check_exist ()
+{
+	DWORD err = GetLastError ();
+	if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) {
+		close_handle ();
+		throw CORBA::OBJECT_NOT_EXIST ();
+	}
+	return err;
 }
 
 inline

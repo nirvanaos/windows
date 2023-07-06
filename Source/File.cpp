@@ -76,10 +76,10 @@ void* File::open (uint32_t access, uint32_t share_mode, uint32_t creation_dispos
 	HANDLE h = CreateFileW (path (),
 		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
 
-	if (INVALID_HANDLE_VALUE == h) {
-		if (GetLastError () == ERROR_FILE_NOT_FOUND)
-			type_ = FileType::not_found;
-	}
+	if (INVALID_HANDLE_VALUE == h)
+		error_check_exist ();
+	else if (FileType::none == type_ || FileType::not_found == type_)
+		type_ = FileType::regular;
 
 	return h;
 }
