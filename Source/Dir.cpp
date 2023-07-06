@@ -82,31 +82,36 @@ void Dir::append_path (StringW& path, const NameComponent& nc)
 	}
 }
 
-StringW Dir::check_path (Name& n, size_t rem_cnt) const
+StringW Dir::check_path (Name& n, bool append_last) const
 {
-	assert (n.size () >= rem_cnt);
+	assert (!n.empty ());
+
+	// Check all name components, except for the last one, as valid directories and then erase.
 	StringW path = get_path (n);
-	while (n.size () > rem_cnt) {
+	while (n.size () > 1) {
 		append_path (path, n.front ());
 		DWORD att = GetFileAttributesW (path.c_str ());
 		if (0xFFFFFFFF == att) {
 			DWORD err = GetLastError ();
-			if (ERROR_PATH_NOT_FOUND == err)
+			if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
 				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
-		} else if (n.size () > 1 && !(FILE_ATTRIBUTE_DIRECTORY & att))
+		} else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
 			throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
 
 		n.erase (n.begin ());
 	}
+
+	assert (n.size () == 1);
+	if (append_last)
+		append_path (path, n.front ());
+
 	return path;
 }
 
 void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 {
 	// Create symbolic link
-	StringW path = check_path (n, 1);
-
-	append_path (path, n.back ());
+	StringW path = check_path (n);
 
 	if (flags & FLAG_REBIND) {
 		flags &= ~FLAG_REBIND;
@@ -133,8 +138,7 @@ void Dir::unlink (const WinWChar* path, uint32_t att)
 
 void Dir::unlink (Name& n) const
 {
-	StringW path = check_path (n, 1);
-	append_path (path, n.back ());
+	StringW path = check_path (n);
 
 	DWORD att = GetFileAttributesW (path.c_str ());
 	if (0xFFFFFFFF == att) {
@@ -150,9 +154,7 @@ void Dir::unlink (Name& n) const
 
 DirItemId Dir::create_dir (Name& n) const
 {
-	StringW path = check_path (n, 1);
-
-	append_path (path, n.back ());
+	StringW path = check_path (n);
 
 	if (!CreateDirectoryW (path.c_str (), nullptr)) {
 		DWORD err = GetLastError ();
@@ -162,14 +164,19 @@ DirItemId Dir::create_dir (Name& n) const
 			throw_win_error_sys (err);
 	}
 
-	return FileSystem::path_to_id (path.c_str (), Nirvana::FileType::directory);
+	return FileSystem::path_to_id (path.c_str (), n, Nirvana::FileType::directory);
+}
+
+DirItemId Dir::resolve_path (Name& n) const
+{
+	return FileSystem::path_to_id (check_path (n).c_str (), n);
 }
 
 DirItemId Dir::get_new_file_id (Name& n) const
 {
-	StringW path = check_path (n, 1);
+	StringW path = check_path (n, false);
 	// Create id for parent path
-	DirItemId id = FileSystem::path_to_id (path.c_str (), Nirvana::FileType::regular);
+	DirItemId id = FileSystem::path_to_id (path.c_str (), n, Nirvana::FileType::regular);
 
 	// Append file name to id
 	StringW name;

@@ -52,11 +52,8 @@ public:
 		create_link (n, dir, FLAG_DIRECTORY | (rebind ? FLAG_REBIND : 0));
 	}
 
-	// This method must be const to avoid race condition in iterator.
-	DirItemId resolve_path (CosNaming::Name& n) const
-	{
-		return FileSystem::path_to_id (check_path (n, 0).c_str ());
-	}
+	// This method must be really const to avoid race condition in iterator.
+	DirItemId resolve_path (CosNaming::Name& n) const;
 
 	virtual void unlink (CosNaming::Name& n) const;
 	virtual DirItemId create_dir (CosNaming::Name& n) const;
@@ -71,7 +68,7 @@ protected:
 	Dir (const DirItemId& id);
 	Dir ();
 
-	Windows::StringW check_path (CosNaming::Name& n, size_t rem_cnt) const;
+	Windows::StringW check_path (CosNaming::Name& n, bool append_last = true) const;
 
 	virtual Windows::StringW get_path (CosNaming::Name& n) const;
 

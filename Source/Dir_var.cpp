@@ -44,9 +44,10 @@ StringW Dir_var::get_path (Name& n) const
 {
 	assert (!n.empty ());
 	if (is_tmp (n.front ())) {
-		StringW path = Port::FileSystem::get_temp_path ();
+		WinWChar buf [MAX_PATH + 1];
+		size_t cc = Port::FileSystem::get_temp_path (buf);
 		n.erase (n.begin ());
-		return path;
+		return StringW (buf, cc);
 	} else
 		return Base::get_path (n);
 }

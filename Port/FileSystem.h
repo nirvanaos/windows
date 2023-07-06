@@ -76,7 +76,7 @@ public:
 		}
 		
 		for (const char* p = begin; *p; ++p) {
-			if ('\\' == *p) {
+			if ('\\' == *p || '/' == *p) {
 				if (p == begin)
 					++begin; // Skip adjacent backslashes
 				else {
@@ -84,7 +84,7 @@ public:
 						path.substr (begin - s, p - begin)));
 					begin = p + 1;
 				}
-			} else if (strchr ("<>:\"/\\|?*", *p))
+			} else if (strchr ("<>:\"|?*", *p))
 				throw CosNaming::NamingContext::InvalidName ();
 		}
 		if (*begin) // Ignore trailing slash
@@ -95,8 +95,8 @@ public:
 
 	// For internal use
 	
-	static DirItemId path_to_id (const Windows::WinWChar* path, Nirvana::FileType type =
-		Nirvana::FileType::unknown);
+	static DirItemId path_to_id (const Windows::WinWChar* path, CosNaming::Name& last, FileType type = FileType::unknown);
+	static DirItemId dir_path_to_id (const Windows::WinWChar* path);
 
 	static const Windows::WinWChar* id_to_path (const DirItemId& id) noexcept
 	{
@@ -113,7 +113,7 @@ public:
 		return Windows::StringW (id_to_path (id), path_len (id));
 	}
 
-	static Windows::StringW get_temp_path ();
+	static size_t get_temp_path (Windows::WinWChar* buf);
 
 private:
 	static DirItemId get_app_data_dir (const IDL::String& name, bool& may_cache);

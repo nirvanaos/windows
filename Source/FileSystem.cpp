@@ -32,6 +32,8 @@
 #include "Dir_mnt.h"
 #include <ShlObj.h>
 
+using namespace CosNaming;
+
 namespace Nirvana {
 namespace Core {
 
@@ -58,8 +60,11 @@ Roots FileSystem::get_roots ()
 	return roots;
 }
 
-DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::FileType type)
+DirItemId FileSystem::path_to_id (const WinWChar* path, Name& last, FileType type)
 {
+	assert (path);
+	assert (last.size () <= 1);
+
 	DirItemId id;
 
 	assert (path [0] && path [1]);
@@ -82,15 +87,23 @@ DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::FileType type)
 		// Get final path name
 		HANDLE h = CreateFileW (path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
 			FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-		if (INVALID_HANDLE_VALUE == h)
-			throw_last_error ();
+		if (INVALID_HANDLE_VALUE == h) {
+			DWORD err = GetLastError ();
+			if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
+				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (last));
+			else
+				throw_win_error_sys (err);
+		}
 
 		try {
 			DWORD cc = GetFinalPathNameByHandleW (h, nullptr, 0, 0);
 			if (!cc)
-				throw_last_error ();
+				throw_win_error_sys (GetLastError ());
 			id.resize ((cc + 1) * sizeof (WinWChar));
-			verify (GetFinalPathNameByHandleW (h, (WinWChar*)(id.data () + 2), cc, 0));
+			if (!GetFinalPathNameByHandleW (h, (WinWChar*)(id.data () + 2), cc, 0)) {
+				assert (false);
+				throw_win_error_sys (GetLastError ());
+			}
 
 			if (Nirvana::FileType::unknown == type) {
 				BY_HANDLE_FILE_INFORMATION bhfi;
@@ -111,6 +124,12 @@ DirItemId FileSystem::path_to_id (const WinWChar* path, Nirvana::FileType type)
 	// Save file type as first WinWChar
 	*((WinWChar*)id.data ()) = (WinWChar)type;
 	return id;
+}
+
+DirItemId FileSystem::dir_path_to_id (const WinWChar* path)
+{
+	Name n;
+	return path_to_id (path, n, FileType::directory);
 }
 
 DirItemId FileSystem::make_special_id (SpecialDir dir)
@@ -158,7 +177,7 @@ DirItemId FileSystem::get_app_data_dir_id (const WinWChar* name)
 	size_t cc = get_app_data_folder (path, std::size (path), name, false);
 	if (!cc)
 		throw CORBA::UNKNOWN ();
-	return path_to_id (path);
+	return dir_path_to_id (path);
 }
 
 DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)
@@ -180,18 +199,17 @@ DirItemId FileSystem::get_home (const IDL::String&, bool& may_cache)
 	WinWChar path [MAX_PATH];
 	HRESULT result = SHGetFolderPathW (NULL, CSIDL_PROFILE, NULL, 0, path);
 	if (SUCCEEDED (result))
-		return path_to_id (path, Nirvana::FileType::directory);
+		return dir_path_to_id (path);
 	else
 		throw CORBA::UNKNOWN ();
 }
 
-StringW FileSystem::get_temp_path ()
+size_t FileSystem::get_temp_path (WinWChar* buf)
 {
-	WinWChar buf [MAX_PATH + 1];
-	DWORD cc = GetTempPathW ((DWORD)std::size (buf), buf);
+	size_t cc = GetTempPathW (MAX_PATH + 1, buf);
 	if (!cc)
 		throw_win_error_sys (GetLastError ());
-	return StringW (buf, cc - 1);
+	return cc;
 }
 
 DirItemId FileSystem::get_tmp (const IDL::String&, bool& may_cache)
@@ -199,10 +217,8 @@ DirItemId FileSystem::get_tmp (const IDL::String&, bool& may_cache)
 	may_cache = false;
 
 	WinWChar buf [MAX_PATH + 1];
-	DWORD cc = GetTempPathW ((DWORD)std::size (buf), buf);
-	if (!cc)
-		throw_win_error_sys (GetLastError ());
-	return path_to_id (buf, Nirvana::FileType::directory);
+	get_temp_path (buf);
+	return dir_path_to_id (buf);
 }
 
 DirItemId FileSystem::get_sbin (const IDL::String&, bool& may_cache)
@@ -214,7 +230,8 @@ DirItemId FileSystem::get_sbin (const IDL::String&, bool& may_cache)
 	if (!cc)
 		throw_win_error_sys (GetLastError ());
 	*wcsrchr (buf, '\\') = 0;
-	return path_to_id (buf, Nirvana::FileType::directory);
+
+	return dir_path_to_id (buf);
 }
 
 }
