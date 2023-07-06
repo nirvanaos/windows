@@ -43,7 +43,7 @@ public:
 		Base (std::move (id))
 	{}
 
-	virtual StringW get_path (CosNaming::Name& n) const override;
+	virtual StringW get_path (CosNaming::Name& n, bool create_file) const override;
 	virtual void unlink (CosNaming::Name& n) const override;
 	virtual void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const override;
 	virtual DirItemId create_dir (CosNaming::Name& n) const override;

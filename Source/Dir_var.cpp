@@ -40,22 +40,23 @@ bool Dir_var::is_tmp (const NameComponent& nc)
 	return nc.id () == "tmp" && nc.kind ().empty ();
 }
 
-StringW Dir_var::get_path (Name& n) const
+StringW Dir_var::get_path (Name& n, bool create_file) const
 {
 	assert (!n.empty ());
 	if (is_tmp (n.front ())) {
+		if (n.size () <= 1 && create_file)
+			throw RuntimeError (EACCES);
 		WinWChar buf [MAX_PATH + 1];
 		size_t cc = Port::FileSystem::get_temp_path (buf);
-		n.erase (n.begin ());
 		return StringW (buf, cc);
 	} else
-		return Base::get_path (n);
+		return Base::get_path (n, create_file);
 }
 
 void Dir_var::unlink (Name& n) const
 {
 	if (n.size () == 1 && is_tmp (n.front ()))
-		throw CORBA::NO_PERMISSION ();
+		throw CORBA::NO_PERMISSION (make_minor_errno (EACCES));
 	Base::unlink (n);
 }
 

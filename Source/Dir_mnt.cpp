@@ -53,9 +53,11 @@ std::unique_ptr <Iterator> Dir_mnt::make_iterator () const
 	return iter;
 }
 
-StringW Dir_mnt::get_path (Name& n) const
+StringW Dir_mnt::get_path (Name& n, bool create_file) const
 {
 	assert (!n.empty ());
+	if (n.size () <= 1 && create_file)
+		throw RuntimeError (EACCES);
 	const NameComponent& nc = n.front ();
 	if (!nc.kind ().empty () || nc.id ().size () != 2 || nc.id () [1] != ':')
 		throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
@@ -63,15 +65,9 @@ StringW Dir_mnt::get_path (Name& n) const
 	if ('a' <= drive_letter && drive_letter <= 'z')
 		drive_letter += 'A' - 'a';
 	if ('A' <= drive_letter && drive_letter <= 'Z') {
-		WCHAR path [4] = WINWCS ("A:\\");
+		WCHAR path [2];
 		path [0] = drive_letter;
-		DWORD att = GetFileAttributesW (path);
-		if (0xFFFFFFFF == att) {
-			DWORD err = GetLastError ();
-			if (ERROR_PATH_NOT_FOUND == err)
-				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
-		}
-		n.erase (n.begin ());
+		path [1] = ':';
 		return StringW (path, 2);
 	} else
 		throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));

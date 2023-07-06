@@ -58,10 +58,13 @@ Dir::Dir () :
 	Base (Nirvana::FileType::directory)
 {}
 
-StringW Dir::get_path (CosNaming::Name& n) const
+StringW Dir::get_path (Name& n, bool create_file) const
 {
 	assert (!n.empty ());
-	return make_path ();
+	StringW path = make_path ();
+	if (n.size () > 1 || !create_file)
+		append_path (path, n.front ());
+	return path;
 }
 
 void Dir::append_path (StringW& path, const NameComponent& nc)
@@ -82,28 +85,31 @@ void Dir::append_path (StringW& path, const NameComponent& nc)
 	}
 }
 
-StringW Dir::check_path (Name& n, bool append_last) const
+StringW Dir::check_path (Name& n, bool create_file) const
 {
 	assert (!n.empty ());
 
 	// Check all name components, except for the last one, as valid directories and then erase.
-	StringW path = get_path (n);
-	while (n.size () > 1) {
-		append_path (path, n.front ());
-		DWORD att = GetFileAttributesW (path.c_str ());
-		if (0xFFFFFFFF == att) {
-			DWORD err = GetLastError ();
-			if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
-				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
-		} else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
-			throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
+	StringW path = get_path (n, create_file);
+	if (n.size () > 1) {
+		do {
+			DWORD att = GetFileAttributesW (path.c_str ());
+			if (0xFFFFFFFF == att) {
+				DWORD err = GetLastError ();
+				if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
+					throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+			} else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
+				throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
 
-		n.erase (n.begin ());
+			n.erase (n.begin ());
+			append_path (path, n.front ());
+		} while (n.size () > 1);
+
+		if (!create_file)
+			append_path (path, n.front ());
 	}
 
 	assert (n.size () == 1);
-	if (append_last)
-		append_path (path, n.front ());
 
 	return path;
 }
@@ -174,7 +180,8 @@ DirItemId Dir::resolve_path (Name& n) const
 
 DirItemId Dir::get_new_file_id (Name& n) const
 {
-	StringW path = check_path (n, false);
+	StringW path = check_path (n, true);
+
 	// Create id for parent path
 	DirItemId id = FileSystem::path_to_id (path.c_str (), n, Nirvana::FileType::regular);
 

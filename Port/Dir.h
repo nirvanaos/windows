@@ -68,20 +68,19 @@ protected:
 	Dir (const DirItemId& id);
 	Dir ();
 
-	Windows::StringW check_path (CosNaming::Name& n, bool append_last = true) const;
-
-	virtual Windows::StringW get_path (CosNaming::Name& n) const;
-
+	virtual Windows::StringW get_path (CosNaming::Name& n, bool create_file) const;
 	static void append_path (Windows::StringW& path, const CosNaming::NameComponent& nc);
-
-	static const unsigned FLAG_REBIND = 0x80000000;
-	static const unsigned FLAG_DIRECTORY = 0x00000001;
 	virtual void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const;
-
-	static void unlink (const Windows::WinWChar* path, uint32_t att);
 
 	Windows::StringW get_pattern () const;
 
+private:
+	Windows::StringW check_path (CosNaming::Name& n, bool create_file = false) const;
+
+	static const unsigned FLAG_REBIND = 0x80000000;
+	static const unsigned FLAG_DIRECTORY = 0x00000001;
+
+	static void unlink (const Windows::WinWChar* path, uint32_t att);
 };
 
 }
