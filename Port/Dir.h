@@ -68,14 +68,17 @@ protected:
 	Dir (const DirItemId& id);
 	Dir ();
 
-	virtual Windows::StringW get_path (CosNaming::Name& n, bool create_file) const;
+	// Append first name component if it not last or dont_append_last false.
+	// May be overriden.
+	virtual Windows::StringW get_path (CosNaming::Name& n, bool dont_append_last) const;
+
 	static void append_path (Windows::StringW& path, const CosNaming::NameComponent& nc);
 	virtual void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const;
 
 	Windows::StringW get_pattern () const;
 
 private:
-	Windows::StringW check_path (CosNaming::Name& n, bool create_file = false) const;
+	Windows::StringW check_path (CosNaming::Name& n, bool dont_append_last = false) const;
 
 	static const unsigned FLAG_REBIND = 0x80000000;
 	static const unsigned FLAG_DIRECTORY = 0x00000001;

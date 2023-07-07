@@ -48,22 +48,13 @@ public:
 		return type_;
 	}
 
+protected:
 	const DirItemId& id () const noexcept
 	{
 		return id_;
 	}
 
-	bool removed () const noexcept
-	{
-		return FileType::not_found == type_;
-	}
-
-	bool _non_existent () const noexcept
-	{
-		return removed ();
-	}
-
-	void check_exist () const;
+	void etherealize () noexcept;
 
 protected:
 	DirItem (DirItemId&& id);
@@ -100,7 +91,6 @@ protected:
 	void* handle ();
 
 	void* get_handle () noexcept;
-	void close_handle () noexcept;
 
 	void get_attributes (_BY_HANDLE_FILE_INFORMATION& att);
 

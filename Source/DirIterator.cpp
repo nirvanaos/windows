@@ -38,7 +38,7 @@ DirIterator::DirIterator (const WinWChar* pattern) :
 {
 	handle_ = FindFirstFileExW (pattern, FindExInfoBasic, &data_, FindExSearchNameMatch, nullptr, 0);
 	if (INVALID_HANDLE_VALUE == handle_) {
-		// We can not throw user exception by the sppecification.
+		// We can not throw user exception by the specification.
 		throw_win_error_sys (GetLastError ());
 	}
 	while (false_item ()) {

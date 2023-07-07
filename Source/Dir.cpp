@@ -58,11 +58,19 @@ Dir::Dir () :
 	Base (Nirvana::FileType::directory)
 {}
 
-StringW Dir::get_path (Name& n, bool create_file) const
+StringW Dir::get_path (Name& n, bool dont_append_last) const
 {
 	assert (!n.empty ());
+
+	// Check directory existence
+	DWORD att = GetFileAttributesW (path ());
+	if (0xFFFFFFFF == att)
+		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
+	else if (!(FILE_ATTRIBUTE_DIRECTORY & att))
+		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOTDIR));
+
 	StringW path = make_path ();
-	if (n.size () > 1 || !create_file)
+	if (n.size () > 1 || !dont_append_last)
 		append_path (path, n.front ());
 	return path;
 }
@@ -85,12 +93,12 @@ void Dir::append_path (StringW& path, const NameComponent& nc)
 	}
 }
 
-StringW Dir::check_path (Name& n, bool create_file) const
+StringW Dir::check_path (Name& n, bool dont_append_last) const
 {
 	assert (!n.empty ());
 
 	// Check all name components, except for the last one, as valid directories and then erase.
-	StringW path = get_path (n, create_file);
+	StringW path = get_path (n, dont_append_last);
 	if (n.size () > 1) {
 		do {
 			DWORD att = GetFileAttributesW (path.c_str ());
@@ -105,7 +113,7 @@ StringW Dir::check_path (Name& n, bool create_file) const
 			append_path (path, n.front ());
 		} while (n.size () > 1);
 
-		if (!create_file)
+		if (!dont_append_last)
 			append_path (path, n.front ());
 	}
 
@@ -218,7 +226,6 @@ void Dir::remove ()
 	if (FileType::directory == type ()) {
 		if (!RemoveDirectoryW (path ()))
 			throw_last_error ();
-		close_handle ();
 	}
 }
 

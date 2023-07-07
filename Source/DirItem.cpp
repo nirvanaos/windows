@@ -59,12 +59,6 @@ DirItem::~DirItem ()
 		CloseHandle (handle_);
 }
 
-void DirItem::check_exist () const
-{
-	if (removed ())
-		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
-}
-
 void* DirItem::get_handle () noexcept
 {
 	if (INVALID_HANDLE_VALUE == handle_) {
@@ -98,7 +92,7 @@ void* DirItem::handle ()
 	return handle_;
 }
 
-void DirItem::close_handle () noexcept
+void DirItem::etherealize () noexcept
 {
 	if (INVALID_HANDLE_VALUE != handle_) {
 		CloseHandle (handle_);
@@ -109,7 +103,7 @@ void DirItem::close_handle () noexcept
 
 void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att)
 {
-	assert (!removed ());
+	assert (FileType::not_found != type_);
 
 	if (!GetFileInformationByHandle (handle (), &att)) {
 		DWORD err = error_check_exist ();
@@ -120,10 +114,9 @@ void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att)
 uint32_t DirItem::error_check_exist ()
 {
 	DWORD err = GetLastError ();
-	if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) {
-		close_handle ();
-		throw CORBA::OBJECT_NOT_EXIST ();
-	}
+	if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND)
+		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
+	
 	return err;
 }
 
@@ -142,7 +135,7 @@ void DirItem::set_inacc (TimeBase::UtcT& t, uint64_t inac) noexcept
 
 void DirItem::stat (FileStat& st)
 {
-	assert (!removed ());
+	assert (FileType::not_found != type_);
 
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);

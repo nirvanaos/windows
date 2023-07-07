@@ -128,20 +128,24 @@ NIRVANA_NORETURN void throw_win_error_sys (unsigned err)
 {
   switch (err) {
 
+  case ERROR_FILE_NOT_FOUND:
+  case ERROR_PATH_NOT_FOUND:
+    throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
+
   case ERROR_ACCESS_DENIED:
-    throw CORBA::NO_PERMISSION ();
+    throw CORBA::NO_PERMISSION (make_minor_errno (EACCES));
 
   case ERROR_NOT_ENOUGH_MEMORY:
-    throw CORBA::NO_MEMORY ();
+    throw CORBA::NO_MEMORY (make_minor_errno (ENOMEM));
 
   case ERROR_INVALID_PARAMETER:
-    throw CORBA::BAD_PARAM ();
+    throw CORBA::BAD_PARAM (make_minor_errno (EINVAL));
 
   case ERROR_CALL_NOT_IMPLEMENTED:
-    throw CORBA::NO_IMPLEMENT ();
+    throw CORBA::NO_IMPLEMENT (make_minor_errno (ENOSYS));
 
   case ERROR_TIMEOUT:
-    throw CORBA::TIMEOUT ();
+    throw CORBA::TIMEOUT (make_minor_errno (EBUSY));
 
   default:
     throw CORBA::INTERNAL (make_minor_errno (error2errno (err)));

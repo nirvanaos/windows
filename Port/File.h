@@ -49,11 +49,6 @@ protected:
 
 	void remove ();
 
-	bool _non_existent () noexcept
-	{
-		return type () == FileType::not_found;
-	}
-
 public:
 	void* open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
 		uint32_t flags_and_attributes);

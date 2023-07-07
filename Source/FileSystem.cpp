@@ -60,6 +60,15 @@ Roots FileSystem::get_roots ()
 	return roots;
 }
 
+NIRVANA_NORETURN void FileSystem::path_to_id_error (CosNaming::Name& n)
+{
+	DWORD err = GetLastError ();
+	if (!n.empty () && (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err))
+		throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));
+	else
+		throw_win_error_sys (err);
+}
+
 DirItemId FileSystem::path_to_id (const WinWChar* path, Name& last, FileType type)
 {
 	assert (path);
@@ -87,23 +96,16 @@ DirItemId FileSystem::path_to_id (const WinWChar* path, Name& last, FileType typ
 		// Get final path name
 		HANDLE h = CreateFileW (path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
 			FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-		if (INVALID_HANDLE_VALUE == h) {
-			DWORD err = GetLastError ();
-			if (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err)
-				throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (last));
-			else
-				throw_win_error_sys (err);
-		}
+		if (INVALID_HANDLE_VALUE == h)
+			path_to_id_error (last);
 
 		try {
 			DWORD cc = GetFinalPathNameByHandleW (h, nullptr, 0, 0);
 			if (!cc)
-				throw_win_error_sys (GetLastError ());
+				path_to_id_error (last);
 			id.resize ((cc + 1) * sizeof (WinWChar));
-			if (!GetFinalPathNameByHandleW (h, (WinWChar*)(id.data () + 2), cc, 0)) {
-				assert (false);
-				throw_win_error_sys (GetLastError ());
-			}
+			if (!GetFinalPathNameByHandleW (h, (WinWChar*)(id.data () + 2), cc, 0))
+				path_to_id_error (last);
 
 			if (Nirvana::FileType::unknown == type) {
 				BY_HANDLE_FILE_INFORMATION bhfi;

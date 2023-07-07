@@ -89,7 +89,6 @@ void File::remove ()
 	if (FileType::regular == type ()) {
 		if (!DeleteFileW (path ()))
 			throw_last_error ();
-		close_handle ();
 	}
 }
 

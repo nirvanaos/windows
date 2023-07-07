@@ -124,6 +124,8 @@ private:
 	static DirItemId get_sbin (const IDL::String&, bool& may_cache);
 	static DirItemId get_tmp (const IDL::String&, bool& may_cache);
 
+	static NIRVANA_NORETURN void path_to_id_error (CosNaming::Name& n);
+
 	enum class SpecialDir
 	{
 		var,
