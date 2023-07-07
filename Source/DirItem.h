@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_WINDOWS_DIRITEM_H_
 #pragma once
 
-#include "../Port/FileSystem.h"
+#include "FileSystemImpl.h"
 
 struct _BY_HANDLE_FILE_INFORMATION;
 struct _FILETIME;
@@ -41,12 +41,12 @@ namespace Windows {
 class DirItem
 {
 public:
-	void stat (FileStat& st);
-
 	FileType type () const noexcept
 	{
 		return type_;
 	}
+
+	void stat (FileStat& st);
 
 protected:
 	const DirItemId& id () const noexcept
@@ -65,20 +65,20 @@ protected:
 	const WinWChar* path () const noexcept
 	{
 		if (!id_.empty ())
-			return Port::FileSystem::id_to_path (id_);
+			return FileSystemImpl::id_to_path (id_);
 		else
 			return nullptr;
 	}
 
 	StringW make_path () const
 	{
-		return Port::FileSystem::make_path (id_);
+		return FileSystemImpl::make_path (id_);
 	}
 
 	size_t path_len () const noexcept
 	{
 		if (!id_.empty ())
-			return Port::FileSystem::path_len (id_);
+			return FileSystemImpl::path_len (id_);
 		else
 			return 0;
 	}

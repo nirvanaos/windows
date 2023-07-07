@@ -35,36 +35,106 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
+/// Implements Dir object for host system.
 class NIRVANA_NOVTABLE Dir : 
 	public Windows::DirItem,
 	public CosNaming::Core::NamingContextRoot
 {
 	typedef Windows::DirItem Base;
 
+	///@{
+	/// DirItem implementation.
+
 public:
+	/// File system object type.
+	FileType type () const noexcept
+	{
+		return Base::type ();
+	}
+
+	/// File system object status information.
+	/// 
+	/// \param [out] st FileStat structure.
+	void stat (FileStat& st)
+	{
+		Base::stat (st);
+	}
+
+protected:
+	/// File system object unique id.
+	const DirItemId& id () const noexcept
+	{
+		return Base::id ();
+	}
+
+	/// Etherealize file system object: close all handles etc.
+	void etherealize () noexcept
+	{
+		Base::etherealize ();
+	}
+
+	/// Delete all links to a file or empty directory.
+	virtual void remove ();
+
+	///@}
+
+protected:
+
+	///@{
+	/// Dir implementation.
+	
+	/// Bind file.
+	/// 
+	/// \param n Name.
+	/// \param file File object unique id.
+	/// \param rebind `true` for rebind.
 	void bind_file (CosNaming::Name& n, const DirItemId& file, bool rebind) const
 	{
 		create_link (n, file, rebind ? FLAG_REBIND : 0);
 	}
 
+	/// Bind directory.
+	/// 
+	/// \param n Name.
+	/// \param file Dir object unique id.
+	/// \param rebind `true` for rebind.
 	void bind_dir (CosNaming::Name& n, const DirItemId& dir, bool rebind) const
 	{
 		create_link (n, dir, FLAG_DIRECTORY | (rebind ? FLAG_REBIND : 0));
 	}
 
-	// This method must be really const to avoid race condition in iterator.
+	/// Resolve path to object.
+	/// This method must be really const to avoid race condition in iterator.
+	/// \param n File system object name.
+	/// \returns File system object unique id.
 	DirItemId resolve_path (CosNaming::Name& n) const;
 
+	/// Unlink object.
+	/// 
+	/// \param n Object name.
 	virtual void unlink (CosNaming::Name& n) const;
+
+	/// Create directory.
+	/// 
+	/// \param n Directory name.
+	/// \returns New directory unique id.
 	virtual DirItemId create_dir (CosNaming::Name& n) const;
 
+	/// Make new file id.
+	/// 
+	/// \param n File name.
+	/// \returns File id.
 	DirItemId get_new_file_id (CosNaming::Name& n) const;
 
+	/// Make directory iterator.
+	/// 
+	/// \returns Unique pointer to CosNaming::Core::Iterator object.
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 
-	virtual void remove ();
+	///@}
 
 protected:
+	// Implementation details.
 	Dir (const DirItemId& id);
 	Dir ();
 

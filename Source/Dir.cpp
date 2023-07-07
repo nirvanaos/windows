@@ -135,7 +135,7 @@ void Dir::create_link (Name& n, const DirItemId& target, unsigned flags) const
 			unlink (path.c_str (), att);
 	}
 
-	if (!CreateSymbolicLinkW (path.c_str (), FileSystem::id_to_path (target), flags))
+	if (!CreateSymbolicLinkW (path.c_str (), FileSystemImpl::id_to_path (target), flags))
 		throw_win_error_sys (GetLastError ());
 }
 
@@ -178,12 +178,12 @@ DirItemId Dir::create_dir (Name& n) const
 			throw_win_error_sys (err);
 	}
 
-	return FileSystem::path_to_id (path.c_str (), n, Nirvana::FileType::directory);
+	return FileSystemImpl::path_to_id (path.c_str (), n, Nirvana::FileType::directory);
 }
 
 DirItemId Dir::resolve_path (Name& n) const
 {
-	return FileSystem::path_to_id (check_path (n).c_str (), n);
+	return FileSystemImpl::path_to_id (check_path (n).c_str (), n);
 }
 
 DirItemId Dir::get_new_file_id (Name& n) const
@@ -191,7 +191,7 @@ DirItemId Dir::get_new_file_id (Name& n) const
 	StringW path = check_path (n, true);
 
 	// Create id for parent path
-	DirItemId id = FileSystem::path_to_id (path.c_str (), n, Nirvana::FileType::regular);
+	DirItemId id = FileSystemImpl::path_to_id (path.c_str (), n, Nirvana::FileType::regular);
 
 	// Append file name to id
 	StringW name;

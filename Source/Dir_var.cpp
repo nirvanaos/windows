@@ -27,7 +27,7 @@
 #include "win32.h"
 #include "error2errno.h"
 #include "DirIteratorEx.h"
-#include <Port/FileSystem.h>
+#include "FileSystemImpl.h"
 
 using namespace CosNaming;
 
@@ -47,7 +47,7 @@ StringW Dir_var::get_path (Name& n, bool create_file) const
 		if (n.size () <= 1 && create_file)
 			throw RuntimeError (EACCES);
 		WinWChar buf [MAX_PATH + 1];
-		size_t cc = Port::FileSystem::get_temp_path (buf);
+		size_t cc = FileSystemImpl::get_temp_path (buf);
 		return StringW (buf, cc);
 	} else
 		return Base::get_path (n, create_file);

@@ -23,7 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "../Port/FileSystem.h"
+#include "FileSystemImpl.h"
 #include "app_data.h"
 #include "error2errno.h"
 #include <NameService/Dir.h>
@@ -36,12 +36,9 @@ using namespace CosNaming;
 
 namespace Nirvana {
 namespace Core {
+namespace Windows {
 
-using namespace Windows;
-
-namespace Port {
-
-const FileSystem::Root FileSystem::roots_ [] = {
+const FileSystemImpl::Root FileSystemImpl::roots_ [] = {
 	{ "etc", get_app_data_dir },
 	{ "home", get_home },
 	{ "mnt", get_mnt },
@@ -50,7 +47,7 @@ const FileSystem::Root FileSystem::roots_ [] = {
 	{ "var", get_var }
 };
 
-Roots FileSystem::get_roots ()
+Roots FileSystemImpl::get_roots ()
 {
 	Roots roots;
 	roots.reserve (std::size (roots_));
@@ -60,7 +57,7 @@ Roots FileSystem::get_roots ()
 	return roots;
 }
 
-NIRVANA_NORETURN void FileSystem::path_to_id_error (CosNaming::Name& n)
+NIRVANA_NORETURN void FileSystemImpl::path_to_id_error (CosNaming::Name& n)
 {
 	DWORD err = GetLastError ();
 	if (!n.empty () && (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err))
@@ -69,7 +66,7 @@ NIRVANA_NORETURN void FileSystem::path_to_id_error (CosNaming::Name& n)
 		throw_win_error_sys (err);
 }
 
-DirItemId FileSystem::path_to_id (const WinWChar* path, Name& last, FileType type)
+DirItemId FileSystemImpl::path_to_id (const WinWChar* path, Name& last, FileType type)
 {
 	assert (path);
 	assert (last.size () <= 1);
@@ -128,13 +125,13 @@ DirItemId FileSystem::path_to_id (const WinWChar* path, Name& last, FileType typ
 	return id;
 }
 
-DirItemId FileSystem::dir_path_to_id (const WinWChar* path)
+DirItemId FileSystemImpl::dir_path_to_id (const WinWChar* path)
 {
 	Name n;
 	return path_to_id (path, n, FileType::directory);
 }
 
-DirItemId FileSystem::make_special_id (SpecialDir dir)
+DirItemId FileSystemImpl::make_special_id (SpecialDir dir)
 {
 	DirItemId id (4);
 	WinWChar* p = (WinWChar*)id.data ();
@@ -143,7 +140,7 @@ DirItemId FileSystem::make_special_id (SpecialDir dir)
 	return id;
 }
 
-PortableServer::ServantBase::_ref_type FileSystem::incarnate (const DirItemId& id)
+PortableServer::ServantBase::_ref_type FileSystemImpl::incarnate (const DirItemId& id)
 {
 	if (get_item_type (id) == Nirvana::FileType::directory) {
 		switch (is_special_dir (id)) {
@@ -161,7 +158,7 @@ PortableServer::ServantBase::_ref_type FileSystem::incarnate (const DirItemId& i
 		return CORBA::make_reference <Nirvana::Core::File> (std::ref (id));
 }
 
-DirItemId FileSystem::get_app_data_dir (const IDL::String& name, bool& may_cache)
+DirItemId FileSystemImpl::get_app_data_dir (const IDL::String& name, bool& may_cache)
 {
 	if (!name.size () || name.size () > 3)
 		throw CORBA::BAD_PARAM ();
@@ -173,7 +170,7 @@ DirItemId FileSystem::get_app_data_dir (const IDL::String& name, bool& may_cache
 	return get_app_data_dir_id (wname);
 }
 
-DirItemId FileSystem::get_app_data_dir_id (const WinWChar* name)
+DirItemId FileSystemImpl::get_app_data_dir_id (const WinWChar* name)
 {
 	WinWChar path [MAX_PATH + 1];
 	size_t cc = get_app_data_folder (path, std::size (path), name, false);
@@ -182,19 +179,19 @@ DirItemId FileSystem::get_app_data_dir_id (const WinWChar* name)
 	return dir_path_to_id (path);
 }
 
-DirItemId FileSystem::get_var (const IDL::String&, bool& may_cache)
+DirItemId FileSystemImpl::get_var (const IDL::String&, bool& may_cache)
 {
 	may_cache = true;
 	return make_special_id (SpecialDir::var);
 }
 
-DirItemId FileSystem::get_mnt (const IDL::String&, bool& may_cache)
+DirItemId FileSystemImpl::get_mnt (const IDL::String&, bool& may_cache)
 {
 	may_cache = true;
 	return make_special_id (SpecialDir::mnt);
 }
 
-DirItemId FileSystem::get_home (const IDL::String&, bool& may_cache)
+DirItemId FileSystemImpl::get_home (const IDL::String&, bool& may_cache)
 {
 	may_cache = false;
 
@@ -206,7 +203,7 @@ DirItemId FileSystem::get_home (const IDL::String&, bool& may_cache)
 		throw CORBA::UNKNOWN ();
 }
 
-size_t FileSystem::get_temp_path (WinWChar* buf)
+size_t FileSystemImpl::get_temp_path (WinWChar* buf)
 {
 	size_t cc = GetTempPathW (MAX_PATH + 1, buf);
 	if (!cc)
@@ -214,7 +211,7 @@ size_t FileSystem::get_temp_path (WinWChar* buf)
 	return cc;
 }
 
-DirItemId FileSystem::get_tmp (const IDL::String&, bool& may_cache)
+DirItemId FileSystemImpl::get_tmp (const IDL::String&, bool& may_cache)
 {
 	may_cache = false;
 
@@ -223,7 +220,7 @@ DirItemId FileSystem::get_tmp (const IDL::String&, bool& may_cache)
 	return dir_path_to_id (buf);
 }
 
-DirItemId FileSystem::get_sbin (const IDL::String&, bool& may_cache)
+DirItemId FileSystemImpl::get_sbin (const IDL::String&, bool& may_cache)
 {
 	may_cache = true;
 

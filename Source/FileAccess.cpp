@@ -24,7 +24,6 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/FileAccess.h"
-#include "../Port/FileSystem.h"
 #include "MessageBroker.h"
 #include "error2errno.h"
 #include <Nirvana/RuntimeError.h>

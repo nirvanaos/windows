@@ -28,30 +28,56 @@
 #define NIRVANA_CORE_PORT_FILESYSTEM_H_
 #pragma once
 
-#include <NameService/Roots.h>
+#include "../Source/FileSystemImpl.h"
 #include <NameService/NamingContextRoot.h>
-#include <Nirvana/File.h>
-#include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-class FileSystem
+/// Implements file system operations.
+class FileSystem : private Windows::FileSystemImpl
 {
+	typedef Windows::FileSystemImpl Base;
+
 public:
-	static Roots get_roots ();
-
-	static PortableServer::ServantBase::_ref_type incarnate (const DirItemId& id);
-
-	static void etherealize (const DirItemId& id, CORBA::Object::_ptr_type servant)
-	{}
-
-	static Nirvana::FileType get_item_type (const DirItemId& id) noexcept
+	/// Obtain root directories
+	static Roots get_roots ()
 	{
-		return (Nirvana::FileType)*(const Windows::WinWChar*)id.data ();
+		return Base::get_roots ();
 	}
 
+	/// Incarnate file system object.
+	/// 
+	/// \param id File system object id.
+	/// \returns  File system object servant.
+	static PortableServer::ServantBase::_ref_type incarnate (const DirItemId& id)
+	{
+		return Base::incarnate (id);
+	}
+
+	/// Etherealize file system object.
+	/// 
+	/// \param id      File system object id.
+	/// \param servant File system object servant.
+	static void etherealize (const DirItemId& id, CORBA::Object::_ptr_type servant)
+	{
+		Base::etherealize (id, servant);
+	}
+
+	/// Get item type by id.
+	/// 
+	/// \param id File system object id.
+	/// \returns File system object type.
+	static Nirvana::FileType get_item_type (const DirItemId& id) noexcept
+	{
+		return Base::get_item_type (id);
+	}
+
+	/// Get Naming Service name from file system path.
+	/// 
+	/// \param path File or directory path.
+	/// \returns Naming Service compound name.
 	static CosNaming::Name get_name_from_path (const IDL::String& path)
 	{
 		CosNaming::Name n;
@@ -92,67 +118,6 @@ public:
 
 		return n;
 	}
-
-	// For internal use
-	
-	static DirItemId path_to_id (const Windows::WinWChar* path, CosNaming::Name& last, FileType type = FileType::unknown);
-	static DirItemId dir_path_to_id (const Windows::WinWChar* path);
-
-	static const Windows::WinWChar* id_to_path (const DirItemId& id) noexcept
-	{
-		return ((const Windows::WinWChar*)id.data ()) + 1;
-	}
-
-	static size_t path_len (const DirItemId& id) noexcept
-	{
-		return id.size () / 2 - 2;
-	}
-
-	static Windows::StringW make_path (const DirItemId& id)
-	{
-		return Windows::StringW (id_to_path (id), path_len (id));
-	}
-
-	static size_t get_temp_path (Windows::WinWChar* buf);
-
-private:
-	static DirItemId get_app_data_dir (const IDL::String& name, bool& may_cache);
-	static DirItemId get_app_data_dir_id (const Windows::WinWChar* name);
-	static DirItemId get_var (const IDL::String&, bool& may_cache);
-	static DirItemId get_mnt (const IDL::String&, bool& may_cache);
-	static DirItemId get_home (const IDL::String&, bool& may_cache);
-	static DirItemId get_sbin (const IDL::String&, bool& may_cache);
-	static DirItemId get_tmp (const IDL::String&, bool& may_cache);
-
-	static NIRVANA_NORETURN void path_to_id_error (CosNaming::Name& n);
-
-	enum class SpecialDir
-	{
-		var,
-		mnt,
-		// dev, ...
-
-		END
-	};
-
-	static DirItemId make_special_id (SpecialDir dir);
-
-	static SpecialDir is_special_dir (const DirItemId& id) noexcept
-	{
-		if (id.size () == 4 && get_item_type (id) == Nirvana::FileType::directory)
-			return (SpecialDir)((const Windows::WinWChar*)id.data ()) [1];
-		else
-			return SpecialDir::END;
-	}
-
-private:
-	struct Root
-	{
-		const char* dir;
-		GetRootId factory;
-	};
-	
-	static const Root roots_ [];
 };
 
 }

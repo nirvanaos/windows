@@ -32,24 +32,68 @@
 
 namespace Nirvana {
 namespace Core {
+
+namespace Windows {
+class FileAccess;
+}
+
 namespace Port {
 
-class File : public Windows::DirItem
+class File : private Windows::DirItem
 {
 	typedef Windows::DirItem Base;
+
+	///@{
+	/// DirItem implementation.
+
+public:
+	/// File system object type.
+	FileType type () noexcept;
+
+	/// File system object status information.
+	/// 
+	/// \param [out] st FileStat structure.
+	void stat (FileStat& st)
+	{
+		Base::stat (st);
+	}
+
+protected:
+	/// File system object unique id.
+	const DirItemId& id () const noexcept
+	{
+		return Base::id ();
+	}
+
+	/// Etherealize file system object: close all handles etc.
+	void etherealize () noexcept
+	{
+		Base::etherealize ();
+	}
+
+	/// Delete all links to a file or empty directory.
+	void remove ();
+
+	///@}
+
+	///@{
+	/// File implementation.
+
+protected:
+
+	/// File size.
+	uint64_t size ();
+
+	///@}
 
 protected:
 	File (const DirItemId& id) :
 		Base (DirItemId (id))
 	{}
 
-	uint64_t size ();
+private:
+	friend class Nirvana::Core::Windows::FileAccess;
 
-	FileType type () noexcept;
-
-	void remove ();
-
-public:
 	void* open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
 		uint32_t flags_and_attributes);
 
