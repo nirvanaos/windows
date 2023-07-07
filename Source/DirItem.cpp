@@ -101,6 +101,18 @@ void DirItem::etherealize () noexcept
 	type_ = FileType::not_found;
 }
 
+bool DirItem::_non_existent () const noexcept
+{
+	assert (FileType::not_found != type_);
+	assert (INVALID_HANDLE_VALUE != handle_);
+	_BY_HANDLE_FILE_INFORMATION att;
+	if (!GetFileInformationByHandle (handle_, &att)) {
+		DWORD err = GetLastError ();
+		return err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND;
+	} else
+		return 0 == att.nNumberOfLinks;
+}
+
 void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att)
 {
 	assert (FileType::not_found != type_);
@@ -116,7 +128,7 @@ uint32_t DirItem::error_check_exist ()
 	DWORD err = GetLastError ();
 	if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND)
 		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
-	
+
 	return err;
 }
 

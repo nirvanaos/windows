@@ -50,6 +50,14 @@ public:
 	/// File system object type.
 	FileType type () noexcept;
 
+	/// Existance check
+	bool _non_existent () noexcept
+	{
+		if (type () == FileType::not_found)
+			return true;
+		return Base::_non_existent ();
+	}
+
 	/// File system object status information.
 	/// 
 	/// \param [out] st FileStat structure.

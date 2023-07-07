@@ -40,7 +40,7 @@ namespace Windows {
 // File system item: interface Nirvana::DirItem
 class DirItem
 {
-public:
+protected:
 	FileType type () const noexcept
 	{
 		return type_;
@@ -48,7 +48,6 @@ public:
 
 	void stat (FileStat& st);
 
-protected:
 	const DirItemId& id () const noexcept
 	{
 		return id_;
@@ -56,7 +55,8 @@ protected:
 
 	void etherealize () noexcept;
 
-protected:
+	bool _non_existent () const noexcept;
+
 	DirItem (DirItemId&& id);
 	DirItem (FileType type);
 
