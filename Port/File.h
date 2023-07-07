@@ -39,6 +39,7 @@ class FileAccess;
 
 namespace Port {
 
+/// Implements File object for host system.
 class File : private Windows::DirItem
 {
 	typedef Windows::DirItem Base;

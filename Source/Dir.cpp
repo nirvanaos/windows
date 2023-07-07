@@ -58,6 +58,13 @@ Dir::Dir () :
 	Base (Nirvana::FileType::directory)
 {}
 
+StringW Dir::make_path () const
+{
+	if (Base::_non_existent ())
+		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
+	return Base::make_path ();
+}
+
 StringW Dir::get_path (Name& n, bool dont_append_last) const
 {
 	assert (!n.empty ());

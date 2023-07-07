@@ -156,6 +156,7 @@ protected:
 	Windows::StringW get_pattern () const;
 
 private:
+	Windows::StringW make_path () const;
 	Windows::StringW check_path (CosNaming::Name& n, bool dont_append_last = false) const;
 
 	static const unsigned FLAG_REBIND = 0x80000000;
