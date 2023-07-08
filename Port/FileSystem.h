@@ -29,7 +29,6 @@
 #pragma once
 
 #include "../Source/FileSystemImpl.h"
-#include <NameService/NamingContextRoot.h>
 
 namespace Nirvana {
 namespace Core {
@@ -42,28 +41,20 @@ class FileSystem : private Windows::FileSystemImpl
 
 public:
 	/// Obtain root directories
-	static Roots get_roots ()
-	{
-		return Base::get_roots ();
-	}
+	static Roots get_roots ();
 
 	/// Incarnate file system object.
 	/// 
 	/// \param id File system object id.
 	/// \returns  File system object servant.
-	static PortableServer::ServantBase::_ref_type incarnate (const DirItemId& id)
-	{
-		return Base::incarnate (id);
-	}
+	static PortableServer::ServantBase::_ref_type incarnate (const DirItemId& id);
 
 	/// Etherealize file system object.
 	/// 
 	/// \param id      File system object id.
 	/// \param servant File system object servant.
 	static void etherealize (const DirItemId& id, CORBA::Object::_ptr_type servant)
-	{
-		Base::etherealize (id, servant);
-	}
+	{} // Do nothing
 
 	/// Get item type by id.
 	/// 
@@ -74,50 +65,23 @@ public:
 		return Base::get_item_type (id);
 	}
 
-	/// Get Naming Service name from file system path.
+	/// Translate path from a host-specific form to standard.
 	/// 
-	/// \param path File or directory path.
-	/// \returns Naming Service compound name.
-	static CosNaming::Name get_name_from_path (const IDL::String& path)
+	/// On the UNIX-like systems probably does nothing and just returns `false`.
+	/// 
+	/// \param path Host-specific path.
+	/// \param [out] translated Translated standard path.
+	/// \returns `true` if path was translated and \p translated string is not empty.
+	static bool translate_path (const IDL::String& path, IDL::String& translated);
+
+private:
+	struct Root
 	{
-		CosNaming::Name n;
-		const char* s = path.c_str ();
-		const char* begin = s;
-		if (path.size () > 3 && begin [1] == ':' && begin [2] == '\\') {
+		const char* dir;
+		GetRootId factory;
+	};
 
-			char drive = *begin;
-			if ('a' <= drive && drive <= 'z')
-				drive += 'A' - 'a';
-			else if (!('A' <= drive && drive <= 'Z'))
-				throw CosNaming::NamingContext::InvalidName ();
-
-			n.push_back (CosNaming::NameComponent ("/", IDL::String ()));
-			n.push_back (CosNaming::NameComponent ("mnt", IDL::String ()));
-
-			IDL::String drv;
-			drv += drive;
-			drv += ':';
-			n.push_back (CosNaming::NameComponent (drv, IDL::String ()));
-			begin += 3;
-		}
-		
-		for (const char* p = begin; *p; ++p) {
-			if ('\\' == *p || '/' == *p) {
-				if (p == begin)
-					++begin; // Skip adjacent backslashes
-				else {
-					n.push_back (CosNaming::Core::NamingContextRoot::to_component (
-						path.substr (begin - s, p - begin)));
-					begin = p + 1;
-				}
-			} else if (strchr ("<>:\"|?*", *p))
-				throw CosNaming::NamingContext::InvalidName ();
-		}
-		if (*begin) // Ignore trailing slash
-			n.push_back (CosNaming::Core::NamingContextRoot::to_component (path.substr (begin - s)));
-
-		return n;
-	}
+	static const Root roots_ [];
 };
 
 }

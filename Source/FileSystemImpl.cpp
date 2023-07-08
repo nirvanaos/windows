@@ -28,8 +28,6 @@
 #include "error2errno.h"
 #include <NameService/Dir.h>
 #include <NameService/File.h>
-#include "Dir_var.h"
-#include "Dir_mnt.h"
 #include <ShlObj.h>
 
 using namespace CosNaming;
@@ -38,26 +36,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-const FileSystemImpl::Root FileSystemImpl::roots_ [] = {
-	{ "etc", get_app_data_dir },
-	{ "home", get_home },
-	{ "mnt", get_mnt },
-	{ "sbin", get_sbin },
-	{ "tmp", get_tmp },
-	{ "var", get_var }
-};
-
-Roots FileSystemImpl::get_roots ()
-{
-	Roots roots;
-	roots.reserve (std::size (roots_));
-	for (const Root* p = roots_; p != std::end (roots_); ++p) {
-		roots.push_back ({ p->dir, p->factory });
-	}
-	return roots;
-}
-
-NIRVANA_NORETURN void FileSystemImpl::path_to_id_error (CosNaming::Name& n)
+NIRVANA_NORETURN void FileSystemImpl::path_to_id_error (Name& n)
 {
 	DWORD err = GetLastError ();
 	if (!n.empty () && (ERROR_PATH_NOT_FOUND == err || ERROR_FILE_NOT_FOUND == err))
@@ -138,24 +117,6 @@ DirItemId FileSystemImpl::make_special_id (SpecialDir dir)
 	*(p++) = (WinWChar)Nirvana::FileType::directory;
 	*(p++) = (WinWChar)dir;
 	return id;
-}
-
-PortableServer::ServantBase::_ref_type FileSystemImpl::incarnate (const DirItemId& id)
-{
-	if (get_item_type (id) == Nirvana::FileType::directory) {
-		switch (is_special_dir (id)) {
-		case SpecialDir::var:
-			return CORBA::make_reference <Windows::Dir_var> (get_app_data_dir_id (WINWCS("var")));
-
-		case SpecialDir::mnt:
-			return CORBA::make_reference <Windows::Dir_mnt> ();
-		
-		default:
-			return CORBA::make_reference <Nirvana::Core::Dir> (std::ref (id));
-		}
-
-	} else
-		return CORBA::make_reference <Nirvana::Core::File> (std::ref (id));
 }
 
 DirItemId FileSystemImpl::get_app_data_dir (const IDL::String& name, bool& may_cache)

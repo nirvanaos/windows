@@ -39,13 +39,6 @@ namespace Windows {
 class FileSystemImpl
 {
 public:
-	static Roots get_roots ();
-
-	static PortableServer::ServantBase::_ref_type incarnate (const DirItemId& id);
-
-	static void etherealize (const DirItemId& id, CORBA::Object::_ptr_type servant)
-	{}
-
 	static Nirvana::FileType get_item_type (const DirItemId& id) noexcept
 	{
 		return (Nirvana::FileType) * (const Windows::WinWChar*)id.data ();
@@ -71,7 +64,6 @@ public:
 
 	static size_t get_temp_path (Windows::WinWChar* buf);
 
-private:
 	static DirItemId get_app_data_dir (const IDL::String& name, bool& may_cache);
 	static DirItemId get_app_data_dir_id (const Windows::WinWChar* name);
 	static DirItemId get_var (const IDL::String&, bool& may_cache);
@@ -79,8 +71,6 @@ private:
 	static DirItemId get_home (const IDL::String&, bool& may_cache);
 	static DirItemId get_sbin (const IDL::String&, bool& may_cache);
 	static DirItemId get_tmp (const IDL::String&, bool& may_cache);
-
-	static NIRVANA_NORETURN void path_to_id_error (CosNaming::Name& n);
 
 	enum class SpecialDir
 	{
@@ -91,8 +81,6 @@ private:
 		END
 	};
 
-	static DirItemId make_special_id (SpecialDir dir);
-
 	static SpecialDir is_special_dir (const DirItemId& id) noexcept
 	{
 		if (id.size () == 4 && get_item_type (id) == Nirvana::FileType::directory)
@@ -102,13 +90,10 @@ private:
 	}
 
 private:
-	struct Root
-	{
-		const char* dir;
-		GetRootId factory;
-	};
+	static NIRVANA_NORETURN void path_to_id_error (CosNaming::Name& n);
 
-	static const Root roots_ [];
+	static DirItemId make_special_id (SpecialDir dir);
+
 };
 
 }
