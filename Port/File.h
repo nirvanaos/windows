@@ -64,6 +64,9 @@ public:
 	/// \param [out] st FileStat structure.
 	void stat (FileStat& st)
 	{
+		// File type can be unknown here, check.
+		if (type () == FileType::not_found)
+			throw CORBA::OBJECT_NOT_EXIST (ENOENT);
 		Base::stat (st);
 	}
 

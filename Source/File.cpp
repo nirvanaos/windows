@@ -36,6 +36,10 @@ namespace Port {
 
 uint64_t File::size ()
 {
+	// File type can be unknown here, check.
+	if (type () == FileType::not_found)
+		throw CORBA::OBJECT_NOT_EXIST (ENOENT);
+
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
 	return make64 (att.nFileSizeLow, att.nFileSizeHigh);

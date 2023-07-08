@@ -118,6 +118,7 @@ bool DirItem::_non_existent () const noexcept
 void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att)
 {
 	assert (FileType::not_found != type_);
+	assert (FileType::unknown != type_);
 
 	if (!GetFileInformationByHandle (handle (), &att)) {
 		DWORD err = error_check_exist ();
@@ -151,6 +152,7 @@ void DirItem::set_inacc (TimeBase::UtcT& t, uint64_t inac) noexcept
 void DirItem::stat (FileStat& st)
 {
 	assert (FileType::not_found != type_);
+	assert (FileType::unknown != type_);
 
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
