@@ -1,8 +1,8 @@
 #include <Nirvana/Formatter.h>
+#include <Nirvana/System.h>
+#include <Nirvana/string_conv.h>
 #include <crtdbg.h>
-#include <Windows.h>
 
-using namespace std;
 using namespace Nirvana;
 
 extern "C" int __cdecl _CrtDbgReport (
@@ -13,82 +13,42 @@ extern "C" int __cdecl _CrtDbgReport (
 	char const* format,
 	...)
 {
-	string s;
-	if (module_name) {
-		s = module_name;
-		s += ": ";
-	}
-
-	if (file_name) {
-		s += file_name;
-		s += '(';
-		char buf [16];
-		_itoa_s (line_number, buf, 10);
-		s += buf;
-		s += "): ";
-	}
-
-	if (_CRT_ASSERT == report_type)
-		s += "Assertion failed: ";
-	else if (report_type)
-		s += "ERROR: ";
-	else
-		s += "WARNING: ";
-
-	CIn <char> in (format);
-	COutContainer <string> out (s);
+	std::string s;
 
 	va_list arglist;
 	va_start (arglist, format);
-	Formatter::vformat (false, in, arglist, out);
+	append_format_v (s, format, arglist);
 	va_end (arglist);
 
-	s += '\n';
-	OutputDebugStringA (s.c_str ());
+	g_system->debug_event ((System::DebugEvent)(report_type + 1), s, file_name, line_number);
 
-	return report_type ? 1 : 0;
+	return 0;
 }
 
 extern "C" int __cdecl _CrtDbgReportW (
 	int         report_type,
-	WCHAR const* file_name,
+	wchar_t const* file_name,
 	int         line_number,
-	WCHAR const* module_name,
-	WCHAR const* format,
+	wchar_t const* module_name,
+	wchar_t const* format,
 	...)
 {
-	wstring s;
+	std::wstring s;
 	if (module_name) {
 		s = module_name;
 		s += L": ";
 	}
 
-	if (file_name) {
-		s += file_name;
-		s += '(';
-		wchar_t buf [16];
-		_itow_s (line_number, buf, 10);
-		s += buf;
-		s += L"): ";
-	}
-
-	if (_CRT_ASSERT == report_type)
-		s += L"Assertion failed: ";
-	else if (report_type)
-		s += L"ERROR: ";
-	else
-		s += L"WARNING: ";
-
-	CIn <WCHAR> in (format);
-	COutContainer <wstring> out (s);
-
 	va_list arglist;
 	va_start (arglist, format);
-	Formatter::vformat (true, in, arglist, out);
+	append_format_v (s, format, arglist);
 	va_end (arglist);
 
-	s += '\n';
-	OutputDebugStringW (s.c_str ());
+	IDL::String msg, sfn;
+	wide_to_utf8 (s, msg);
+	wide_to_utf8 (file_name, sfn);
 
-	return report_type ? 1 : 0;
+	g_system->debug_event ((System::DebugEvent)(report_type + 1), msg, sfn, line_number);
+
+	return 0;
 }

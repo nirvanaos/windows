@@ -11,8 +11,8 @@ extern "C" int __cdecl __stdio_common_vsprintf_s (
   va_list          const arglist
 )
 {
-  CIn <char> in (format);
-  COutBufSize <char> out (buffer, buffer_count);
+  Format <char> in (format);
+  FormatOutBufSize <char> out (buffer, buffer_count);
 
   return Formatter::vformat (false, in, arglist, out);
 }
