@@ -24,6 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "error2errno.h"
+#include <Nirvana/RuntimeError.h>
 #include "win32.h"
 #include <algorithm>
 #include <assert.h>

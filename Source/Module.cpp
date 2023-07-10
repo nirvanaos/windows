@@ -28,6 +28,7 @@
 #include "win32.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
+#include <Nirvana/RuntimeError.h>
 
 namespace Nirvana {
 namespace Core {
