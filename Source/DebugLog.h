@@ -51,6 +51,8 @@ public:
 	static HANDLE get_handle () noexcept;
 	static void terminate () noexcept;
 
+	static bool trace_;
+
 private:
 	static void write (const char* text, size_t len) noexcept;
 

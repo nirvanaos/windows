@@ -40,7 +40,7 @@ void Debugger::output_debug_string (System::DebugEvent level, const char* msg)
 		Windows::SharedStringW ws;
 		utf8_to_wide (msg, ws);
 		OutputDebugStringW (ws.c_str ());
-	} else if (level > System::DebugEvent::DEBUG_INFO)
+	} else if (level > System::DebugEvent::DEBUG_INFO || Windows::DebugLog::trace_)
 		Windows::DebugLog () << msg;
 }
 

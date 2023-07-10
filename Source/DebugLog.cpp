@@ -41,6 +41,7 @@ namespace Windows {
 
 HANDLE DebugLog::handle_ = nullptr;
 CRITICAL_SECTION DebugLog::cs_;
+bool DebugLog::trace_ = true;
 
 void DebugLog::initialize () noexcept
 {
