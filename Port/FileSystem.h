@@ -29,6 +29,7 @@
 #pragma once
 
 #include "../Source/FileSystemImpl.h"
+#include <array>
 
 namespace Nirvana {
 namespace Core {
@@ -73,6 +74,13 @@ public:
 	/// \param [out] translated Translated standard path.
 	/// \returns `true` if path was translated and \p translated string is not empty.
 	static bool translate_path (const IDL::String& path, IDL::String& translated);
+
+	/// Line endings sequence.
+	/// For UNIX \n line endings must return {0, 0}.
+	static std::array <char, 2> eol () noexcept
+	{
+		return { '\r', '\n' };
+	}
 
 private:
 	struct Root

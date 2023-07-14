@@ -40,7 +40,7 @@ bool FileAccess::open (Port::File& file, uint32_t access, uint32_t share_mode,
 	if (INVALID_HANDLE_VALUE == handle_)
 		return false;
 	MessageBroker::completion_port ().add_receiver (handle_, *this);
-	access_mask_ = (access & GENERIC_WRITE) ? AccessMask::READ | AccessMask::WRITE : AccessMask::READ;
+	flags_ = (access & GENERIC_WRITE) ? O_RDWR : O_RDONLY;
 	return true;
 }
 

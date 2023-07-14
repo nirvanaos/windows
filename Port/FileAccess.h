@@ -32,15 +32,13 @@
 #include "File.h"
 #include <IO_Request.h>
 #include "../Source/CompletionPortReceiver.h"
-#include <FileAccessBase.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
 class FileAccess :
-	protected CompletionPortReceiver,
-	public FileAccessBase
+	protected CompletionPortReceiver
 {
 protected:
 	// The same as Windows OVERLAPPED structure
@@ -108,15 +106,19 @@ protected:
 	bool open (Port::File& file, uint32_t access, uint32_t share_mode,
 		uint32_t creation_disposition, uint32_t flags_and_attributes);
 
-	void close () noexcept;
-
 	void issue_request (Request& rq) noexcept;
+
+	unsigned flags () const noexcept
+	{
+		return flags_;
+	}
 
 protected:
 	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept;
 
 protected:
 	void* handle_;
+	unsigned flags_;
 };
 
 }
@@ -174,9 +176,9 @@ protected:
 	/// \throw RuntimeError.
 	FileAccessDirect (File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size);
 
-	unsigned access_mask () const noexcept
+	unsigned flags () const noexcept
 	{
-		return Base::access_mask ();
+		return Base::flags ();
 	}
 
 	/// Issues the I/O request to the host or kernel.
