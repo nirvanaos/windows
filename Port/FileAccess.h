@@ -173,7 +173,6 @@ protected:
 	/// \param flags Creation flags.
 	/// \param [out] size File size.
 	/// \param [out] block_size Block (sector) size. 
-	/// \throw RuntimeError.
 	FileAccessDirect (File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size);
 
 	unsigned flags () const noexcept

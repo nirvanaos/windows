@@ -45,7 +45,7 @@ StringW Dir_var::get_path (Name& n, bool create_file) const
 	assert (!n.empty ());
 	if (is_tmp (n.front ())) {
 		if (n.size () <= 1 && create_file)
-			throw RuntimeError (EACCES);
+			throw_NO_PERMISSION (make_minor_errno (EACCES));
 		WinWChar buf [MAX_PATH + 1];
 		size_t cc = FileSystemImpl::get_temp_path (buf);
 		return StringW (buf, cc);
@@ -83,7 +83,7 @@ std::unique_ptr <CosNaming::Core::Iterator> Dir_var::make_iterator () const
 
 void Dir_var::remove ()
 {
-	throw RuntimeError (ENOTEMPTY);
+	throw_BAD_OPERATION (make_minor_errno (ENOTEMPTY));
 }
 
 }

@@ -229,7 +229,7 @@ std::unique_ptr <CosNaming::Core::Iterator> Dir::make_iterator () const
 void Dir::remove ()
 {
 	if (special ())
-		throw RuntimeError (ENOTEMPTY);
+		throw_BAD_OPERATION (make_minor_errno (ENOTEMPTY));
 	if (FileType::directory == type ()) {
 		if (!RemoveDirectoryW (path ()))
 			throw_last_error ();

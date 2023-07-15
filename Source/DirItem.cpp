@@ -122,16 +122,16 @@ void DirItem::get_attributes (_BY_HANDLE_FILE_INFORMATION& att)
 
 	if (!GetFileInformationByHandle (handle (), &att)) {
 		DWORD err = error_check_exist ();
-		throw RuntimeError (error2errno (err));
+		throw_INTERNAL (make_minor_errno (error2errno (err)));
 	} else if (0 == att.nNumberOfLinks)
-		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
+		throw_OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
 }
 
 uint32_t DirItem::error_check_exist ()
 {
 	DWORD err = GetLastError ();
 	if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND)
-		throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
+		throw_OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
 
 	return err;
 }

@@ -24,7 +24,6 @@
 *  popov.nirvana@gmail.com
 */
 #include "error2errno.h"
-#include <Nirvana/RuntimeError.h>
 #include "win32.h"
 #include <algorithm>
 #include <assert.h>
@@ -131,31 +130,31 @@ NIRVANA_NORETURN void throw_win_error_sys (unsigned err)
 
   case ERROR_FILE_NOT_FOUND:
   case ERROR_PATH_NOT_FOUND:
-    throw CORBA::OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
+    throw_OBJECT_NOT_EXIST (make_minor_errno (ENOENT));
 
   case ERROR_ACCESS_DENIED:
-    throw CORBA::NO_PERMISSION (make_minor_errno (EACCES));
+    throw_NO_PERMISSION (make_minor_errno (EACCES));
 
   case ERROR_NOT_ENOUGH_MEMORY:
-    throw CORBA::NO_MEMORY (make_minor_errno (ENOMEM));
+    throw_NO_MEMORY (make_minor_errno (ENOMEM));
 
   case ERROR_INVALID_PARAMETER:
-    throw CORBA::BAD_PARAM (make_minor_errno (EINVAL));
+    throw_BAD_PARAM (make_minor_errno (EINVAL));
 
   case ERROR_CALL_NOT_IMPLEMENTED:
-    throw CORBA::NO_IMPLEMENT (make_minor_errno (ENOSYS));
+    throw_NO_IMPLEMENT (make_minor_errno (ENOSYS));
 
   case ERROR_TIMEOUT:
-    throw CORBA::TIMEOUT (make_minor_errno (EBUSY));
+    throw_TIMEOUT (make_minor_errno (EBUSY));
 
   default:
-    throw CORBA::INTERNAL (make_minor_errno (error2errno (err)));
+    throw_INTERNAL (make_minor_errno (error2errno (err)));
   }
 }
 
 NIRVANA_NORETURN void throw_last_error ()
 {
-  throw RuntimeError (error2errno (GetLastError ()));
+  throw_win_error_sys (GetLastError ());
 }
 
 }

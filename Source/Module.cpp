@@ -28,7 +28,6 @@
 #include "win32.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
-#include <Nirvana/RuntimeError.h>
 
 namespace Nirvana {
 namespace Core {
@@ -46,7 +45,7 @@ Module::Module (const StringView& file)
 		utf8_to_wide (file, wpath);
 		DWORD att = GetFileAttributesW (wpath.c_str ());
 		if (att & FILE_ATTRIBUTE_DIRECTORY)
-			throw RuntimeError (ENOENT);
+			throw_BAD_PARAM (make_minor_errno (ENOENT));
 		WCHAR temp_dir [MAX_PATH + 1];
 		if (!GetTempPathW ((DWORD)countof(temp_dir), temp_dir))
 			throw_UNKNOWN ();
@@ -68,10 +67,10 @@ Module::Module (const StringView& file)
 			throw_last_error ();
 		Nirvana::Core::PortableExecutable pe (mod);
 		if (!pe.find_OLF_section (metadata_))
-			throw RuntimeError (ENOEXEC);
+			throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 		const COFF::PE32Header* pehdr = pe.pe32_header ();
 		if (!pehdr || pehdr->AddressOfEntryPoint)
-			throw RuntimeError (ENOEXEC);
+			throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 	} catch (...) {
 		unload ();
 		throw;

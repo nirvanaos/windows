@@ -57,7 +57,7 @@ StringW Dir_mnt::get_path (Name& n, bool create_file) const
 {
 	assert (!n.empty ());
 	if (n.size () <= 1 && create_file)
-		throw RuntimeError (EACCES);
+		throw_NO_PERMISSION (make_minor_errno (EACCES));
 	const NameComponent& nc = n.front ();
 	if (!nc.kind ().empty () || nc.id ().size () != 2 || nc.id () [1] != ':')
 		throw NamingContext::NotFound (NamingContext::NotFoundReason::missing_node, std::move (n));

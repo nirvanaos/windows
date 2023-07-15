@@ -26,7 +26,6 @@
 #include "../Port/FileAccess.h"
 #include "MessageBroker.h"
 #include "error2errno.h"
-#include <Nirvana/RuntimeError.h>
 #include <fnctl.h>
 
 namespace Nirvana {
