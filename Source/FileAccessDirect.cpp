@@ -23,7 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "../Port/FileAccess.h"
+#include "../Port/FileAccessDirect.h"
 #include "MessageBroker.h"
 #include "error2errno.h"
 #include <fnctl.h>

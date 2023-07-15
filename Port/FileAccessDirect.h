@@ -24,8 +24,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_FILEACCESS_H_
-#define NIRVANA_CORE_PORT_FILEACCESS_H_
+#ifndef NIRVANA_CORE_PORT_FILEACCESSDIRECT_H_
+#define NIRVANA_CORE_PORT_FILEACCESSDIRECT_H_
 #pragma once
 
 #include <Nirvana/Nirvana.h>
