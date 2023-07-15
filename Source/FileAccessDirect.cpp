@@ -24,61 +24,12 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/FileAccessDirect.h"
-#include "MessageBroker.h"
 #include "error2errno.h"
+#include "MessageBroker.h"
 #include <fnctl.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Windows {
-
-bool FileAccess::open (Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
-	uint32_t flags_and_attributes)
-{
-	handle_ = file.open (access, share_mode, creation_disposition, flags_and_attributes);
-	if (INVALID_HANDLE_VALUE == handle_)
-		return false;
-	MessageBroker::completion_port ().add_receiver (handle_, *this);
-	flags_ = (access & GENERIC_WRITE) ? O_RDWR : O_RDONLY;
-	return true;
-}
-
-FileAccess::~FileAccess ()
-{
-	if (INVALID_HANDLE_VALUE != handle_)
-		CloseHandle (handle_);
-}
-
-void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
-{
-	IO_Result result{ size, 0 };
-	if (error)
-		result.error = error2errno (error);
-	Request::from_overlapped (*ovl).signal (result);
-}
-
-void FileAccess::issue_request (Request& rq) noexcept
-{
-	BOOL ret;
-	switch (rq.operation ()) {
-		case Request::OP_READ:
-			ret = ReadFile (handle_, rq.buffer (), rq.size (), nullptr, rq);
-			break;
-		case Request::OP_WRITE:
-			ret = WriteFile (handle_, rq.buffer (), rq.size (), nullptr, rq);
-			break;
-		default:
-			ret = TRUE;
-			rq.signal ({ 0, ENOTSUP });
-	}
-	if (!ret) {
-		DWORD err = GetLastError ();
-		if (ERROR_IO_PENDING != err)
-			rq.signal ({ 0, error2errno (err) });
-	}
-}
-
-}
 
 using namespace Windows;
 

@@ -41,7 +41,7 @@ namespace Port {
 
 class FileAccessDirect;
 
-/// Implements File object for host system.
+/// Implements regular file object for the host system.
 class File : private Windows::DirItem
 {
 	typedef Windows::DirItem Base;
