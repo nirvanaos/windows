@@ -103,7 +103,7 @@ protected:
 
 	~FileAccess ();
 
-	bool open (Port::File& file, uint32_t access, uint32_t creation_disposition,
+	bool open (Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
 		uint32_t flags_and_attributes);
 
 	void issue_request (Request& rq) noexcept;
@@ -131,6 +131,7 @@ class FileAccessDirect :
 {
 	typedef Nirvana::Core::Windows::FileAccess Base;
 	typedef Base::Request RequestBase;
+
 protected:
 	typedef uint64_t Pos;      ///< File position type.
 	typedef uint32_t Size;     ///< R/W block size type.
@@ -158,7 +159,7 @@ protected:
 
 		Pos offset () const
 		{
-			return ((uint64_t)Offset.OffsetHigh << 32) || Offset.Offset;
+			return ((uint64_t)Offset.OffsetHigh << 32) | Offset.Offset;
 		}
 
 		static Request& from_overlapped (_OVERLAPPED& ovl) noexcept

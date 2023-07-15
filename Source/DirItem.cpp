@@ -42,7 +42,8 @@ DirItem::DirItem (DirItemId&& id) :
 	type_ (FileType::none),
 	file_system_type_ (FS_UNKNOWN),
 	file_system_flags_ (0),
-	max_component_len_ (0)
+	max_component_len_ (0),
+	block_size_ (0)
 {}
 
 DirItem::DirItem (FileType type) :
@@ -50,7 +51,8 @@ DirItem::DirItem (FileType type) :
 	type_ (type),
 	file_system_type_ (FS_UNKNOWN),
 	file_system_flags_ (0),
-	max_component_len_ (0)
+	max_component_len_ (0),
+	block_size_ (0)
 {}
 
 DirItem::~DirItem ()
@@ -77,6 +79,8 @@ void* DirItem::get_handle () noexcept
 					}
 				}
 			}
+
+			query_block_size (handle_);
 		}
 	}
 	return handle_;
@@ -171,6 +175,20 @@ void DirItem::stat (FileStat& st)
 		set_inacc (st.creation_time (), fst.time_inaccuracy.creation);
 		set_inacc (st.last_access_time (), fst.time_inaccuracy.last_access);
 		set_inacc (st.last_write_time (), fst.time_inaccuracy.last_write);
+	}
+
+	st.blksize (block_size ());
+	st.blkcnt ((st.size () + block_size () - 1) / block_size ());
+}
+
+void DirItem::query_block_size (void* handle) noexcept
+{
+	if (!block_size_) {
+		FILE_STORAGE_INFO fsi;
+		if (GetFileInformationByHandleEx (handle, FileStorageInfo, &fsi, sizeof (fsi)))
+			block_size_ = fsi.FileSystemEffectivePhysicalBytesPerSectorForAtomicity;
+		else
+			assert (false);
 	}
 }
 

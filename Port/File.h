@@ -39,6 +39,8 @@ class FileAccess;
 
 namespace Port {
 
+class FileAccessDirect;
+
 /// Implements File object for host system.
 class File : private Windows::DirItem
 {
@@ -91,8 +93,6 @@ protected:
 	///@{
 	/// File implementation.
 
-protected:
-
 	/// File size.
 	uint64_t size ();
 
@@ -105,10 +105,15 @@ protected:
 
 private:
 	friend class Nirvana::Core::Windows::FileAccess;
+	friend class FileAccessDirect;
 
 	void* open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
 		uint32_t flags_and_attributes);
 
+	uint32_t block_size () const noexcept
+	{
+		return Base::block_size ();
+	}
 };
 
 }

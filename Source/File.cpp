@@ -82,8 +82,11 @@ void* File::open (uint32_t access, uint32_t share_mode, uint32_t creation_dispos
 
 	if (INVALID_HANDLE_VALUE == h)
 		error_check_exist ();
-	else if (FileType::none == type_ || FileType::not_found == type_)
-		type_ = FileType::regular;
+	else {
+		query_block_size (h);
+		if (FileType::none == type_ || FileType::not_found == type_)
+			type_ = FileType::regular;
+	}
 
 	return h;
 }

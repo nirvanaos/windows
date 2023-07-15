@@ -37,7 +37,8 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-// File system item: interface Nirvana::DirItem
+// File system item. See interface Nirvana::DirItem.
+// Base class for Port::File and Port::Dir.
 class DirItem
 {
 protected:
@@ -117,6 +118,14 @@ protected:
 
 	uint32_t error_check_exist ();
 
+	void query_block_size (void* handle) noexcept;
+
+	uint32_t block_size () const noexcept
+	{
+		assert (block_size_);
+		return block_size_;
+	}
+
 private:
 	const DirItemId id_;
 	void* handle_;
@@ -128,6 +137,7 @@ private:
 	FileSystemType file_system_type_;
 	unsigned long file_system_flags_;
 	unsigned long max_component_len_;
+	unsigned long block_size_;
 
 	typedef uint64_t TimeInaccuracy;
 

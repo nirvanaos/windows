@@ -32,12 +32,10 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool FileAccess::open (Port::File& file, uint32_t access, uint32_t creation_disposition,
+bool FileAccess::open (Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
 	uint32_t flags_and_attributes)
 {
-	// We allow Windows users to read and delete file opened by the Nirvana,
-	// but do not allow write to it.
-	handle_ = file.open (access, FILE_SHARE_READ | FILE_SHARE_DELETE, creation_disposition, flags_and_attributes);
+	handle_ = file.open (access, share_mode, creation_disposition, flags_and_attributes);
 	if (INVALID_HANDLE_VALUE == handle_)
 		return false;
 	MessageBroker::completion_port ().add_receiver (handle_, *this);
@@ -102,7 +100,11 @@ FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, P
 	} else
 		creation = OPEN_EXISTING;
 
-	if (!open (file, GENERIC_READ | GENERIC_WRITE, creation, FILE_FLAG_OVERLAPPED
+	// We allow Windows users to read and delete file opened by the Nirvana,
+	// but do not allow write to it.
+	const uint32_t SHARE_MODE = FILE_SHARE_READ | FILE_SHARE_DELETE;
+
+	if (!open (file, GENERIC_READ | GENERIC_WRITE, SHARE_MODE, creation, FILE_FLAG_OVERLAPPED
 		| FILE_ATTRIBUTE_NORMAL
 		| FILE_FLAG_NO_BUFFERING
 		| FILE_FLAG_WRITE_THROUGH)
@@ -111,7 +113,7 @@ FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, P
 		if (flags & O_ACCMODE)
 			throw_last_error ();
 
-		if (!open (file, GENERIC_READ, creation, FILE_FLAG_OVERLAPPED
+		if (!open (file, GENERIC_READ, SHARE_MODE, creation, FILE_FLAG_OVERLAPPED
 			| FILE_ATTRIBUTE_NORMAL
 			| FILE_FLAG_NO_BUFFERING
 			| FILE_FLAG_WRITE_THROUGH)
@@ -132,7 +134,7 @@ FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, P
 		size = 0;
 	}
 
-	block_size = 4096; // TODO: Implement
+	block_size = file.block_size ();
 }
 
 void FileAccessDirect::issue_request (Request& rq) noexcept
