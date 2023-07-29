@@ -38,7 +38,7 @@ IDL::String ProtDomain::user ()
 	WCHAR buf [UNLEN + 1];
 	DWORD cc = (DWORD)std::size (buf);
 	if (GetUserNameW (buf, &cc))
-		Nirvana::wide_to_utf8 (buf, buf + cc - 1, name);
+		Nirvana::append_utf8 (buf, buf + cc - 1, name);
 
 	return name;
 }

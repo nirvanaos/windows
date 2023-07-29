@@ -93,10 +93,10 @@ void Dir::append_path (StringW& path, const NameComponent& nc)
 		size += nc.kind ().size () + 1;
 	path.reserve (path.size () + size);
 	path += '\\';
-	utf8_to_wide (nc.id (), path);
+	append_wide (nc.id (), path);
 	if (!nc.kind ().empty ()) {
 		path += '.';
-		utf8_to_wide (nc.kind (), path);
+		append_wide (nc.kind (), path);
 	}
 }
 

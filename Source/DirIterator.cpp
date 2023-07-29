@@ -72,9 +72,9 @@ bool DirIterator::next_one (Binding& b)
 		size_t len = wcslen (data_.cFileName);
 		if (!ext)
 			ext = data_.cFileName + len;
-		wide_to_utf8 (data_.cFileName, ext, b.name.id ());
+		append_utf8 (data_.cFileName, ext, b.name.id ());
 		if (*ext)
-			wide_to_utf8 (ext + 1, data_.cFileName + len, b.name.kind ());
+			append_utf8 (ext + 1, data_.cFileName + len, b.name.kind ());
 
 		if (data_.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			b.type = BindingType::ncontext;

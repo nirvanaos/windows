@@ -38,7 +38,7 @@ void Debugger::output_debug_string (System::DebugEvent level, const char* msg)
 	// Use shared string to avoid possible infinite recursion in assertions.
 	if (IsDebuggerPresent ()) {
 		Windows::SharedStringW ws;
-		utf8_to_wide (msg, ws);
+		append_wide (msg, ws);
 		OutputDebugStringW (ws.c_str ());
 	} else if (level > System::DebugEvent::DEBUG_INFO || Windows::DebugLog::trace_)
 		Windows::DebugLog () << msg;

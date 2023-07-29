@@ -45,8 +45,8 @@ extern "C" int __cdecl _CrtDbgReportW (
 	va_end (arglist);
 
 	IDL::String msg, sfn;
-	wide_to_utf8 (s, msg);
-	wide_to_utf8 (file_name, sfn);
+	append_utf8 (s, msg);
+	append_utf8 (file_name, sfn);
 
 	g_system->debug_event ((System::DebugEvent)(report_type + 1), msg, sfn, line_number);
 
