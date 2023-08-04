@@ -27,6 +27,7 @@
 #include "win32.h"
 #include <timeapi.h>
 #include <limits>
+#include <Nirvana/rescale.h>
 
 namespace Nirvana {
 namespace Core {

@@ -31,7 +31,6 @@
 #include <CORBA/CORBA.h>
 #include <CORBA/TimeBase.h>
 #include <Nirvana/time_defs.h>
-#include <Nirvana/rescale.h>
 
 extern "C" __declspec(dllimport)
 void __stdcall QueryInterruptTimePrecise (unsigned __int64* lpInterruptTimePrecise);
@@ -72,29 +71,6 @@ public:
 		return TSC_frequency_;
 	}
 
-	/// Convert UTC time to the local deadline time.
-	/// 
-	/// \param utc UTC time.
-	/// \returns Local deadline time.
-	static DeadlineTime deadline_from_UTC (const TimeBase::UtcT& utc) noexcept
-	{
-		TimeBase::UtcT cur = UTC ();
-		return deadline_clock () + rescale64 (utc.time () - cur.time () + inacc_max (utc, cur),
-			deadline_clock_frequency (), 0, 10000000);
-	}
-
-	/// Convert local deadline time to UTC time.
-	/// 
-	/// \param deadline Local deadline time.
-	/// \returns UTC time.
-	static TimeBase::UtcT deadline_to_UTC (DeadlineTime deadline) noexcept
-	{
-		TimeBase::UtcT utc = UTC ();
-		utc.time (utc.time () + rescale64 (deadline - deadline_clock (), 10000000,
-			deadline_clock_frequency () - 1, deadline_clock_frequency ()));
-		return utc;
-	}
-
 	/// Make deadline.
 	/// 
 	/// NOTE: If deadline_clock_frequency () is too low (1 sec?), Port library can implement advanced
@@ -108,16 +84,6 @@ public:
 	static void terminate () noexcept;
 
 private:
-	static uint64_t inacc_max (const TimeBase::UtcT& t1, const TimeBase::UtcT& t2) noexcept
-	{
-		if (t1.inacchi () > t2.inacchi ())
-			return ((uint64_t)t1.inacchi () << 32) | t1.inacclo ();
-		else if (t1.inacchi () < t2.inacchi ())
-			return ((uint64_t)t2.inacchi () << 32) | t2.inacclo ();
-		else
-			return ((uint64_t)t1.inacchi () << 32) | std::max (t1.inacclo (), t2.inacclo ());
-	}
-
 	static bool NTP_client_enabled ();
 	static uint32_t local_clock_dispersion_sec ();
 	static uint32_t max_allowed_phase_offset_sec ();
