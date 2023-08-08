@@ -175,6 +175,9 @@ void SchedulerMaster::received (void* data, DWORD size) noexcept
 				case SchedulerMessage::Tagged::CORE_FREE:
 					core_free ();
 					break;
+
+				default:
+					assert (false);
 			}
 		break;
 
@@ -197,6 +200,9 @@ void SchedulerMaster::received (void* data, DWORD size) noexcept
 			}
 		}
 		break;
+
+		default:
+			assert (false);
 	}
 }
 
