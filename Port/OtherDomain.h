@@ -28,14 +28,13 @@
 #define NIRVANA_ESIOP_PORT_OTHERDOMAIN_H_
 #pragma once
 
-#include <ORB/ESIOP.h>
+#include "ESIOP.h"
 #include "../Source/Mailslot.h"
 #include "../Source/OtherSpace.h"
 #include "SystemInfo.h"
 #include <BinderObject.h>
 
 namespace ESIOP {
-
 namespace Windows {
 
 class OtherDomainBase : public Nirvana::Core::Windows::Mailslot
