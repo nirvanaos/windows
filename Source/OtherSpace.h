@@ -27,7 +27,7 @@
 #define NIRVANA_ESIOP_WINDOWS_OTHERSPACE_H_
 #pragma once
 
-#include <Port/ESIOP.h>
+#include <ORB/ESIOP.h>
 #include "AddressSpace.h"
 #include <limits>
 #include <algorithm>
@@ -56,7 +56,14 @@ public:
 	SharedMemPtr copy (SharedMemPtr reserved, void* src, size_t& size, unsigned flags);
 	void release (SharedMemPtr p, size_t size);
 
-	static void get_sizes (PlatformSizes& sizes) noexcept;
+	static void get_sizes (PlatformSizes& sizes) noexcept
+	{
+		sizes.allocation_unit = ALLOCATION_GRANULARITY;
+		sizes.block_size = ALLOCATION_GRANULARITY;
+		sizes.sizeof_pointer = sizeof (Address);
+		sizes.sizeof_size = sizeof (Size);
+		sizes.max_size = std::max (std::numeric_limits <size_t>::max (), (size_t)std::numeric_limits <Size>::max ());
+	}
 
 	static void* store_pointer (void* where, SharedMemPtr p) noexcept
 	{

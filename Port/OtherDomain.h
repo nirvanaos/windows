@@ -28,7 +28,6 @@
 #define NIRVANA_ESIOP_PORT_OTHERDOMAIN_H_
 #pragma once
 
-#include "ESIOP.h"
 #include "../Source/Mailslot.h"
 #include "../Source/OtherSpace.h"
 #include "SystemInfo.h"

@@ -29,7 +29,6 @@
 
 #include "OtherSpace.h"
 #include "AddressSpace.inl"
-#include <ORB/ESIOP.h>
 
 using Nirvana::Core::Port::Memory;
 using Nirvana::Core::Windows::PageState;
@@ -129,16 +128,6 @@ template <bool x64> inline
 void OtherSpace <x64>::release (SharedMemPtr p, size_t size)
 {
 	Base::release ((Address)p, size);
-}
-
-template <bool x64> inline
-void OtherSpace <x64>::get_sizes (PlatformSizes& sizes) noexcept
-{
-	sizes.allocation_unit = ALLOCATION_GRANULARITY;
-	sizes.block_size = ALLOCATION_GRANULARITY;
-	sizes.sizeof_pointer = sizeof (Address);
-	sizes.sizeof_size = sizeof (Size);
-	sizes.max_size = std::max (std::numeric_limits <size_t>::max (), (size_t)std::numeric_limits <Size>::max ());
 }
 
 }
