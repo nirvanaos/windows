@@ -35,19 +35,25 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-/// Debugging support
+/// \brief Debugging support.
 class Debugger
 {
 public:
-	/// Prints message to debug output.
+	/// \brief Prints message to debug output.
 	/// \param msg The message.
 	static void output_debug_string (System::DebugEvent level, const char* msg);
 
-	/// Debug break.
+	/// \brief Debug break.
 	/// 
 	/// \returns If debugger is available, performs debug break and returns `true`.
 	/// Otherwise returns `false`;
 	static bool debug_break ();
+
+	/// \brief Determines whether the calling process is being debugged by a user-mode debugger.
+	/// 
+	/// \returns If the current process is running in the context of a debugger, the return value
+	///          is `true`.
+	static bool is_debugger_present () noexcept;
 };
 
 }

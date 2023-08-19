@@ -68,6 +68,11 @@ bool Debugger::debug_break ()
 	return false;
 }
 
+bool Debugger::is_debugger_present () noexcept
+{
+	return IsDebuggerPresent ();
+}
+
 }
 }
 }
