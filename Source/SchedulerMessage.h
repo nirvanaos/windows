@@ -29,10 +29,10 @@
 #define NIRVANA_CORE_WINDOWS_SCHEDULERMESSAGE_H_
 #pragma once
 
-#define SCHEDULER_MAILSLOT_NAME MAILSLOT_PREFIX L"scheduler"
-#define WATCHDOG_MAILSLOT_NAME MAILSLOT_PREFIX L"watchdog"
-
 #include <Nirvana/NirvanaBase.h>
+
+#define SCHEDULER_PIPE_NAME WINWCS ("\\\\.pipe\\") OBJ_NAME_PREFIX WINWCS ("/scheduler")
+#define SCHEDULER_SEMAPHORE_PREFIX WINWCS ("\\\\.pipe\\") OBJ_NAME_PREFIX WINWCS ("/scheduler")
 
 namespace Nirvana {
 namespace Core {
@@ -45,11 +45,9 @@ struct SchedulerMessage
 	struct Schedule
 	{
 		DeadlineTime deadline;
-		uint32_t executor_id;
 
-		Schedule (const DeadlineTime& dt, uint32_t id) :
-			deadline (dt),
-			executor_id (id)
+		Schedule (const DeadlineTime& dt) :
+			deadline (dt)
 		{}
 	};
 
@@ -57,12 +55,10 @@ struct SchedulerMessage
 	{
 		DeadlineTime deadline;
 		DeadlineTime deadline_prev;
-		uint32_t executor_id;
 
-		ReSchedule (const DeadlineTime& dt, uint32_t id, const DeadlineTime& old) :
+		ReSchedule (const DeadlineTime& dt, const DeadlineTime& old) :
 			deadline (dt),
-			deadline_prev (old),
-			executor_id (id)
+			deadline_prev (old)
 		{}
 	};
 
@@ -87,12 +83,6 @@ struct SchedulerMessage
 		ReSchedule reschedule;
 		Tagged tagged;
 	};
-};
-
-struct ProcessStartMessage
-{
-	uint32_t process_id;
-	uint32_t executor_id;
 };
 
 #pragma pack (pop)

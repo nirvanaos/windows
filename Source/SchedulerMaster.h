@@ -41,23 +41,59 @@ class StartupSys;
 
 namespace Windows {
 
+class SchedulerProcess : public SharedObject
+{
+public:
+	SchedulerProcess () :
+		process_id_ (0),
+		semaphore_ (nullptr)
+	{}
+
+	~SchedulerProcess ()
+	{
+		if (semaphore_)
+			CloseHandle (semaphore_);
+	}
+
+	void start (DWORD process_id)
+	{
+		assert (!semaphore_);
+
+	}
+
+	bool alive () const noexcept
+	{
+		return semaphore_;
+	}
+
+	HANDLE semaphore () const noexcept
+	{
+		return semaphore_;
+	}
+
+private:
+	DWORD process_id_;
+	HANDLE semaphore_;
+};
+
+typedef ImplDynamic <SchedulerProcess> SchedulerProcessImpl;
+typedef Ref <SchedulerProcessImpl> SchedulerProcessRef;
+
 class SchedulerItem
 {
 public:
-	SchedulerItem ()
-	{}
-
-	SchedulerItem (uint32_t executor_id) :
-		executor_ (executor_id | IS_SEMAPHORE)
+	SchedulerItem (SchedulerProcessImpl& process) :
+		process_ (&process),
+		executor_ (nullptr)
 	{}
 
 	SchedulerItem (Executor& executor) :
-		executor_ ((uintptr_t)&executor)
+		executor_ (&executor)
 	{}
 
-	uintptr_t is_semaphore () const
+	SchedulerProcess* process () const noexcept
 	{
-		return executor_ & IS_SEMAPHORE;
+		return process_;
 	}
 
 	HANDLE semaphore () const
@@ -79,8 +115,8 @@ public:
 	}
 
 private:
-	static const uintptr_t IS_SEMAPHORE = ~((~(uintptr_t)0) >> 1);
-	uintptr_t executor_;
+	SchedulerProcessRef process_;
+	Executor* executor_;
 };
 
 /// SchedulerMaster class. 
@@ -91,6 +127,7 @@ class SchedulerMaster :
 {
 	typedef SchedulerImpl <SchedulerMaster, SchedulerItem> Base;
 	typedef PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY> Office;
+
 public:
 	SchedulerMaster ();
 	~SchedulerMaster ();
