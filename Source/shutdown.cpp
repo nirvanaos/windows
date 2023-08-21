@@ -26,7 +26,7 @@
 #include "shutdown.h"
 #include <ORB/ESIOP.h>
 #include "Mailslot.h"
-#include "MailslotName.h"
+#include "object_name.h"
 #include "app_data.h"
 
 namespace Nirvana {
@@ -37,7 +37,7 @@ bool shutdown ()
 {
 	if (get_sys_process_id ()) {
 		Mailslot ms;
-		if (ms.open (MailslotName (sys_process_id))) {
+		if (ms.open (object_name (MAILSLOT_PREFIX, sys_process_id))) {
 			try {
 				ms.send (ESIOP::Shutdown ());
 				return true;

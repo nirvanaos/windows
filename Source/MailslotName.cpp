@@ -31,12 +31,6 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-const WCHAR MailslotName::prefix_ [] = MAILSLOT_PREFIX;
-
-MailslotName::MailslotName (DWORD id)
-{
-	_ultow (id, real_copy (prefix_, prefix_ + _countof (prefix_) - 1, name_), 16);
-}
 
 }
 }
