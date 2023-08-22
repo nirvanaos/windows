@@ -24,31 +24,39 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_MAILSLOTNAME_H_
-#define NIRVANA_CORE_WINDOWS_MAILSLOTNAME_H_
+#ifndef NIRVANA_CORE_WINDOWS_OBJECT_NAME_H_
+#define NIRVANA_CORE_WINDOWS_OBJECT_NAME_H_
 #pragma once
 
-#include "win32.h"
+#include "WinWChar.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class MailslotName
+template <size_t prefix_len>
+class ObjectName
 {
 public:
-	MailslotName (DWORD id);
+	ObjectName (const WinWChar* prefix, unsigned id)
+	{
+		_ultow (id, std::copy (prefix, prefix + prefix_len - 1, name_), 16);
+	}
 
-	operator LPCWSTR () const
+	operator const WinWChar* () const
 	{
 		return name_;
 	}
 
 private:
-	WCHAR name_ [sizeof (MAILSLOT_PREFIX) + 8];
-
-	static const WCHAR prefix_ [];
+	WinWChar name_ [prefix_len + 8];
 };
+
+template <size_t prefix_len> inline
+ObjectName <prefix_len> object_name (const WinWChar (&prefix) [prefix_len], unsigned id)
+{
+	return ObjectName <prefix_len> (prefix, id);
+}
 
 }
 }

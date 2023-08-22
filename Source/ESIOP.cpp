@@ -25,7 +25,8 @@
 */
 #include <ORB/ESIOP.h>
 #include "Mailslot.h"
-#include "MailslotName.h"
+#include "object_name.h"
+#include "win32.h"
 
 using namespace Nirvana::Core::Windows;
 
@@ -35,7 +36,7 @@ void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) n
 {
 	try {
 		Mailslot ms;
-		ms.open (MailslotName (domain_id));
+		ms.open (object_name (MAILSLOT_PREFIX, domain_id));
 		ms.send (msg, (DWORD)size);
 	} catch (...) {
 	}
