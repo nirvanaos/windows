@@ -119,16 +119,17 @@ public:
 	void received (void* data, DWORD size) noexcept;
 
 	/// Called by SchedulerImpl
-	void execute (SchedulerItem& item) noexcept
+	bool execute (SchedulerItem& item) noexcept
 	{
 		if (item.is_semaphore ()) {
 			if (!ReleaseSemaphore (item.semaphore (), 1, nullptr)) {
 				// Semaphore handle may be closed by the ProcessWatchdog.
 				assert (ERROR_INVALID_HANDLE == GetLastError ());
-				core_free ();
+				return false;
 			}
 		} else
 			worker_threads_.execute (item.executor ());
+		return true;
 	}
 
 private:
