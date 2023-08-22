@@ -32,7 +32,7 @@
 #include <Nirvana/NirvanaBase.h>
 
 #define SCHEDULER_PIPE_NAME WINWCS ("\\\\.pipe\\") OBJ_NAME_PREFIX WINWCS ("/scheduler")
-#define SCHEDULER_SEMAPHORE_PREFIX WINWCS ("\\\\.pipe\\") OBJ_NAME_PREFIX WINWCS ("/scheduler")
+#define SCHEDULER_SEMAPHORE_PREFIX OBJ_NAME_PREFIX WINWCS ("/scheduler")
 
 namespace Nirvana {
 namespace Core {

@@ -30,9 +30,13 @@
 
 #include "SchedulerBase.h"
 #include <SchedulerImpl.h>
-#include "PostOffice.h"
+#include "SchedulerMessage.h"
+#include "CompletionPort.h"
+#include "CompletionPortReceiver.h"
+#include "ThreadPostman.h"
 #include "WorkerThreads.h"
-#include "ProcessWatchdog.h"
+#include "object_name.h"
+#include "BufferPool.h"
 
 namespace Nirvana {
 namespace Core {
@@ -41,54 +45,81 @@ class StartupSys;
 
 namespace Windows {
 
-class SchedulerProcess : public SharedObject
+class SchedulerMaster;
+
+class SchedulerProcess : 
+	public CompletionPortReceiver,
+	public SharedObject
 {
+	SchedulerProcess (SchedulerProcess&) = delete;
+	SchedulerProcess& operator = (SchedulerProcess&) = delete;
+
 public:
-	SchedulerProcess () :
-		process_id_ (0),
-		semaphore_ (nullptr)
-	{}
+	SchedulerProcess (SchedulerMaster& scheduler, DWORD flags = 0);
+	~SchedulerProcess ();
 
-	~SchedulerProcess ()
+	void _add_ref () noexcept
 	{
-		if (semaphore_)
-			CloseHandle (semaphore_);
+		ref_cnt_.increment ();
 	}
 
-	void start (DWORD process_id)
+	void _remove_ref () noexcept
 	{
-		assert (!semaphore_);
-
+		if (!ref_cnt_.decrement ())
+			delete this;
 	}
 
-	bool alive () const noexcept
-	{
-		return semaphore_;
-	}
-
-	HANDLE semaphore () const noexcept
-	{
-		return semaphore_;
-	}
+	bool execute () noexcept;
 
 private:
-	DWORD process_id_;
+	bool start () noexcept;
+	void terminate () noexcept;
+
+	bool is_alive () const noexcept
+	{
+		return semaphore_;
+	}
+
+	void connect () noexcept;
+	void create_item ();
+	void delete_item ();
+	void core_free ();
+	void schedule (DeadlineTime deadline);
+	void reschedule (DeadlineTime deadline, DeadlineTime old);
+	void enqueue_buffer (OVERLAPPED* buf) noexcept;
+	void dispatch_message (const void* msg, size_t size);
+
+	virtual void completed (OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept override;
+
+private:
+	SchedulerMaster& scheduler_;
 	HANDLE semaphore_;
+	HANDLE pipe_;
+	ULONG process_id_;
+	RefCounter ref_cnt_;
+	AtomicCounter <false> valid_cnt_;
+	AtomicCounter <false> used_cores_;
+	AtomicCounter <false> created_items_;
+	std::atomic_flag terminated_;
+	BufferPool buffers_;
 };
 
-typedef ImplDynamic <SchedulerProcess> SchedulerProcessImpl;
-typedef Ref <SchedulerProcessImpl> SchedulerProcessRef;
+typedef Ref <SchedulerProcess> SchedulerProcessRef;
 
 class SchedulerItem
 {
 public:
-	SchedulerItem (SchedulerProcessImpl& process) :
+	SchedulerItem () :
+		local_executor_ (nullptr)
+	{}
+
+	SchedulerItem (SchedulerProcess& process) :
 		process_ (&process),
-		executor_ (nullptr)
+		local_executor_ (nullptr)
 	{}
 
 	SchedulerItem (Executor& executor) :
-		executor_ (&executor)
+		local_executor_ (&executor)
 	{}
 
 	SchedulerProcess* process () const noexcept
@@ -96,16 +127,9 @@ public:
 		return process_;
 	}
 
-	HANDLE semaphore () const
+	Executor* local_executor () const
 	{
-		assert (is_semaphore ());
-		return (HANDLE)(executor_ & ~IS_SEMAPHORE);
-	}
-
-	Executor& executor () const
-	{
-		assert (!is_semaphore ());
-		return *(Executor*)executor_;
+		return local_executor_;
 	}
 
 	bool operator < (const SchedulerItem& rhs) const
@@ -116,17 +140,17 @@ public:
 
 private:
 	SchedulerProcessRef process_;
-	Executor* executor_;
+	Executor* local_executor_;
 };
 
 /// SchedulerMaster class. 
 class SchedulerMaster :
 	public SchedulerBase,
-	public PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY>,
+	public ThreadPool <CompletionPort, ThreadPostman>,
 	public SchedulerImpl <SchedulerMaster, SchedulerItem>
 {
 	typedef SchedulerImpl <SchedulerMaster, SchedulerItem> Base;
-	typedef PostOffice <SchedulerMaster, sizeof (SchedulerMessage::Buffer), SCHEDULER_THREAD_PRIORITY> Office;
+	typedef ThreadPool <CompletionPort, ThreadPostman> Pool;
 
 public:
 	SchedulerMaster ();
@@ -152,24 +176,27 @@ public:
 	// Implementation of SchedulerBase
 	virtual void worker_thread_proc () noexcept;
 
-	/// Process mailslot message.
-	void received (void* data, DWORD size) noexcept;
-
 	/// Called by SchedulerImpl
-	void execute (SchedulerItem& item) noexcept
+	bool execute (SchedulerItem& item) noexcept
 	{
-		if (item.is_semaphore ()) {
-			if (!ReleaseSemaphore (item.semaphore (), 1, nullptr)) {
-				// Semaphore handle may be closed by the ProcessWatchdog.
-				assert (ERROR_INVALID_HANDLE == GetLastError ());
-				core_free ();
-			}
-		} else
-			worker_threads_.execute (item.executor ());
+		SchedulerProcess* process = item.process ();
+		if (process)
+			return process->execute ();
+		else {
+			assert (item.local_executor ());
+			worker_threads_.execute (*item.local_executor ());
+			return true;
+		}
 	}
 
+	void schedule (DeadlineTime deadline, SchedulerProcess& process) noexcept;
+	void reschedule (DeadlineTime deadline, SchedulerProcess& process, DeadlineTime old) noexcept;
+
 private:
+	friend class SchedulerProcess;
+
 	void create_folders ();
+	bool create_process (SchedulerProcess* started) noexcept;
 
 private:
 	/// Helper class for executing in the current process.
@@ -190,58 +217,7 @@ private:
 	worker_threads_;
 
 	HANDLE sysdomainid_;
-	ProcessWatchdog watchdog_;
 };
-
-inline
-void SchedulerMaster::received (void* data, DWORD size) noexcept
-{
-	switch (size) {
-		case sizeof (SchedulerMessage::Tagged):
-			switch (((const SchedulerMessage::Tagged*)data)->tag) {
-				case SchedulerMessage::Tagged::CREATE_ITEM:
-					try {
-						Base::create_item ();
-					} catch (...) {
-						// TODO: Log
-					}
-					break;
-				case SchedulerMessage::Tagged::DELETE_ITEM:
-					Base::delete_item ();
-					break;
-				case SchedulerMessage::Tagged::CORE_FREE:
-					core_free ();
-					break;
-
-				default:
-					assert (false);
-			}
-		break;
-
-		case sizeof (SchedulerMessage::Schedule) : {
-			const SchedulerMessage::Schedule* msg = (const SchedulerMessage::Schedule*)data;
-			try {
-				Base::schedule (msg->deadline, msg->executor_id);
-			} catch (...) {
-				on_error (CORBA::SystemException::EC_NO_MEMORY);
-			}
-		}
-		break;
-
-		case sizeof (SchedulerMessage::ReSchedule) : {
-			const SchedulerMessage::ReSchedule* msg = (const SchedulerMessage::ReSchedule*)data;
-			try {
-				Base::reschedule (msg->deadline, msg->executor_id, msg->deadline_prev);
-			} catch (...) {
-				// TODO: Log
-			}
-		}
-		break;
-
-		default:
-			assert (false);
-	}
-}
 
 }
 }

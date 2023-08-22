@@ -53,7 +53,6 @@ public:
 		return ovl + 1;
 	}
 
-protected:
 	size_t buffer_size () const noexcept
 	{
 		return buffer_size_;
