@@ -81,7 +81,6 @@ private:
 
 	static DWORD WINAPI s_watchdog_thread_proc (void* _this);
 
-
 private:
 	HANDLE sys_process_;
 	HANDLE terminate_event_;

@@ -122,11 +122,16 @@ void SchedulerProcess::terminate () noexcept
 inline
 bool SchedulerProcess::execute () noexcept
 {
-	if (valid_cnt_.load ()) {
+	if (valid_cnt_.increment_if_not_zero ()) {
 		used_cores_.increment ();
-		if (ReleaseSemaphore (semaphore_, 1, nullptr))
-			return true;
-		used_cores_.decrement ();
+		bool ret = true;
+		if (!ReleaseSemaphore (semaphore_, 1, nullptr)) {
+			ret = false;
+			used_cores_.decrement ();
+		}
+		if (!valid_cnt_.decrement_seq ())
+			terminate ();
+		return ret;
 	}
 	return false;
 }

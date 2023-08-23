@@ -55,17 +55,17 @@ SchedulerSlave::~SchedulerSlave ()
 		SetEvent (terminate_event_);
 		WaitForSingleObject (watchdog_thread_, INFINITE);
 		CloseHandle (watchdog_thread_);
-		watchdog_thread_ = nullptr;
 	}
+
+	if (INVALID_HANDLE_VALUE != scheduler_pipe_)
+		CloseHandle (scheduler_pipe_);
+
 	worker_threads_.terminate ();
-	if (sys_process_) {
+	
+	if (sys_process_)
 		CloseHandle (sys_process_);
-		sys_process_ = nullptr;
-	}
-	if (terminate_event_) {
+	if (terminate_event_)
 		CloseHandle (terminate_event_);
-		terminate_event_ = nullptr;
-	}
 }
 
 bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
@@ -156,6 +156,10 @@ void SchedulerSlave::shutdown () noexcept
 #ifdef DEBUG_SHUTDOWN
 	Port::Debugger::output_debug_string ("Shutdown 2\n");
 #endif
+
+	CloseHandle (scheduler_pipe_);
+	scheduler_pipe_ = INVALID_HANDLE_VALUE;
+
 	worker_threads_.shutdown ();
 }
 
@@ -169,7 +173,6 @@ void SchedulerSlave::core_free () noexcept
 {
 	try {
 		send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CORE_FREE));
-		return;
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
 	}
