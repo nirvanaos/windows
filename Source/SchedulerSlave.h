@@ -31,7 +31,6 @@
 #include "SchedulerBase.h"
 #include "WorkerThreads.h"
 #include "WorkerSemaphore.h"
-#include "Mailslot.h"
 #include <PriorityQueue.h>
 #include <SkipListWithPool.h>
 
@@ -72,14 +71,22 @@ public:
 private:
 	void core_free () noexcept;
 
+	template <class MSG>
+	void send (const MSG& msg) const
+	{
+		DWORD cb;
+		if (!WriteFile (scheduler_pipe_, &msg, sizeof (MSG), &cb, nullptr))
+			throw_COMM_FAILURE ();
+	}
+
 	static DWORD WINAPI s_watchdog_thread_proc (void* _this);
+
 
 private:
 	HANDLE sys_process_;
 	HANDLE terminate_event_;
 	HANDLE watchdog_thread_;
-	Mailslot scheduler_mailslot_;
-	uint32_t executor_id_;
+	HANDLE scheduler_pipe_;
 	SkipListWithPool <PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;
 	WorkerThreads <WorkerSemaphore> worker_threads_;
 };

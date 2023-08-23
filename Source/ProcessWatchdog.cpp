@@ -23,7 +23,9 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "SchedulerMaster.h"
+
+/*
+#include "ProcessWatchdog.h"
 
 namespace Nirvana {
 namespace Core {
@@ -99,3 +101,4 @@ DWORD WINAPI ProcessWatchdog::s_thread_proc (void* _this)
 }
 }
 }
+*/

@@ -99,7 +99,8 @@ private:
 	RefCounter ref_cnt_;
 	AtomicCounter <false> valid_cnt_;
 	AtomicCounter <false> used_cores_;
-	AtomicCounter <false> created_items_;
+	// create_item and delete_item may be out of order, so we need signed counter.
+	AtomicCounter <true> created_items_;
 	std::atomic_flag terminated_;
 	BufferPool buffers_;
 };
@@ -192,11 +193,17 @@ public:
 	void schedule (DeadlineTime deadline, SchedulerProcess& process) noexcept;
 	void reschedule (DeadlineTime deadline, SchedulerProcess& process, DeadlineTime old) noexcept;
 
-private:
-	friend class SchedulerProcess;
+	void process_started (SchedulerProcess& process)
+	{
+		create_process (0);
+	}
 
+	void process_terminated (SchedulerProcess& process)
+	{}
+
+private:
 	void create_folders ();
-	bool create_process (SchedulerProcess* started) noexcept;
+	bool create_process (DWORD flags) noexcept;
 
 private:
 	/// Helper class for executing in the current process.
@@ -211,7 +218,7 @@ private:
 		}
 
 	private:
-		virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept;
+		virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept override;
 
 	}
 	worker_threads_;

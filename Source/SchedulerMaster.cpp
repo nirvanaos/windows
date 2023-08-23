@@ -68,13 +68,16 @@ SchedulerProcess::~SchedulerProcess ()
 inline
 void SchedulerProcess::connect () noexcept
 {
-	if (!ConnectNamedPipe (pipe_, buffers_.begin ()))
+	OVERLAPPED* ovl = buffers_.begin ();
+	zero (*ovl);
+	if (!ConnectNamedPipe (pipe_, ovl))
 		assert (ERROR_IO_PENDING == GetLastError ());
 }
 
 void SchedulerProcess::enqueue_buffer (OVERLAPPED* buf) noexcept
 {
 	_add_ref ();
+	zero (*buf);
 	if (!ReadFile (pipe_, BufferPool::data (buf), sizeof (SchedulerMessage::Buffer), nullptr, buf))
 		assert (ERROR_IO_PENDING == GetLastError ());
 }
@@ -104,17 +107,14 @@ bool SchedulerProcess::start () noexcept
 
 void SchedulerProcess::terminate () noexcept
 {
-	HANDLE sem = semaphore_;
+	CloseHandle (semaphore_);
 	semaphore_ = nullptr;
-	CloseHandle (sem);
 	CloseHandle (pipe_);
 	pipe_ = INVALID_HANDLE_VALUE;
-	auto cnt = used_cores_.load ();
-	while (cnt--) {
+	for (auto cnt = used_cores_.load (); cnt > 0; --cnt) {
 		scheduler_.core_free ();
 	}
-	cnt = created_items_.load ();
-	while (cnt--) {
+	for (auto cnt = created_items_.load (); cnt > 0; --cnt) {
 		scheduler_.delete_item ();
 	}
 }
@@ -122,9 +122,11 @@ void SchedulerProcess::terminate () noexcept
 inline
 bool SchedulerProcess::execute () noexcept
 {
-	if (valid_cnt_.load () && ReleaseSemaphore (semaphore_, 1, nullptr)) {
+	if (valid_cnt_.load ()) {
 		used_cores_.increment ();
-		return true;
+		if (ReleaseSemaphore (semaphore_, 1, nullptr))
+			return true;
+		used_cores_.decrement ();
 	}
 	return false;
 }
@@ -161,34 +163,42 @@ void SchedulerProcess::reschedule (DeadlineTime deadline, DeadlineTime old)
 void SchedulerProcess::completed (OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
 {
 	if (ERROR_BROKEN_PIPE == error) {
-		if (!terminated_.test_and_set () && !valid_cnt_.decrement_seq ())
-			terminate ();
-	} else if (!error) {
-		if (0 == valid_cnt_.load ()) {
-			assert (!size);
-			if (start ())
-				scheduler_.create_process (this);
-			else {
-				connect ();
-				return; // No _remove_ref here
-			}
-		} else if (size && valid_cnt_.increment_if_not_zero ()) {
-
-			static const size_t MAX_WORDS = (sizeof (SchedulerMessage::Buffer) + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR);
-			LONG_PTR buf [MAX_WORDS];
-			LONG_PTR* msg = (LONG_PTR*)BufferPool::data (ovl);
-			real_copy (msg, msg + (size + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR), buf);
-
-			// Enqueue buffer to reading a next message.
-			enqueue_buffer (ovl);
-
-			dispatch_message (buf, size);
-
+		if (!terminated_.test_and_set ()) {
+			scheduler_.process_terminated (*this);
 			if (!valid_cnt_.decrement_seq ())
 				terminate ();
 		}
-	}
+	} else {
+		assert (!error);
+		if (!error) {
+			if (0 == valid_cnt_.load ()) {
+				assert (!size);
+				if (start ())
+					scheduler_.process_started (*this);
+				else {
+					connect ();
+					return; // No _remove_ref here
+				}
+			} else {
+				assert (size);
+				if (size && valid_cnt_.increment_if_not_zero ()) {
 
+					static const size_t MAX_WORDS = (sizeof (SchedulerMessage::Buffer) + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR);
+					LONG_PTR buf [MAX_WORDS];
+					LONG_PTR* msg = (LONG_PTR*)BufferPool::data (ovl);
+					real_copy (msg, msg + (size + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR), buf);
+
+					// Enqueue buffer to reading a next message.
+					enqueue_buffer (ovl);
+
+					dispatch_message (buf, size);
+
+					if (!valid_cnt_.decrement_seq ())
+						terminate ();
+				}
+			}
+		}
+	}
 	_remove_ref ();
 }
 
@@ -274,7 +284,7 @@ bool SchedulerMaster::run (StartupSys& startup)
 
 		create_folders ();
 
-		if (!create_process (nullptr))
+		if (!create_process (FILE_FLAG_FIRST_PIPE_INSTANCE))
 			throw_INITIALIZE ();
 
 		Pool::start (SCHEDULER_THREAD_PRIORITY);
@@ -288,10 +298,10 @@ bool SchedulerMaster::run (StartupSys& startup)
 	return true;
 }
 
-bool SchedulerMaster::create_process (SchedulerProcess* started) noexcept
+bool SchedulerMaster::create_process (DWORD flags) noexcept
 {
 	try {
-		new SchedulerProcess (*this, started ? 0 : FILE_FLAG_FIRST_PIPE_INSTANCE);
+		new SchedulerProcess (*this, flags);
 	} catch (...) {
 		assert (false);
 		return false;
@@ -354,7 +364,7 @@ void SchedulerMaster::shutdown () noexcept
 #ifdef DEBUG_SHUTDOWN
 	Port::Debugger::output_debug_string ("Shutdown 2\n");
 #endif
-	Office::terminate ();
+	Pool::terminate ();
 	worker_threads_.shutdown ();
 }
 

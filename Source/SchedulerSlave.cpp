@@ -29,6 +29,7 @@
 #include <Executor.h>
 #include "SchedulerMessage.h"
 #include "app_data.h"
+#include "object_name.h"
 
 //#define DEBUG_SHUTDOWN
 
@@ -44,7 +45,7 @@ SchedulerSlave::SchedulerSlave () :
 	sys_process_ (nullptr),
 	terminate_event_ (nullptr),
 	watchdog_thread_ (nullptr),
-	executor_id_ (0),
+	scheduler_pipe_ (INVALID_HANDLE_VALUE),
 	queue_ (Port::SystemInfo::hardware_concurrency ())
 {}
 
@@ -56,7 +57,6 @@ SchedulerSlave::~SchedulerSlave ()
 		CloseHandle (watchdog_thread_);
 		watchdog_thread_ = nullptr;
 	}
-	scheduler_mailslot_.close ();
 	worker_threads_.terminate ();
 	if (sys_process_) {
 		CloseHandle (sys_process_);
@@ -73,32 +73,26 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	if (!get_sys_process_id ())
 		return false; // System domain is not running
 
-	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
-		throw_COMM_FAILURE ();
-
-	if (!scheduler_mailslot_.open (SCHEDULER_MAILSLOT_NAME))
-		throw_COMM_FAILURE ();
-
-	Mailslot watchdog_mailslot;
-	if (!watchdog_mailslot.open (WATCHDOG_MAILSLOT_NAME))
-		throw_COMM_FAILURE ();
-
-	HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (), nullptr);
-	worker_threads_.semaphore (sem);
-	HANDLE executor;
-	if (!DuplicateHandle (GetCurrentProcess (), sem, sys_process_, &executor, 0, FALSE, DUPLICATE_SAME_ACCESS))
-		throw_INITIALIZE ();
-	executor_id_ = (uint32_t)(uintptr_t)executor;
-
 	if (!(terminate_event_ = CreateEventW (nullptr, TRUE, FALSE, nullptr)))
 		throw_INITIALIZE ();
+
+	if (!(sys_process_ = OpenProcess (SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, sys_process_id)))
+		throw_COMM_FAILURE ();
 
 	if (!(watchdog_thread_ = CreateThread (nullptr, NEUTRAL_FIBER_STACK_RESERVE, s_watchdog_thread_proc,
 		this, STACK_SIZE_PARAM_IS_A_RESERVATION, nullptr)))
 		throw_INITIALIZE ();
 
-	ProcessStartMessage process_start { GetCurrentProcessId (), executor_id_ };
-	watchdog_mailslot.send (process_start);
+	HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (),
+		object_name (SCHEDULER_SEMAPHORE_PREFIX, GetCurrentProcessId ()));
+	if (!sem)
+		throw_INITIALIZE ();
+
+	worker_threads_.semaphore (sem);
+
+	scheduler_pipe_ = CreateFileW (SCHEDULER_PIPE_NAME, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+	if (INVALID_HANDLE_VALUE == scheduler_pipe_)
+		throw_COMM_FAILURE ();
 
 	worker_threads_.run (startup, startup_deadline);
 
@@ -109,7 +103,7 @@ void SchedulerSlave::create_item ()
 {
 	queue_.create_item ();
 	try {
-		scheduler_mailslot_.send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CREATE_ITEM));
+		send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CREATE_ITEM));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
 	}
@@ -119,7 +113,7 @@ void SchedulerSlave::delete_item () noexcept
 {
 	queue_.delete_item ();
 	try {
-		scheduler_mailslot_.send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::DELETE_ITEM));
+		send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::DELETE_ITEM));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
 	}
@@ -134,7 +128,7 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) noexce
 	}
 
 	try {
-		scheduler_mailslot_.send (SchedulerMessage::Schedule (deadline, executor_id_));
+		send (SchedulerMessage::Schedule (deadline));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
 	}
@@ -150,7 +144,7 @@ bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, Dead
 	}
 
 	try {
-		scheduler_mailslot_.send (SchedulerMessage::ReSchedule (deadline, executor_id_, old));
+		send (SchedulerMessage::ReSchedule (deadline, old));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
 	}
@@ -174,7 +168,7 @@ inline
 void SchedulerSlave::core_free () noexcept
 {
 	try {
-		scheduler_mailslot_.send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CORE_FREE));
+		send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CORE_FREE));
 		return;
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
