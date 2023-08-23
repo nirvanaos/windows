@@ -39,7 +39,7 @@ namespace Windows {
 /// \param err           Windows error code.
 /// \param default_errno Default error code for return.
 /// \returns             POSIX error code.
-int error2errno (unsigned err, int default_errno = EINVAL);
+int error2errno (unsigned err, int default_errno = EINVAL) noexcept;
 
 NIRVANA_NORETURN void throw_win_error_sys (unsigned err);
 NIRVANA_NORETURN void throw_last_error ();

@@ -114,7 +114,7 @@ protected:
 	}
 
 protected:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept;
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept override;
 
 protected:
 	void* handle_;

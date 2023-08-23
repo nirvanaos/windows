@@ -79,7 +79,7 @@ protected:
 	{}
 
 private:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) override
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept override
 	{
 		assert (!error);
 		if (!error) {

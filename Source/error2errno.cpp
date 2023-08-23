@@ -113,7 +113,7 @@ struct ErrPred
   }
 };
 
-int error2errno (unsigned err, int default_errno)
+int error2errno (unsigned err, int default_errno) noexcept
 {
   assert (err);
   if (err) {
