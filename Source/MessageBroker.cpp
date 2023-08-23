@@ -32,7 +32,7 @@ namespace Windows {
 
 StaticallyAllocated <MessageBroker> MessageBroker::singleton_;
 
-void MessageBroker::received (void* message, DWORD size)
+void MessageBroker::received (void* message, DWORD size) noexcept
 {
 	ESIOP::dispatch_message (*(ESIOP::MessageHeader*)message);
 }

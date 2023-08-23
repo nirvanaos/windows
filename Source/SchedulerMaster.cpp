@@ -354,6 +354,7 @@ void SchedulerMaster::shutdown () noexcept
 #ifdef DEBUG_SHUTDOWN
 	Port::Debugger::output_debug_string ("Shutdown 2\n");
 #endif
+	Office::terminate ();
 	worker_threads_.shutdown ();
 }
 

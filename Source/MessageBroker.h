@@ -60,7 +60,7 @@ public:
 		return singleton_;
 	}
 
-	virtual void received (void* message, DWORD size);
+	void received (void* message, DWORD size) noexcept;
 
 private:
 	static StaticallyAllocated <MessageBroker> singleton_;

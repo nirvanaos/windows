@@ -96,7 +96,7 @@ protected:
 	void issue_request (Request& rq) noexcept;
 
 private:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept;
+	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept override;
 
 };
 
