@@ -193,7 +193,7 @@ void SchedulerProcess::completed (OVERLAPPED* ovl, uint32_t size, uint32_t error
 					LONG_PTR* msg = (LONG_PTR*)BufferPool::data (ovl);
 					real_copy (msg, msg + (size + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR), buf);
 
-					// Enqueue buffer to reading a next message.
+					// Enqueue buffer to read a next message.
 					enqueue_buffer (ovl);
 
 					dispatch_message (buf, size);

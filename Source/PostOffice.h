@@ -88,7 +88,7 @@ private:
 			LONG_PTR* msg = (LONG_PTR*)data (ovl);
 			real_copy (msg, msg + (size + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR), buf);
 
-			// Enqueue buffer to reading a next message.
+			// Enqueue buffer to read a next message.
 			enqueue_buffer (ovl);
 
 			// Process message
