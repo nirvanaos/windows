@@ -31,7 +31,7 @@
 #include "SchedulerBase.h"
 #include "WorkerThreads.h"
 #include "WorkerSemaphore.h"
-#include <PriorityQueue.h>
+#include <PriorityQueueReorder.h>
 #include <SkipListWithPool.h>
 
 namespace Nirvana {
@@ -86,7 +86,7 @@ private:
 	HANDLE terminate_event_;
 	HANDLE watchdog_thread_;
 	HANDLE scheduler_pipe_;
-	SkipListWithPool <PriorityQueue <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;
+	SkipListWithPool <PriorityQueueReorder <Executor*, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;
 	WorkerThreads <WorkerSemaphore> worker_threads_;
 };
 
