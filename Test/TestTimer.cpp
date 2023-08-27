@@ -108,4 +108,15 @@ TEST_F (TestTimer, Periodic)
 	EXPECT_EQ (timer.signalled_, 2);
 }
 
+TEST_F (TestTimer, Absolute)
+{
+	TimerTest timer;
+	TimeBase::TimeT t = Nirvana::Core::Port::Chrono::UTC ().time () + 1 * TimeBase::SECOND;
+	timer.set (TimerTest::TIMER_ABSOLUTE, t, 0);
+	Sleep (500);
+	EXPECT_EQ (timer.signalled_, 0);
+	Sleep (1000);
+	EXPECT_EQ (timer.signalled_, 1);
+}
+
 }
