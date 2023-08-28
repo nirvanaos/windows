@@ -26,6 +26,9 @@
 #include "SchedulerMaster.h"
 #include "app_data.h"
 #include <StartupSys.h>
+#include <SysDomain.h>
+#include <ORB/Services.h>
+#include "error2errno.h"
 
 //#define DEBUG_SHUTDOWN
 
@@ -41,6 +44,7 @@ SchedulerProcess::SchedulerProcess (SchedulerMaster& scheduler, DWORD flags) :
 	scheduler_ (scheduler),
 	semaphore_ (nullptr),
 	pipe_ (INVALID_HANDLE_VALUE),
+	process_handle_ (nullptr),
 	process_id_ (0),
 	valid_cnt_ (0),
 	used_cores_ (0),
@@ -62,7 +66,10 @@ SchedulerProcess::~SchedulerProcess ()
 {
 	if (semaphore_)
 		CloseHandle (semaphore_);
-	CloseHandle (pipe_);
+	if (INVALID_HANDLE_VALUE != pipe_)
+		CloseHandle (pipe_);
+	if (process_handle_)
+		CloseHandle (process_handle_);
 }
 
 inline
@@ -88,6 +95,11 @@ bool SchedulerProcess::start () noexcept
 	assert (!semaphore_);
 	if (!GetNamedPipeClientProcessId (pipe_, &process_id_))
 		return false;
+
+	if (!(process_handle_ = OpenProcess (READ_CONTROL | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE,
+		FALSE, process_id_)))
+		return false;
+
 	semaphore_ = OpenSemaphoreW (SEMAPHORE_MODIFY_STATE, false,
 		object_name (SCHEDULER_SEMAPHORE_PREFIX, process_id_));
 	if (!semaphore_) {
@@ -102,6 +114,7 @@ bool SchedulerProcess::start () noexcept
 		enqueue_buffer (buf);
 		buf = buffers_.next (buf);
 	} while (buf != buffers_.end ());
+
 	return true;
 }
 
@@ -362,6 +375,114 @@ void SchedulerMaster::reschedule (DeadlineTime deadline, SchedulerProcess& proce
 	} catch (...) {
 		on_error (CORBA::SystemException::EC_NO_MEMORY);
 	}
+}
+
+class SchedulerMaster::ProcessStart : public Runnable
+{
+public:
+	ProcessStart (Ref <SysDomain>&& sd, SchedulerProcess& process) :
+		sys_domain_ (std::move (sd)),
+		process_ (&process)
+	{}
+
+private:
+	virtual void run () override;
+
+private:
+	Ref <SysDomain> sys_domain_;
+	Ref <SchedulerProcess> process_;
+};
+
+class SchedulerMaster::ProcessTerminate : public Runnable
+{
+public:
+	ProcessTerminate (Ref <SysDomain>&& sd, SchedulerProcess& process) :
+		sys_domain_ (std::move (sd)),
+		process_ (&process)
+	{}
+
+private:
+	virtual void run () override;
+
+private:
+	Ref <SysDomain> sys_domain_;
+	Ref <SchedulerProcess> process_;
+};
+
+template <class R> inline
+void SchedulerMaster::call_sys_domain (SchedulerProcess& process) noexcept
+{
+	Ref <SysDomain> sys_domain;
+	Ref <SyncContext> sync_context;
+	SysDomain::get_call_context (sys_domain, sync_context);
+	ExecDomain::async_call <R> (Chrono::make_deadline (SYS_DOMAIN_CALL_DEADLINE),
+		*sync_context, nullptr, std::move (sys_domain), std::ref (process));
+}
+
+inline
+void SchedulerMaster::process_started (SchedulerProcess& process) noexcept
+{
+	try {
+		call_sys_domain <ProcessStart> (process);
+	} catch (...) {
+		// TODO: Log
+		assert (false);
+		TerminateProcess (process.process_handle (), -1);
+	}
+	create_process (0);
+}
+
+inline
+void SchedulerMaster::process_terminated (SchedulerProcess& process) noexcept
+{
+	try {
+		call_sys_domain <ProcessTerminate> (process);
+	} catch (...) {
+		assert (false);
+		// TODO: Log
+	}
+}
+
+void SchedulerMaster::ProcessStart::run ()
+{
+	try {
+		HANDLE process = process_->process_handle ();
+		USHORT platform;
+		USHORT process_machine, host_machine;
+		if (!IsWow64Process2 (process, &process_machine, &host_machine))
+			throw_last_error ();
+		platform = (IMAGE_FILE_MACHINE_UNKNOWN == process_machine) ? host_machine : process_machine;
+
+		HANDLE token;
+		if (!OpenProcessToken (process, TOKEN_READ, &token))
+			throw_last_error ();
+
+		DWORD len = 0;
+		GetTokenInformation (token, TokenUser, nullptr, 0, &len);
+		if (!len) {
+			CloseHandle (token);
+			throw_last_error ();
+		}
+		std::vector <uint8_t> buf ((size_t)len);
+		BOOL ok = GetTokenInformation (token, TokenUser, buf.data (), len, &len);
+		CloseHandle (token);
+		if (!ok)
+			throw_last_error ();
+
+		PSID sid = ((const TOKEN_USER*)buf.data ())->User.Sid;
+		len = GetLengthSid (sid);
+		SecurityId user ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);
+		sys_domain_->domain_created (process_->process_id (), platform, std::move (user));
+	} catch (...) {
+		// TODO: Log
+		assert (false);
+		TerminateProcess (process_->process_handle (), -1);
+	}
+}
+
+void SchedulerMaster::ProcessTerminate::run ()
+{
+	sys_domain_->domain_destroyed (process_->process_id ());
 }
 
 void SchedulerMaster::shutdown () noexcept

@@ -24,8 +24,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_NETWORK_H_
-#define NIRVANA_CORE_PORT_NETWORK_H_
+#ifndef NIRVANA_CORE_PORT_SECURITY_H_
+#define NIRVANA_CORE_PORT_SECURITY_H_
 #pragma once
 
 #include <Nirvana/Nirvana.h>
@@ -34,12 +34,9 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-class Network
+class Security
 {
 public:
-	typedef void* Socket;
-
-	static void socket_close (Socket s);
 };
 
 }

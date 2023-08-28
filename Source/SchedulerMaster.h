@@ -71,6 +71,16 @@ public:
 
 	bool execute () noexcept;
 
+	ULONG process_id () const noexcept
+	{
+		return process_id_;
+	}
+
+	HANDLE process_handle () const noexcept
+	{
+		return process_handle_;
+	}
+
 private:
 	bool start () noexcept;
 	void terminate () noexcept;
@@ -95,6 +105,7 @@ private:
 	SchedulerMaster& scheduler_;
 	HANDLE semaphore_;
 	HANDLE pipe_;
+	HANDLE process_handle_;
 	ULONG process_id_;
 	RefCounter ref_cnt_;
 	AtomicCounter <false> valid_cnt_;
@@ -153,6 +164,8 @@ class SchedulerMaster :
 	typedef SchedulerImpl <SchedulerMaster, SchedulerItem> Base;
 	typedef ThreadPool <CompletionPort, ThreadPostman> Pool;
 
+	static const TimeBase::TimeT SYS_DOMAIN_CALL_DEADLINE = 1 * TimeBase::MILLISECOND;
+
 public:
 	SchedulerMaster ();
 	~SchedulerMaster ();
@@ -193,17 +206,18 @@ public:
 	void schedule (DeadlineTime deadline, SchedulerProcess& process) noexcept;
 	void reschedule (DeadlineTime deadline, SchedulerProcess& process, DeadlineTime old) noexcept;
 
-	void process_started (SchedulerProcess& process)
-	{
-		create_process (0);
-	}
-
-	void process_terminated (SchedulerProcess& process)
-	{}
+	void process_started (SchedulerProcess& process) noexcept;
+	void process_terminated (SchedulerProcess& process) noexcept;
 
 private:
 	void create_folders ();
 	bool create_process (DWORD flags) noexcept;
+	
+	class ProcessStart;
+	class ProcessTerminate;
+
+	template <class R>
+	void call_sys_domain (SchedulerProcess& process) noexcept;
 
 private:
 	/// Helper class for executing in the current process.
