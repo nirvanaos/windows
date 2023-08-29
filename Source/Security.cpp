@@ -39,14 +39,10 @@ Security::ContextABI Security::Context::duplicate () const
 	if (!data_)
 		return 0;
 
-	HANDLE h;
-	if (!DuplicateToken ((HANDLE)(uintptr_t)data_, SecurityDelegation, &h))
-		throw_last_error ();
-	/*
 	HANDLE process = GetCurrentProcess ();
+	HANDLE h;
 	if (!DuplicateHandle (process, (HANDLE)(uintptr_t)data_, process, &h, 0, false, DUPLICATE_SAME_ACCESS))
 		throw_last_error ();
-		*/
 	assert ((uintptr_t)h <= 0xFFFFFFFF);
 	return (ContextABI)(uintptr_t)h;
 }
