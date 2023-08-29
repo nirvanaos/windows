@@ -36,14 +36,8 @@ namespace Windows {
 bool shutdown ()
 {
 	if (get_sys_process_id ()) {
-		Mailslot ms;
-		if (ms.open (object_name (MAILSLOT_PREFIX, sys_process_id))) {
-			try {
-				ms.send (ESIOP::Shutdown ());
-				return true;
-			} catch (...) {
-			}
-		}
+		ESIOP::send_shutdown (sys_process_id);
+		return true;
 	}
 	return false;
 }

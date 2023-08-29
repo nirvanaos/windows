@@ -30,13 +30,95 @@
 
 #include <Nirvana/Nirvana.h>
 
+extern "C" __declspec (dllimport)
+int __stdcall CloseHandle (void* handle);
+
 namespace Nirvana {
+
+typedef IDL::Sequence <CORBA::Octet> SecurityId;
+
 namespace Core {
 namespace Port {
 
+class Thread;
+
+/// \brief System security API.
 class Security
 {
 public:
+	typedef uint32_t ContextABI;
+
+	class Context
+	{
+	public:
+		Context () :
+			data_ (0)
+		{}
+
+		explicit Context (ContextABI data) :
+			data_ (data)
+		{}
+
+		Context (const Context& src) :
+			data_ (src.duplicate ())
+		{}
+
+		Context (Context&& src) noexcept :
+			data_ (src.data_)
+		{
+			src.data_ = 0;
+		}
+
+		~Context ()
+		{
+			clear ();
+		}
+
+		Context& operator = (const Context& src)
+		{
+			clear ();
+			data_ = src.duplicate ();
+			return *this;
+		}
+
+		Context& operator = (Context&& src) noexcept
+		{
+			clear ();
+			data_ = src.data_;
+			src.data_ = 0;
+			return *this;
+		}
+
+		void clear () noexcept
+		{
+			if (data_) {
+				verify (CloseHandle ((void*)(uintptr_t)data_));
+				data_ = 0;
+			}
+		}
+
+		bool empty () const noexcept
+		{
+			return data_ == 0;
+		}
+
+		SecurityId security_id () const;
+
+		operator void* () const noexcept
+		{
+			return (void*)(uintptr_t)data_;
+		}
+
+	private:
+		ContextABI duplicate () const;
+
+	private:
+		ContextABI data_;
+	};
+
+	static bool is_valid_context (ContextABI context) noexcept;
+
+	static Context get_domain_context ();
 };
 
 }

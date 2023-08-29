@@ -30,7 +30,6 @@
 
 #include <ThreadWorker.h>
 #include "Thread.inl"
-#include "ExecContext.inl"
 
 namespace Nirvana {
 namespace Core {
@@ -62,6 +61,12 @@ public:
 
 	~ThreadWorker ()
 	{}
+
+	static void execute (Executor& executor) noexcept
+	{
+		Core::ThreadWorker::execute (executor);
+		RevertToSelf ();
+	}
 
 	void join ()
 	{

@@ -29,6 +29,7 @@
 #include <SysDomain.h>
 #include <ORB/Services.h>
 #include "error2errno.h"
+#include "../Port/Security.h"
 
 //#define DEBUG_SHUTDOWN
 
@@ -457,22 +458,8 @@ void SchedulerMaster::ProcessStart::run ()
 		if (!OpenProcessToken (process, TOKEN_READ, &token))
 			throw_last_error ();
 
-		DWORD len = 0;
-		GetTokenInformation (token, TokenUser, nullptr, 0, &len);
-		if (!len) {
-			CloseHandle (token);
-			throw_last_error ();
-		}
-		std::vector <uint8_t> buf ((size_t)len);
-		BOOL ok = GetTokenInformation (token, TokenUser, buf.data (), len, &len);
-		CloseHandle (token);
-		if (!ok)
-			throw_last_error ();
-
-		PSID sid = ((const TOKEN_USER*)buf.data ())->User.Sid;
-		len = GetLengthSid (sid);
-		SecurityId user ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);
-		sys_domain_->domain_created (process_->process_id (), platform, std::move (user));
+		Port::Security::Context context ((Port::Security::ContextABI)(uintptr_t)token);
+		sys_domain_->domain_created (process_->process_id (), platform, context.security_id ());
 	} catch (...) {
 		// TODO: Log
 		assert (false);

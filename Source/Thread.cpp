@@ -24,6 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "Thread.inl"
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {

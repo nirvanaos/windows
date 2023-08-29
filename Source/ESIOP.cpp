@@ -24,9 +24,11 @@
 *  popov.nirvana@gmail.com
 */
 #include <ORB/ESIOP.h>
+#include <Port/Security.h>
 #include "Mailslot.h"
 #include "object_name.h"
 #include "win32.h"
+#include "error2errno.h"
 
 using namespace Nirvana::Core::Windows;
 
@@ -39,6 +41,30 @@ void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) n
 		ms.open (object_name (MAILSLOT_PREFIX, domain_id));
 		ms.send (msg, (DWORD)size);
 	} catch (...) {
+	}
+}
+
+void send_shutdown (ProtDomainId domain_id)
+{
+	HANDLE process = OpenProcess (PROCESS_DUP_HANDLE, false, domain_id);
+	if (!process)
+		throw_last_error ();
+
+	Nirvana::Core::Port::Security::Context local_context = Nirvana::Core::Port::Security::get_domain_context ();
+
+	HANDLE token2;
+	if (!DuplicateHandle (GetCurrentProcess (), local_context, process, &token2, 0, FALSE,
+		DUPLICATE_SAME_ACCESS))
+		throw_last_error ();
+
+	try {
+		Shutdown msg ((Nirvana::Core::Port::Security::ContextABI)(uintptr_t)token2);
+		Mailslot ms;
+		ms.open (object_name (MAILSLOT_PREFIX, domain_id));
+		ms.send (msg);
+	} catch (...) {
+		CloseHandle (token2);
+		throw;
 	}
 }
 

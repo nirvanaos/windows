@@ -29,6 +29,7 @@
 #pragma once
 
 #include "ExecContext.h"
+#include "../Port/Security.h"
 
 typedef unsigned long (__stdcall *PTHREAD_START_ROUTINE) (void* lpThreadParameter);
 
@@ -36,6 +37,9 @@ extern "C" __declspec (dllimport)
 void* __stdcall TlsGetValue (unsigned long dwTlsIndex);
 
 typedef void* HANDLE;
+
+extern "C" __declspec (dllimport)
+int __stdcall ImpersonateLoggedOnUser (HANDLE hToken);
 
 namespace Nirvana {
 namespace Core {
@@ -75,6 +79,11 @@ public:
 
 	/// Wait for the thread termination
 	void join () const;
+
+	static void impersonate (const Security::Context& sec_context) noexcept
+	{
+		verify (ImpersonateLoggedOnUser (sec_context));
+	}
 
 	///@}
 

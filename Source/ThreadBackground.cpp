@@ -44,6 +44,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 		if (_this->finish_)
 			break;
 		thread.execute ();
+		RevertToSelf ();
 	}
 	
 	context.convert_to_thread ();
