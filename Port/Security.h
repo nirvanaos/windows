@@ -104,6 +104,16 @@ public:
 
 		SecurityId security_id () const;
 
+		ContextABI abi () const noexcept
+		{
+			return data_;
+		}
+
+		void detach () noexcept
+		{
+			data_ = 0;
+		}
+
 		operator void* () const noexcept
 		{
 			return (void*)(uintptr_t)data_;

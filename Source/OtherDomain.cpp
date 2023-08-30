@@ -1,7 +1,10 @@
 #include "../Port/OtherDomain.h"
 #include "OtherSpace.inl"
 #include "object_name.h"
+#include "error2errno.h"
+#include <ExecDomain.h>
 
+using namespace Nirvana::Core;
 using namespace Nirvana::Core::Windows;
 
 namespace ESIOP {
@@ -11,7 +14,7 @@ OtherDomainBase::OtherDomainBase (ProtDomainId domain_id) :
 	process_ (::OpenProcess (PROCESS_QUERY_INFORMATION
 		| PROCESS_VM_OPERATION | PROCESS_DUP_HANDLE , FALSE, domain_id))
 {
-	if (!process_ || !open (Nirvana::Core::Windows::object_name (MAILSLOT_PREFIX, domain_id)))
+	if (!process_ || !Mailslot::open (Nirvana::Core::Windows::object_name (MAILSLOT_PREFIX, domain_id)))
 		Nirvana::throw_COMM_FAILURE ();
 }
 
@@ -35,6 +38,25 @@ inline bool OtherDomainBase::is_64_bit () const noexcept
 		x64 = IMAGE_FILE_MACHINE_I386 != machine;
 	}
 	return x64;
+}
+
+inline
+Security::Context OtherDomainBase::create_security_context (
+	const Security::Context& local_context) const
+{
+	HANDLE h;
+	if (!DuplicateHandle (GetCurrentProcess (), local_context, process_, &h, 0, false, DUPLICATE_SAME_ACCESS))
+		throw_last_error ();
+	return Security::Context ((Security::ContextABI)(uintptr_t)h);
+}
+
+Security::Context OtherDomainBase::create_security_context () const
+{
+	const Security::Context& sc = ExecDomain::current ().security_context ();
+	if (!sc.empty ())
+		return create_security_context (sc);
+
+	return create_security_context (Security::get_domain_context ());
 }
 
 }

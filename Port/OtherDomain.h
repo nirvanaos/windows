@@ -32,19 +32,22 @@
 #include "../Source/OtherSpace.h"
 #include "SystemInfo.h"
 #include <BinderObject.h>
+#include <Security.h>
 
 namespace ESIOP {
 namespace Windows {
 
 class OtherDomainBase : public Nirvana::Core::Windows::Mailslot
 {
-	typedef Nirvana::Core::Windows::Mailslot Base;
+	typedef Nirvana::Core::Windows::Mailslot Mailslot;
 
 public:
 	void send_message (const void* msg, size_t size)
 	{
-		Base::send (msg, (uint32_t)size);
+		Mailslot::send (msg, (uint32_t)size);
 	}
+
+	Nirvana::Core::Security::Context create_security_context () const;
 
 protected:
 	HANDLE process () const noexcept
@@ -57,6 +60,10 @@ protected:
 protected:
 	OtherDomainBase (ProtDomainId domain_id);
 	~OtherDomainBase ();
+
+private:
+	Nirvana::Core::Security::Context create_security_context (
+		const Nirvana::Core::Security::Context& local_context) const;
 
 private:
 	HANDLE process_;
