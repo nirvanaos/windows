@@ -36,7 +36,7 @@ namespace Core {
 namespace Port {
 
 /// Interface to host (kernel) filesystem driver.
-class FileAccessDirect : 
+class FileAccessDirect :
 	private Nirvana::Core::Windows::FileAccess
 {
 	typedef Nirvana::Core::Windows::FileAccess Base;
@@ -62,6 +62,31 @@ protected:
 	Ref <IO_Request> read (uint64_t pos, void* buf, uint32_t size);
 	Ref <IO_Request> write (uint64_t pos, void* buf, uint32_t size);
 	Ref <IO_Request> set_size (uint64_t size);
+
+private:
+	class RequestSetSize : public IO_Request
+	{
+	public:
+		RequestSetSize (void* file, Pos size) :
+			file_ (file),
+			size_ (size),
+			cancelled_ (false)
+		{}
+
+		virtual void cancel () noexcept override
+		{
+			cancelled_ = true;
+		}
+
+		void run () noexcept;
+
+	private:
+		void* file_;
+		Pos size_;
+		volatile bool cancelled_;
+	};
+
+	static unsigned long __stdcall set_size_proc (void* rq);
 };
 
 }

@@ -128,16 +128,38 @@ Ref <IO_Request> FileAccessDirect::write (uint64_t pos, void* buf, uint32_t size
 
 Ref <IO_Request> FileAccessDirect::set_size (uint64_t size)
 {
-	// While we set file size synchronously.
-	// TODO: Make it in a separate thread.
-	Ref <RequestOverlapped> rq = Ref <RequestOverlapped>::create <RequestOverlapped> (handle_);
-	FILE_END_OF_FILE_INFO info;
-	info.EndOfFile.QuadPart = size;
-	IO_Result result (0, 0);
-	if (!SetFileInformationByHandle (handle_, FileEndOfFileInfo, &info, sizeof (info)))
-		result.error = error2errno (GetLastError ());
-	rq->signal (result);
+	Ref <RequestSetSize> rq = Ref <RequestSetSize>::create <RequestSetSize> (handle_, size);
+	HANDLE h = CreateThread (nullptr, NEUTRAL_FIBER_STACK_RESERVE, set_size_proc,
+		&*rq, STACK_SIZE_PARAM_IS_A_RESERVATION | CREATE_SUSPENDED, nullptr);
+	if (!h)
+		rq->signal (IO_Result (0, error2errno (GetLastError ())));
+	else {
+		SetThreadPriority (h, IO_THREAD_PRIORITY);
+		ResumeThread (h);
+		CloseHandle (h);
+	}
 	return rq;
+}
+
+inline
+void FileAccessDirect::RequestSetSize::run () noexcept
+{
+	IO_Result result (0, 0);
+	if (cancelled_)
+		result.error = ECANCELED;
+	else {
+		FILE_END_OF_FILE_INFO info;
+		info.EndOfFile.QuadPart = size_;
+		if (!SetFileInformationByHandle (file_, FileEndOfFileInfo, &info, sizeof (info)))
+			result.error = error2errno (GetLastError ());
+	}
+	signal (result);
+}
+
+DWORD WINAPI FileAccessDirect::set_size_proc (void* rq)
+{
+	reinterpret_cast <RequestSetSize*> (rq)->run ();
+	return 0;
 }
 
 }
