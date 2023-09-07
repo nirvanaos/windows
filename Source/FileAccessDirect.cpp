@@ -26,6 +26,7 @@
 #include "../Port/FileAccessDirect.h"
 #include "error2errno.h"
 #include "MessageBroker.h"
+#include "RequestOverlapped.h"
 #include <fnctl.h>
 
 namespace Nirvana {
@@ -88,47 +89,77 @@ FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, P
 	block_size = file.block_size ();
 }
 
-void FileAccessDirect::issue_request (Request& rq) noexcept
+Ref <IO_Request> FileAccessDirect::read (uint64_t pos, void* buf, uint32_t size)
 {
-	switch (rq.operation ()) {
-		case IO_Request::OP_SET_SIZE:
-			MessageBroker::completion_port ().post (*this, rq, 0);
-			return;
-		case IO_Request::OP_WRITE:
-			// We have to ensure that copying from this block in read() operation
-			// will not cause the remapping. Otherwise it can unpredictable behavoiur
-			// in kernel mode.
-			// Use SRC_DECOMMIT flag to prevent changing the page states to write-copy.
-			try {
-				Memory::prepare_to_share (rq.buffer (), rq.size (), Nirvana::Memory::SRC_DECOMMIT);
-			} catch (const CORBA::NO_MEMORY&) {
-				rq.signal ({ 0, ENOMEM });
-				return;
-			} catch (...) {
-				rq.signal ({ 0, EINVAL });
-				return;
-			}
-			break;
+	Ref <RequestOverlapped> rq = Ref <RequestOverlapped>::create <RequestOverlapped> (handle_, pos);
+	if (!ReadFile (handle_, buf, size, nullptr, rq)) {
+		DWORD err = GetLastError ();
+		if (ERROR_IO_PENDING != err)
+			rq->signal (IO_Result (0, error2errno (err)));
 	}
-	Base::issue_request (rq);
+	return rq;
 }
 
-void FileAccessDirect::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
+Ref <IO_Request> FileAccessDirect::write (uint64_t pos, void* buf, uint32_t size)
 {
-	Request& rq = Request::from_overlapped (*ovl);
-	switch (rq.operation ()) {
-		case Request::OP_SET_SIZE: {
-			FILE_END_OF_FILE_INFO info;
-			info.EndOfFile.QuadPart = rq.offset ();
-			IO_Result result = { 0 };
-			if (!SetFileInformationByHandle (handle_, FileEndOfFileInfo, &info, sizeof (info)))
-				result.error = error2errno (GetLastError ());
-			rq.signal (result);
-		} break;
-		
-		default:
-			Base::completed (ovl, size, error);
+	Ref <RequestOverlapped> rq = Ref <RequestOverlapped>::create <RequestOverlapped> (handle_, pos);
+
+	// We have to ensure that copying from this block in read() operation
+	// will not cause the remapping. Otherwise it can unpredictable behavoiur
+	// in kernel mode.
+	// Use SRC_DECOMMIT flag to prevent changing the page states to write-copy.
+	try {
+		Memory::prepare_to_share (buf, size, Nirvana::Memory::SRC_DECOMMIT);
+	} catch (const CORBA::NO_MEMORY&) {
+		rq->signal (IO_Result (0, ENOMEM));
+		return rq;
+	} catch (...) {
+		rq->signal (IO_Result (0, EINVAL));
+		return rq;
 	}
+
+	if (!WriteFile (handle_, buf, size, nullptr, rq)) {
+		DWORD err = GetLastError ();
+		if (ERROR_IO_PENDING != err)
+			rq->signal (IO_Result (0, error2errno (err)));
+	}
+	return rq;
+}
+
+Ref <IO_Request> FileAccessDirect::set_size (uint64_t size)
+{
+	Ref <RequestSetSize> rq = Ref <RequestSetSize>::create <RequestSetSize> (handle_, size);
+	HANDLE h = CreateThread (nullptr, NEUTRAL_FIBER_STACK_RESERVE, set_size_proc,
+		&*rq, STACK_SIZE_PARAM_IS_A_RESERVATION | CREATE_SUSPENDED, nullptr);
+	if (!h)
+		rq->signal (IO_Result (0, error2errno (GetLastError ())));
+	else {
+		SetThreadPriority (h, IO_THREAD_PRIORITY);
+		ResumeThread (h);
+		CloseHandle (h);
+	}
+	return rq;
+}
+
+inline
+void FileAccessDirect::RequestSetSize::run () noexcept
+{
+	IO_Result result (0, 0);
+	if (cancelled_)
+		result.error = ECANCELED;
+	else {
+		FILE_END_OF_FILE_INFO info;
+		info.EndOfFile.QuadPart = size_;
+		if (!SetFileInformationByHandle (file_, FileEndOfFileInfo, &info, sizeof (info)))
+			result.error = error2errno (GetLastError ());
+	}
+	signal (result);
+}
+
+DWORD WINAPI FileAccessDirect::set_size_proc (void* rq)
+{
+	reinterpret_cast <RequestSetSize*> (rq)->run ();
+	return 0;
 }
 
 }

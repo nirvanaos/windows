@@ -29,53 +29,22 @@
 #pragma once
 
 #include "../Source/FileAccess.h"
+#include <IO_Request.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
 /// Interface to host (kernel) filesystem driver.
-class FileAccessDirect : 
+class FileAccessDirect :
 	private Nirvana::Core::Windows::FileAccess
 {
 	typedef Nirvana::Core::Windows::FileAccess Base;
-	typedef Base::Request RequestBase;
 
 protected:
 	typedef uint64_t Pos;      ///< File position type.
 	typedef uint32_t Size;     ///< R/W block size type.
 	typedef uint64_t BlockIdx; ///< Block index type. Must fit maximal position / minimal block_size.
-
-	/// I/O request.
-	/// Must derive Core::IO_Request.
-	class Request :
-		public RequestBase
-	{
-		typedef RequestBase Base;
-	public:
-		/// Constructor.
-		/// 
-		/// \param op I/O operation.
-		/// \param offset R/W start offset. Must be aligned on the block boundary.
-		/// \param buf R/W buffer.
-		/// \param size R/W byte count. Must be aligned on the block boundary.
-		Request (Operation op, Pos offset, void* buf, Size size) noexcept :
-			Base (op, buf, size)
-		{
-			Offset.Offset = (uint32_t)offset;
-			Offset.OffsetHigh = (offset >> 32);
-		}
-
-		Pos offset () const
-		{
-			return ((uint64_t)Offset.OffsetHigh << 32) | Offset.Offset;
-		}
-
-		static Request& from_overlapped (_OVERLAPPED& ovl) noexcept
-		{
-			return static_cast <Request&> (reinterpret_cast <Overlapped&> (ovl));
-		}
-	};
 
 	/// Constructor.
 	/// 
@@ -90,14 +59,34 @@ protected:
 		return Base::flags ();
 	}
 
-	/// Issues the I/O request to the host or kernel.
-	/// 
-	/// \param rq The `Request` object.
-	void issue_request (Request& rq) noexcept;
+	Ref <IO_Request> read (uint64_t pos, void* buf, uint32_t size);
+	Ref <IO_Request> write (uint64_t pos, void* buf, uint32_t size);
+	Ref <IO_Request> set_size (uint64_t size);
 
 private:
-	virtual void completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept override;
+	class RequestSetSize : public IO_Request
+	{
+	public:
+		RequestSetSize (void* file, Pos size) :
+			file_ (file),
+			size_ (size),
+			cancelled_ (false)
+		{}
 
+		virtual void cancel () noexcept override
+		{
+			cancelled_ = true;
+		}
+
+		void run () noexcept;
+
+	private:
+		void* file_;
+		Pos size_;
+		volatile bool cancelled_;
+	};
+
+	static unsigned long __stdcall set_size_proc (void* rq);
 };
 
 }
