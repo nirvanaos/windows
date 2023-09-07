@@ -1,3 +1,4 @@
+/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -23,41 +24,52 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "FileAccess.h"
-#include "error2errno.h"
-#include "MessageBroker.h"
-#include "RequestOverlapped.h"
-#include <fnctl.h>
+#ifndef NIRVANA_CORE_PORT_REQUESTOVERLAPPED_H_
+#define NIRVANA_CORE_PORT_REQUESTOVERLAPPED_H_
+#pragma once
+
+#include <IO_Request.h>
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool FileAccess::open (Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
-	uint32_t flags_and_attributes)
+class RequestOverlapped :
+	public IO_Request,
+	public OVERLAPPED
 {
-	handle_ = file.open (access, share_mode, creation_disposition, flags_and_attributes);
-	if (INVALID_HANDLE_VALUE == handle_)
-		return false;
-	MessageBroker::completion_port ().add_receiver (handle_, *this);
-	flags_ = (access & GENERIC_WRITE) ? O_RDWR : O_RDONLY;
-	return true;
+public:
+	RequestOverlapped (HANDLE file) noexcept :
+		file_ (file)
+	{
+		zero (static_cast <OVERLAPPED&> (*this));
+	}
+
+	RequestOverlapped (HANDLE file, uint64_t offset) noexcept :
+		file_ (file)
+	{
+		zero (static_cast <OVERLAPPED&> (*this));
+		OffsetHigh = offset >> 32;
+		Offset = (DWORD)offset;
+	}
+
+	static RequestOverlapped& from_overlapped (OVERLAPPED& ovl) noexcept
+	{
+		return static_cast <RequestOverlapped&> (ovl);
+	}
+
+	virtual void cancel () noexcept override
+	{
+		CancelIoEx (file_, this);
+	}
+
+private:
+	HANDLE file_;
+};
+
+}
+}
 }
 
-FileAccess::~FileAccess ()
-{
-	if (INVALID_HANDLE_VALUE != handle_)
-		CloseHandle (handle_);
-}
-
-void FileAccess::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
-{
-	IO_Result result (size, 0);
-	if (error)
-		result.error = error2errno (error);
-	RequestOverlapped::from_overlapped (*ovl).signal (result);
-}
-
-}
-}
-}
+#endif
