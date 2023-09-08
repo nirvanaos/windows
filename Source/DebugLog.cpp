@@ -23,6 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
+#include "pch.h"
 #include "DebugLog.h"
 #include "app_data.h"
 

@@ -23,11 +23,10 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-
+#include "pch.h"
 #include "../Port/Timer.h"
 #include "../Port/SystemInfo.h"
 #include <limits>
-#include "win32.h"
 
 namespace Nirvana {
 namespace Core {

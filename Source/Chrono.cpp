@@ -23,8 +23,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
+#include "pch.h"
 #include "../Port/Chrono.h"
-#include "win32.h"
 #include <timeapi.h>
 #include <limits>
 #include <Nirvana/rescale.h>

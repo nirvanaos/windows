@@ -23,9 +23,9 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
+#include "pch.h"
 #include "../Port/Dir.h"
 #include "DirIterator.h"
-#include "win32.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
 

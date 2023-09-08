@@ -23,6 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
+#include "pch.h"
 #include "DirIterator.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>

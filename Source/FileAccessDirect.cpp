@@ -23,6 +23,7 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
+#include "pch.h"
 #include "../Port/FileAccessDirect.h"
 #include "error2errno.h"
 #include "MessageBroker.h"

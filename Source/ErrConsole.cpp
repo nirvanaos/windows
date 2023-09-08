@@ -23,8 +23,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
+#include "pch.h"
 #include "ErrConsole.h"
-#include "win32.h"
 #include <string.h>
 
 namespace Nirvana {
