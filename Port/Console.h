@@ -28,21 +28,41 @@
 #define NIRVANA_CORE_PORT_CONSOLE_H_
 #pragma once
 
-#include <Nirvana/Nirvana.h>
+#include <FileAccessChar.h>
 
 namespace Nirvana {
 namespace Core {
 namespace Port {
 
-class Console
+class Console : public FileAccessChar
 {
 protected:
 	Console ();
+	~Console ();
 
-	void write (const char* text, size_t len) const noexcept;
+	virtual void read_start () noexcept override;
+	virtual void read_cancel () noexcept override;
+	virtual Ref <IO_Request> write_start (const IDL::String& data) override;
 
 private:
-	void* handle_;
+	void read_proc () noexcept;
+	static unsigned long __stdcall s_read_proc (void*) noexcept;
+
+	class RequestWrite : public IO_Request
+	{
+	public:
+		RequestWrite ()
+		{}
+
+		virtual void cancel () noexcept override
+		{}
+	};
+
+	void* read_thread_;
+	void* read_event_;
+	void* handle_out_;
+	void* handle_in_;
+	bool read_stop_;
 };
 
 }
