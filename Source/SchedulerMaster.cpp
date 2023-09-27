@@ -191,31 +191,35 @@ void SchedulerProcess::completed (OVERLAPPED* ovl, uint32_t size, uint32_t error
 	} else {
 		assert (!error);
 		if (!error) {
-			if (0 == valid_cnt_.load ()) {
-				assert (!size);
-				if (start ())
-					scheduler_.process_started (*this);
-				else {
-					connect ();
-					return; // No _remove_ref here
+			if (!size) {
+				// ConnectNamedPipe completed
+				if (0 == valid_cnt_.load ()) {
+					assert (!size);
+					if (start ())
+						scheduler_.process_started (*this);
+					else {
+						connect ();
+						return; // No _remove_ref here
+					}
 				}
-			} else {
-				assert (size);
-				if (size && valid_cnt_.increment_if_not_zero ()) {
+#ifdef _DEBUG
+				else
+					assert (false);
+#endif
+			} else if (valid_cnt_.increment_if_not_zero ()) {
 
-					static const size_t MAX_WORDS = (sizeof (SchedulerMessage::Buffer) + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR);
-					LONG_PTR buf [MAX_WORDS];
-					LONG_PTR* msg = (LONG_PTR*)BufferPool::data (ovl);
-					real_copy (msg, msg + (size + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR), buf);
+				static const size_t MAX_WORDS = (sizeof (SchedulerMessage::Buffer) + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR);
+				LONG_PTR buf [MAX_WORDS];
+				LONG_PTR* msg = (LONG_PTR*)BufferPool::data (ovl);
+				real_copy (msg, msg + (size + sizeof (LONG_PTR) - 1) / sizeof (LONG_PTR), buf);
 
-					// Enqueue buffer to read a next message.
-					enqueue_buffer (ovl);
+				// Enqueue buffer to read a next message.
+				enqueue_buffer (ovl);
 
-					dispatch_message (buf, size);
+				dispatch_message (buf, size);
 
-					if (!valid_cnt_.decrement_seq ())
-						terminate ();
-				}
+				if (!valid_cnt_.decrement_seq ())
+					terminate ();
 			}
 		}
 	}
