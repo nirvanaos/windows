@@ -24,29 +24,31 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
-#include "../Port/Console.h"
+#include "../Port/FileAccessConsole.h"
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
+
+using namespace Windows;
+
 namespace Port {
 
-Console::Console ()
+FileAccessConsole::FileAccessConsole (FileChar* file) :
+	Windows::FileAccessConsoleBase (file)
 {
-	// Temporary solution
 	if (!IsDebuggerPresent ()) {
 		if (!AttachConsole (ATTACH_PARENT_PROCESS))
 			AllocConsole ();
 	} else
 		AllocConsole ();
-	handle_ = GetStdHandle (STD_OUTPUT_HANDLE);
+	handle_out_ = GetStdHandle (STD_OUTPUT_HANDLE);
+	handle_in_ = GetStdHandle (STD_INPUT_HANDLE);
 }
 
-void Console::write (const char* text, size_t len) const noexcept
+FileAccessConsole::~FileAccessConsole ()
 {
-	if (handle_) {
-		DWORD cb;
-		WriteFile (handle_, text, (DWORD)len, &cb, nullptr);
-	}
+	FreeConsole ();
 }
 
 }
