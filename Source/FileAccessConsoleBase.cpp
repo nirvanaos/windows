@@ -33,10 +33,10 @@ namespace Windows {
 
 FileAccessConsoleBase::FileAccessConsoleBase (FileChar* file) :
 	FileAccessChar (file),
-	read_thread_ (nullptr),
-	read_event_ (nullptr),
 	handle_out_ (nullptr),
 	handle_in_ (nullptr),
+	read_thread_ (nullptr),
+	read_event_ (nullptr),
 	read_stop_ (false)
 {}
 
