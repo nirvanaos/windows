@@ -24,21 +24,21 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_CONSOLE_H_
-#define NIRVANA_CORE_PORT_CONSOLE_H_
+#ifndef NIRVANA_CORE_PORT_FILEACCESSCONSOLEBASE_H_
+#define NIRVANA_CORE_PORT_FILEACCESSCONSOLEBASE_H_
 #pragma once
 
 #include <FileAccessChar.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
 
-class Console : public FileAccessChar
+class FileAccessConsoleBase : public FileAccessChar
 {
 protected:
-	Console ();
-	~Console ();
+	FileAccessConsoleBase (FileChar* file);
+	~FileAccessConsoleBase ();
 
 	virtual void read_start () noexcept override;
 	virtual void read_cancel () noexcept override;
@@ -58,10 +58,13 @@ private:
 		{}
 	};
 
-	void* read_thread_;
-	void* read_event_;
+protected:
 	void* handle_out_;
 	void* handle_in_;
+
+private:
+	void* read_thread_;
+	void* read_event_;
 	bool read_stop_;
 };
 

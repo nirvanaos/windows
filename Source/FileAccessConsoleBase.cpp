@@ -24,32 +24,23 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
-#include "../Port/Console.h"
+#include "FileAccessConsoleBase.h"
 #include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
+namespace Windows {
 
-using namespace Windows;
-
-namespace Port {
-
-Console::Console () :
-	FileAccessChar (nullptr),
+FileAccessConsoleBase::FileAccessConsoleBase (FileChar* file) :
+	FileAccessChar (file),
 	read_thread_ (nullptr),
 	read_event_ (nullptr),
+	handle_out_ (nullptr),
+	handle_in_ (nullptr),
 	read_stop_ (false)
-{
-	if (!IsDebuggerPresent ()) {
-		if (!AttachConsole (ATTACH_PARENT_PROCESS))
-			AllocConsole ();
-	} else
-		AllocConsole ();
-	handle_out_ = GetStdHandle (STD_OUTPUT_HANDLE);
-	handle_in_ = GetStdHandle (STD_INPUT_HANDLE);
-}
+{}
 
-Console::~Console ()
+FileAccessConsoleBase::~FileAccessConsoleBase ()
 {
 	if (read_event_) {
 		if (read_thread_) {
@@ -60,10 +51,9 @@ Console::~Console ()
 		}
 		CloseHandle (read_event_);
 	}
-	FreeConsole ();
 }
 
-void Console::read_start () noexcept
+void FileAccessConsoleBase::read_start () noexcept
 {
 	if (!read_event_) {
 		read_event_ = CreateEventW (nullptr, true, false, nullptr);
@@ -82,13 +72,13 @@ void Console::read_start () noexcept
 	}
 }
 
-void Console::read_cancel () noexcept
+void FileAccessConsoleBase::read_cancel () noexcept
 {
 	CancelSynchronousIo (read_thread_);
 }
 
 inline
-void Console::read_proc () noexcept
+void FileAccessConsoleBase::read_proc () noexcept
 {
 	for (;;) {
 		WaitForSingleObject (read_event_, INFINITE);
@@ -106,13 +96,13 @@ void Console::read_proc () noexcept
 	}
 }
 
-unsigned long __stdcall Console::s_read_proc (void* p) noexcept
+unsigned long __stdcall FileAccessConsoleBase::s_read_proc (void* p) noexcept
 {
-	((Console*)p)->read_proc ();
+	((FileAccessConsoleBase*)p)->read_proc ();
 	return 0;
 }
 
-Ref <IO_Request> Console::write_start (const IDL::String& data)
+Ref <IO_Request> FileAccessConsoleBase::write_start (const IDL::String& data)
 {
 	Ref <IO_Request> rq = Ref <IO_Request>::create <RequestWrite> ();
 	DWORD cbw;
