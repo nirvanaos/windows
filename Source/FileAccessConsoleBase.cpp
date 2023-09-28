@@ -42,39 +42,44 @@ FileAccessConsoleBase::FileAccessConsoleBase (FileChar* file) :
 
 FileAccessConsoleBase::~FileAccessConsoleBase ()
 {
-	if (read_event_) {
-		if (read_thread_) {
-			read_stop_ = true;
-			SetEvent (read_event_);
-			WaitForSingleObject (read_thread_, INFINITE);
-			CloseHandle (read_thread_);
-		}
+	read_cancel ();
+	if (read_event_)
 		CloseHandle (read_event_);
-	}
 }
 
 void FileAccessConsoleBase::read_start () noexcept
 {
 	if (!read_event_) {
 		read_event_ = CreateEventW (nullptr, true, false, nullptr);
-		if (!read_event_)
+		if (!read_event_) {
 			on_read_error (error2errno (GetLastError ()));
+			return;
+		}
 	}
 	if (!read_thread_) {
 		read_thread_ = CreateThread (nullptr, NEUTRAL_FIBER_STACK_RESERVE, s_read_proc, this,
 			STACK_SIZE_PARAM_IS_A_RESERVATION | CREATE_SUSPENDED, nullptr);
-		if (!read_thread_)
+		if (!read_thread_) {
 			on_read_error (error2errno (GetLastError ()));
-		else {
+			return;
+		} else {
 			SetThreadPriority (read_thread_, IO_THREAD_PRIORITY);
 			ResumeThread (read_thread_);
 		}
 	}
+	SetEvent (read_event_);
 }
 
 void FileAccessConsoleBase::read_cancel () noexcept
 {
-	CancelSynchronousIo (read_thread_);
+	if (read_thread_) {
+		read_stop_ = true;
+		SetEvent (read_event_);
+		CancelSynchronousIo (read_thread_);
+		WaitForSingleObject (read_thread_, INFINITE);
+		CloseHandle (read_thread_);
+		read_thread_ = nullptr;
+	}
 }
 
 inline
@@ -86,12 +91,12 @@ void FileAccessConsoleBase::read_proc () noexcept
 			break;
 		char c;
 		DWORD cbr;
-		if (ReadFile (handle_in_, &c, 1, &cbr, nullptr))
-			on_read (c);
-		else {
-			DWORD err = GetLastError ();
-			if (ERROR_OPERATION_ABORTED != err)
-				on_read_error (error2errno (err));
+		BOOL ok = ReadFile (handle_in_, &c, 1, &cbr, nullptr);
+		if (!read_stop_) {
+			if (ok)
+				on_read (c);
+			else
+				on_read_error (error2errno (GetLastError ()));
 		}
 	}
 }

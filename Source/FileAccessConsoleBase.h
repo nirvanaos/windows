@@ -65,7 +65,7 @@ protected:
 private:
 	void* read_thread_;
 	void* read_event_;
-	bool read_stop_;
+	volatile bool read_stop_;
 };
 
 }
