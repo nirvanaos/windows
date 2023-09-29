@@ -24,8 +24,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_PROTDOMAIN_H_
-#define NIRVANA_CORE_PORT_PROTDOMAIN_H_
+#ifndef NIRVANA_CORE_PORT_SYSDOMAIN_H_
+#define NIRVANA_CORE_PORT_SYSDOMAIN_H_
 #pragma once
 
 #include <Nirvana/Nirvana.h>
@@ -34,11 +34,11 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-/// Protection domain (process).
-class ProtDomain
+/// System domain base.
+class SysDomain
 {
 public:
-	static IDL::String user ();
+	uint32_t create_prot_domain (unsigned platform, const IDL::String& host, unsigned port);
 };
 
 }
