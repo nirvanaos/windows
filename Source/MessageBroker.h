@@ -42,10 +42,14 @@ class MessageBroker :
 {
 	typedef PostOffice <MessageBroker, sizeof (ESIOP::MessageBuffer), POSTMAN_THREAD_PRIORITY> Base;
 public:
-	static void initialize ()
+	static void create ()
 	{
 		singleton_.construct ();
 		singleton_->create_mailslot (Windows::object_name (MAILSLOT_PREFIX, GetCurrentProcessId ()));
+	}
+
+	static void initialize ()
+	{
 		singleton_->start ();
 	}
 

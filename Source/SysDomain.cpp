@@ -37,7 +37,7 @@ namespace Port {
 uint32_t SysDomain::create_prot_domain (unsigned platform, const IDL::String& host, unsigned port)
 {
 	WinWChar path [MAX_PATH + 1];
-	DWORD cc = GetModuleFileNameW (nullptr, path, std::size (path));
+	DWORD cc = GetModuleFileNameW (nullptr, path, (DWORD)std::size (path));
 	if (!cc || cc == std::size (path))
 		throw_last_error ();
 
@@ -63,17 +63,32 @@ uint32_t SysDomain::create_prot_domain (unsigned platform, const IDL::String& ho
 		wcscpy (name, exe);
 	}
 
-	StringW cmd_line = path;
+	StringW cmd_line;
+	size_t len = wcslen (path);
+	cmd_line.reserve (len + 2);
+	cmd_line += '\"';
+	cmd_line.append (path, len);
+	cmd_line += '\"';
 	StringW dir (path, name - 1);
 	STARTUPINFOW si;
 	zero (si);
 	PROCESS_INFORMATION pi;
-	if (!CreateProcessW (path, const_cast <WinWChar*> (cmd_line.data ()), nullptr, nullptr, false, 0,
+	if (!CreateProcessW (path, const_cast <WinWChar*> (cmd_line.data ()), nullptr, nullptr, false,
+		DETACHED_PROCESS | PROCESS_PRIORITY_CLASS,
 		nullptr, dir.c_str (), &si, &pi))
 		throw_last_error ();
 
-	CloseHandle (pi.hProcess);
 	CloseHandle (pi.hThread);
+
+	StartingProcess proc;
+	starting_map_.emplace (pi.dwProcessId, &proc);
+	proc.timer_event.wait ();
+	if (!proc.started)
+		TerminateProcess (pi.hProcess, -1);
+	CloseHandle (pi.hProcess);
+
+	if (!proc.started)
+		throw_TIMEOUT ();
 
 	return pi.dwProcessId;
 }

@@ -31,6 +31,7 @@
 #include <ORB/Services.h>
 #include "error2errno.h"
 #include "../Port/Security.h"
+#include "MessageBroker.h"
 
 //#define DEBUG_SHUTDOWN
 
@@ -295,6 +296,8 @@ void SchedulerMaster::create_folders ()
 
 bool SchedulerMaster::run (StartupSys& startup)
 {
+	SetPriorityClass (GetCurrentProcess (), PROCESS_PRIORITY_CLASS);
+
 	sys_process_id = GetCurrentProcessId ();
 
 	sysdomainid_ = open_sysdomainid (true);
@@ -310,6 +313,8 @@ bool SchedulerMaster::run (StartupSys& startup)
 
 		if (!create_process (FILE_FLAG_FIRST_PIPE_INSTANCE))
 			throw_INITIALIZE ();
+
+		Windows::MessageBroker::create (); // Create mailslot
 
 		Pool::start (SCHEDULER_THREAD_PRIORITY);
 		worker_threads_.run (startup, INFINITE_DEADLINE);

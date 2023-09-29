@@ -31,6 +31,7 @@
 #include "SchedulerMessage.h"
 #include "app_data.h"
 #include "object_name.h"
+#include "MessageBroker.h"
 
 //#define DEBUG_SHUTDOWN
 
@@ -90,6 +91,8 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 		throw_INITIALIZE ();
 
 	worker_threads_.semaphore (sem);
+
+	Windows::MessageBroker::create (); // Create mailslot
 
 	scheduler_pipe_ = CreateFileW (SCHEDULER_PIPE_NAME, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
 	if (INVALID_HANDLE_VALUE == scheduler_pipe_)
