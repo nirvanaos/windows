@@ -93,9 +93,10 @@ void FileAccessConsoleBase::read_proc () noexcept
 		DWORD cbr;
 		BOOL ok = ReadFile (handle_in_, &c, 1, &cbr, nullptr);
 		if (!read_stop_) {
-			if (ok)
+			if (ok) {
+				assert (cbr);
 				on_read (c);
-			else
+			} else
 				on_read_error (error2errno (GetLastError ()));
 		}
 	}
