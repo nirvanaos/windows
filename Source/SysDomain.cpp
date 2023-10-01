@@ -25,6 +25,7 @@
 */
 #include "pch.h"
 #include "../Port/SysDomain.h"
+#include "../Port/SystemInfo.h"
 #include "win32.h"
 #include "WinWChar.h"
 #include "error2errno.h"
@@ -50,6 +51,9 @@ uint32_t SysDomain::create_prot_domain (unsigned platform, const IDL::String& ho
 
 	const WinWChar x86 [] = WINWCS ("x86");
 	if (platform != PLATFORM) {
+		if (SystemInfo::SUPPORTED_PLATFORM_CNT <= 1)
+			throw_BAD_PARAM ();
+
 		const WinWChar* folder;
 		if (platform == PLATFORM_I386)
 			folder = x86;

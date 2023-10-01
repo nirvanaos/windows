@@ -52,7 +52,11 @@ public:
 	static_assert (HOST_PLATFORM == PLATFORM_X64 || HOST_PLATFORM == PLATFORM_I386,
 		"Unsupported host");
 
+#if defined (__GNUG__) || defined (__clang__)
+	static const size_t SUPPORTED_PLATFORM_CNT = 1;
+#else
 	static const size_t SUPPORTED_PLATFORM_CNT = (HOST_PLATFORM == PLATFORM_X64) ? 2 : 1;
+#endif
 
 	static const uint16_t* supported_platforms () noexcept;
 
