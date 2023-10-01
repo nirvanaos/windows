@@ -44,6 +44,8 @@ FileAccessConsole::FileAccessConsole (FileChar* file) :
 		AllocConsole ();
 	handle_out_ = GetStdHandle (STD_OUTPUT_HANDLE);
 	handle_in_ = GetStdHandle (STD_INPUT_HANDLE);
+	SetConsoleMode (handle_out_, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	SetConsoleMode (handle_in_, ENABLE_ECHO_INPUT | ENABLE_VIRTUAL_TERMINAL_INPUT);
 }
 
 FileAccessConsole::~FileAccessConsole ()
