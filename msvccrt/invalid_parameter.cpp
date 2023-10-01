@@ -1,6 +1,6 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <Nirvana/Nirvana.h>
 #include <Windows.h>
-
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
 // _invalid_parameter
@@ -19,7 +19,7 @@ extern "C" void __cdecl _invalid_parameter (
     s += file_name;
     s += L'(';
     wchar_t buf [16];
-    _itow_s (line_number, buf, 10);
+    _itow (line_number, buf, 10);
     s += buf;
     s += L"): ";
   }

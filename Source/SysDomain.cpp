@@ -61,10 +61,10 @@ uint32_t SysDomain::create_prot_domain (unsigned platform, const IDL::String& ho
 			throw_BAD_PARAM ();
 
 		WinWChar exe [16];
-		wcscpy (exe, name);
+		wcscpy_s (exe, name);
 		name = std::copy (folder, folder + wcslen (folder), name);
 		*(name++) = '\\';
-		wcscpy (name, exe);
+		wcscpy_s (name, std::end (path) - name, exe);
 	}
 
 	StringW cmd_line;

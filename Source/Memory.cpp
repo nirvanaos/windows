@@ -1271,7 +1271,7 @@ void* Memory::exception_handler_;
 bool Memory::initialize () noexcept
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
-
+/*
 #ifdef _DEBUG
 	if (!IsDebuggerPresent ()) {
 		_CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
@@ -1282,7 +1282,7 @@ bool Memory::initialize () noexcept
 		_CrtSetReportFile (_CRT_ASSERT, _CRTDBG_FILE_STDERR);
 	}
 #endif
-
+*/
 	SetUnhandledExceptionFilter (&unhandled_exception_filter);
 
 	DebugLog::initialize ();
