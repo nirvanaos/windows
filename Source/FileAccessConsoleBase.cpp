@@ -31,10 +31,10 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-FileAccessConsoleBase::FileAccessConsoleBase (FileChar* file) :
-	FileAccessChar (file),
-	handle_out_ (nullptr),
-	handle_in_ (nullptr),
+FileAccessConsoleBase::FileAccessConsoleBase (FileChar* file, unsigned flags, void* out, void* in) :
+	FileAccessChar (file, flags),
+	handle_out_ (out),
+	handle_in_ (in),
 	read_thread_ (nullptr),
 	read_event_ (nullptr),
 	read_stop_ (false)
