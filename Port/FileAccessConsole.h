@@ -37,8 +37,25 @@ namespace Port {
 class FileAccessConsole : public Windows::FileAccessConsoleBase
 {
 public:
-	FileAccessConsole (FileChar* file);
+	FileAccessConsole (FileChar* file) :
+		FileAccessConsole (file, Init ())
+	{}
+
 	~FileAccessConsole ();
+
+private:
+	struct Init
+	{
+		void* out;
+		void* in;
+		unsigned mode;
+
+		Init ();
+	};
+
+	FileAccessConsole (FileChar* file, const Init& init) :
+		FileAccessConsoleBase (file, init.mode, init.out, init.in)
+	{}
 };
 
 }

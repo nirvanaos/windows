@@ -34,18 +34,28 @@ using namespace Windows;
 
 namespace Port {
 
-FileAccessConsole::FileAccessConsole (FileChar* file) :
-	Windows::FileAccessConsoleBase (file)
+FileAccessConsole::Init::Init () :
+	out (INVALID_HANDLE_VALUE),
+	in (INVALID_HANDLE_VALUE),
+	mode (O_RDWR)
 {
 	if (!IsDebuggerPresent ()) {
 		if (!AttachConsole (ATTACH_PARENT_PROCESS))
 			AllocConsole ();
 	} else
 		AllocConsole ();
-	handle_out_ = GetStdHandle (STD_OUTPUT_HANDLE);
-	handle_in_ = GetStdHandle (STD_INPUT_HANDLE);
-	SetConsoleMode (handle_out_, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-	SetConsoleMode (handle_in_, ENABLE_ECHO_INPUT | ENABLE_VIRTUAL_TERMINAL_INPUT);
+	out = GetStdHandle (STD_OUTPUT_HANDLE);
+	in = GetStdHandle (STD_INPUT_HANDLE);
+	if (INVALID_HANDLE_VALUE == out && INVALID_HANDLE_VALUE == in)
+		throw_last_error ();
+	if (INVALID_HANDLE_VALUE == out)
+		mode = O_RDONLY;
+	else
+		SetConsoleMode (out, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	if (INVALID_HANDLE_VALUE == in)
+		mode = O_WRONLY;
+	else
+		SetConsoleMode (in, ENABLE_VIRTUAL_TERMINAL_INPUT);
 }
 
 FileAccessConsole::~FileAccessConsole ()

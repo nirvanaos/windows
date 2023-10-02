@@ -37,7 +37,7 @@ namespace Windows {
 class FileAccessConsoleBase : public FileAccessChar
 {
 protected:
-	FileAccessConsoleBase (FileChar* file);
+	FileAccessConsoleBase (FileChar* file, unsigned flags, void* out, void* in);
 	~FileAccessConsoleBase ();
 
 	virtual void read_start () noexcept override;
