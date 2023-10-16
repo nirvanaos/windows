@@ -17,8 +17,8 @@
 // functions for that EXE.  If a DLL uses the dynamic CRT, then that DLL has its
 // own registry, defined in the statically-linked VCStartup library.
 //
-#include <corecrt_internal.h>
-
+#include <corecrt_startup.h>
+#include <internal_shared.h>
 
 
 // The global atexit and at_quick_exit registries
@@ -79,8 +79,9 @@ extern "C" int __cdecl _initialize_onexit_table (_onexit_table_t* const table)
 // in calling code.
 extern "C" int __cdecl _register_onexit_function (_onexit_table_t* const table, _onexit_t const function)
 {
+  /* Remove interlocking
   return __acrt_lock_and_call (__acrt_select_exit_lock (), [&]
-    {
+    {*/
       if (!table) {
         return -1;
       }
@@ -136,7 +137,8 @@ extern "C" int __cdecl _register_onexit_function (_onexit_table_t* const table, 
       table->_end = __crt_fast_encode_pointer (end);
 
       return 0;
-    });
+      /* Remove interlocking
+      });*/
 }
 
 
@@ -148,8 +150,9 @@ extern "C" int __cdecl _register_onexit_function (_onexit_table_t* const table, 
 // so that it is uninitialized.  Returns 0 on success; -1 on failure.
 extern "C" int __cdecl _execute_onexit_table (_onexit_table_t* const table)
 {
+  /* Remove interlocking
   return __acrt_lock_and_call (__acrt_select_exit_lock (), [&]
-    {
+    {*/
       if (!table) {
         return -1;
       }
@@ -166,7 +169,7 @@ extern "C" int __cdecl _execute_onexit_table (_onexit_table_t* const table)
       // are the only non-trivial calls, so we can do this once for the entire
       // loop.)
       {
-        __crt_state_management::scoped_global_state_reset saved_state;
+// Removed        __crt_state_management::scoped_global_state_reset saved_state;
 
         _PVFV const encoded_nullptr = __crt_fast_encode_pointer (nullptr);
 
@@ -211,5 +214,6 @@ extern "C" int __cdecl _execute_onexit_table (_onexit_table_t* const table)
       table->_end = encoded_nullptr;
 
       return 0;
-    });
+      /* Remove interlocking
+      });*/
 }
