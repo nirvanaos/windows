@@ -49,7 +49,9 @@ void DebugLog::initialize () noexcept
 	InitializeCriticalSection (&cs_);
 #ifdef DEBUG_SYMBOLS
 	SymSetOptions (
+#ifndef _DEBUG
 		SYMOPT_DEFERRED_LOADS |
+#endif
 		SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
 	char path [MAX_PATH + 1];
 	GetModuleFileNameA (nullptr, path, sizeof (path));
