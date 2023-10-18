@@ -14,3 +14,8 @@ extern "C" errno_t __cdecl _configure_narrow_argv (_crt_argv_mode const mode)
   return 0;
 }
 
+extern "C" int __cdecl _initialize_narrow_environment ()
+{
+  return 0;
+}
+

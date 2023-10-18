@@ -46,7 +46,7 @@ size_t get_app_data_path (WCHAR* path, size_t size, bool create) noexcept
 
 	static const WCHAR nirvana [] = WINWCS ("\\Nirvana");
 	for (size_t i = 0; i < 2; ++i) {
-		end = std::copy (nirvana, nirvana + std::size (nirvana), end) - 1;
+		end = real_copy (nirvana, nirvana + std::size (nirvana), end) - 1;
 		if (create && !CreateDirectoryW (path, nullptr)) {
 			DWORD err = GetLastError ();
 			if (ERROR_ALREADY_EXISTS != err)
@@ -56,7 +56,7 @@ size_t get_app_data_path (WCHAR* path, size_t size, bool create) noexcept
 		}
 	}
 	static const WCHAR term [] = L"\\";
-	end = std::copy (term, term + 2, end);
+	end = real_copy (term, term + 2, end);
 	return end - path - 1;
 }
 
