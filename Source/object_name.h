@@ -40,7 +40,7 @@ class ObjectName
 public:
 	ObjectName (const WinWChar* prefix, unsigned id)
 	{
-		_ultow (id, std::copy (prefix, prefix + prefix_len - 1, name_), 16);
+		_ultow (id, real_copy (prefix, prefix + prefix_len - 1, name_), 16);
 	}
 
 	operator const WinWChar* () const

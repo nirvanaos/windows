@@ -65,7 +65,7 @@ size_t create_app_data_folder (const WCHAR* path, WCHAR* end, const WCHAR* folde
 	const WCHAR* folder_end = folder + wcslen (folder);
 	for (const WCHAR* dir = folder;;) {
 		const WCHAR* slash = std::find (dir, folder_end, L'\\');
-		end = std::copy (dir, slash, end);
+		end = real_copy (dir, slash, end);
 		*end = L'\0';
 		if (!CreateDirectoryW (path, nullptr)) {
 			DWORD err = GetLastError ();
@@ -91,7 +91,7 @@ size_t get_app_data_folder (WCHAR* path, size_t size, const WCHAR* folder, bool 
 		else {
 			size_t ccf = wcslen (folder);
 			if (cc + ccf < size) {
-				std::copy (folder, folder + ccf + 1, path + cc);
+				real_copy (folder, folder + ccf + 1, path + cc);
 				cc += ccf;
 			} else
 				return 0;
@@ -107,7 +107,7 @@ HANDLE open_sysdomainid (bool write)
 	if (!cc)
 		throw_INITIALIZE ();
 	static const WCHAR sysdomainid [] = WINWCS ("sysdomainid");
-	std::copy (sysdomainid, sysdomainid + std::size (sysdomainid), path + cc);
+	real_copy (sysdomainid, sysdomainid + std::size (sysdomainid), path + cc);
 	DWORD access, share, disposition, flags;
 	if (write) {
 		access = GENERIC_WRITE;

@@ -39,7 +39,7 @@ namespace Windows {
 
 static void swallow_arg (int& argc, char* argv [])
 {
-	std::copy (argv + 2, argv + argc, argv + 1);
+	real_copy (argv + 2, argv + argc, argv + 1);
 	--argc;
 }
 
