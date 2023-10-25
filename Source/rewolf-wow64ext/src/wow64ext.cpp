@@ -20,24 +20,40 @@
  *
  */
 
-#include <Nirvana/c_heap.h>
+#include <Nirvana/Nirvana.h>
 #include <Windows.h>
 #include <cstddef>
 #include "internal.h"
 #include "wow64ext.h"
-#include "CMemPtr.h"
 
-static void* malloc (size_t size)
+template <class T>
+class TmpBuf
 {
-  return Nirvana::c_malloc <Nirvana::HeapBlockHdr> (size);
-}
+	TmpBuf (const TmpBuf&) = delete;
+	TmpBuf& operator = (const TmpBuf&) = delete;
 
-static void free (void* ptr)
-{
-  Nirvana::c_free <Nirvana::HeapBlockHdr> (ptr);
-}
+public:
+	TmpBuf (size_t cnt) :
+		size_ (cnt * sizeof (T)),
+		p_ ((T*)Nirvana::g_memory->allocate (nullptr, size_, 0))
+	{}
 
-static int _wcsicmp(const wchar_t *string1, const wchar_t *string2)
+	~TmpBuf ()
+	{
+		Nirvana::g_memory->release (p_, size_);
+	}
+
+	operator T* () const noexcept
+	{
+		return p_;
+	}
+
+private:
+	size_t size_;
+	T* p_;
+};
+
+inline static int __wcsicmp(const wchar_t *string1, const wchar_t *string2)
 {
 	wchar_t c1;
 	wchar_t c2;
@@ -296,13 +312,10 @@ extern "C" DWORD64 __cdecl GetModuleHandle64(const wchar_t* lpModuleName)
     {
         getMem64(&head, head.InLoadOrderLinks.Flink, sizeof(LDR_DATA_TABLE_ENTRY64));
 
-        wchar_t* tempBuf = (wchar_t*)malloc(head.BaseDllName.MaximumLength);
-        if (nullptr == tempBuf)
-            return 0;
-        WATCH(tempBuf);
+        TmpBuf <wchar_t> tempBuf (head.BaseDllName.MaximumLength / sizeof (wchar_t));
         getMem64(tempBuf, head.BaseDllName.Buffer, head.BaseDllName.MaximumLength);
 
-        if (0 == _wcsicmp(lpModuleName, tempBuf))
+        if (0 == __wcsicmp(lpModuleName, tempBuf))
             return head.DllBase;
     }
     while (head.InLoadOrderLinks.Flink != LastEntry);
@@ -340,22 +353,13 @@ DWORD64 getLdrGetProcedureAddress()
     IMAGE_EXPORT_DIRECTORY ied;
     getMem64(&ied, modBase + idd.VirtualAddress, sizeof(ied));
 
-    DWORD* rvaTable = (DWORD*)malloc(sizeof(DWORD)*ied.NumberOfFunctions);
-    if (nullptr == rvaTable)
-        return 0;
-    WATCH(rvaTable);
+    TmpBuf <DWORD> rvaTable (ied.NumberOfFunctions);
     getMem64(rvaTable, modBase + ied.AddressOfFunctions, sizeof(DWORD)*ied.NumberOfFunctions);
     
-    WORD* ordTable = (WORD*)malloc(sizeof(WORD)*ied.NumberOfFunctions);
-    if (nullptr == ordTable)
-        return 0;
-    WATCH(ordTable);
+    TmpBuf <WORD> ordTable (ied.NumberOfFunctions);
     getMem64(ordTable, modBase + ied.AddressOfNameOrdinals, sizeof(WORD)*ied.NumberOfFunctions);
 
-    DWORD* nameTable = (DWORD*)malloc(sizeof(DWORD)*ied.NumberOfNames);
-    if (nullptr == nameTable)
-        return 0;
-    WATCH(nameTable);
+    TmpBuf <DWORD> nameTable (ied.NumberOfNames);
     getMem64(nameTable, modBase + ied.AddressOfNames, sizeof(DWORD)*ied.NumberOfNames);
 
     // lazy search, there is no need to use binsearch for just one function
