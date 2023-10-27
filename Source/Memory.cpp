@@ -36,7 +36,6 @@
 #include <DbgHelp.h>
 #endif
 
-#pragma comment (lib, "OneCore.lib")
 #pragma comment (lib, "ntdll.lib")
 
 // wsprintfW

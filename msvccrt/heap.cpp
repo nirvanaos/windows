@@ -75,3 +75,8 @@ void _free_dbg (void* p, int block_type)
 #endif
 
 }
+
+extern "C" int __cdecl _callnewh (size_t const size)
+{
+	return 0;
+}
