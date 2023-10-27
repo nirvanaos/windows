@@ -1,6 +1,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <Nirvana/Nirvana.h>
-#include <Windows.h>
+#include <Nirvana/System.h>
+#include <Nirvana/string_conv.h>
+
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
 // _invalid_parameter
@@ -14,25 +16,31 @@ extern "C" void __cdecl _invalid_parameter (
   uintptr_t      const reserved
 )
 {
-  std::wstring s;
-  if (file_name) {
-    s += file_name;
-    s += L'(';
-    wchar_t buf [16];
-    _itow (line_number, buf, 10);
-    s += buf;
-    s += L"): ";
-  }
-  s += L"Invalid parameter";
+  std::string msg ("Invalid parameter");
   if (expression) {
-    s += L' ';
-    s += expression;
+    msg += ' ';
+    Nirvana::append_utf8 (expression, msg);
   }
   if (function_name) {
-    s += L" Function: ";
-    s += function_name;
+    msg += " Function: ";
+    Nirvana::append_utf8 (function_name, msg);
   }
-  s += L'\n';
+  std::string file;
+  if (file_name)
+    Nirvana::append_utf8 (file_name, file);
+  Nirvana::g_system->debug_event (Nirvana::System::DebugEvent::DEBUG_ERROR, msg, file, line_number);
+}
 
-  OutputDebugStringW (s.c_str ());
+extern "C" void __cdecl _invalid_parameter_noinfo ()
+{
+  _invalid_parameter (nullptr, nullptr, nullptr, 0, 0);
+}
+
+// This is used by inline code in the C++ Standard Library and the SafeInt
+// library.  Because it is __declspec(noreturn), the compiler can better
+// optimize use of the invalid parameter handler for inline code.
+extern "C" __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn ()
+{
+  _invalid_parameter (nullptr, nullptr, nullptr, 0, 0);
+  abort ();
 }
