@@ -36,7 +36,7 @@ void* _realloc_base (void* p, size_t size)
 
 void* _malloc_dbg (size_t size, int block_type, const char* file_name, int line_number)
 {
-	return Nirvana::c_malloc <HeapBlockHdrDbg> (size, block_type, file_name, line_number);
+	return Nirvana::c_malloc <HeapBlockHdrDbg> (size, file_name, line_number);
 }
 
 void* _calloc_dbg (
@@ -46,12 +46,12 @@ void* _calloc_dbg (
 	const char* file_name,
 	int         line_number
 ) {
-	return Nirvana::c_calloc <HeapBlockHdrDbg> (count, element_size, block_type, file_name, line_number);
+	return Nirvana::c_calloc <HeapBlockHdrDbg> (count, element_size, file_name, line_number);
 }
 
 void* _realloc_dbg (void* p, size_t size, int block_type, const char* file_name, int line_number)
 {
-	return Nirvana::c_realloc <HeapBlockHdrDbg> (p, size, block_type, file_name, line_number);
+	return Nirvana::c_realloc <HeapBlockHdrDbg> (p, size, file_name, line_number);
 }
 
 void* _recalloc_dbg (
@@ -64,12 +64,12 @@ void* _recalloc_dbg (
 ) {
 	if (std::numeric_limits <size_t>::max () / element_size < count)
 		return nullptr;
-	return Nirvana::c_realloc <HeapBlockHdrDbg> (p, count * element_size, block_type, file_name, line_number);
+	return Nirvana::c_realloc <HeapBlockHdrDbg> (p, count * element_size, file_name, line_number);
 }
 
 void _free_dbg (void* p, int block_type)
 {
-	Nirvana::c_free <HeapBlockHdrDbg> (p, block_type);
+	Nirvana::c_free <HeapBlockHdrDbg> (p);
 }
 
 #endif
