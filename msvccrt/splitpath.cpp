@@ -13,7 +13,7 @@
 //#include <stdlib.h>
 //#include <corecrt_internal_securecrt.h>
 //#include <corecrt_internal_traits.h>
-#include <Nirvana/strcpy_s.h>
+#include <CRTL/strcpy_s.h>
 #include <internal_shared.h>
 
 namespace
@@ -106,7 +106,7 @@ static errno_t __cdecl common_splitpath_internal (
           return errno = ERANGE;
         }
 
-        Nirvana::strncpy_s (components->_drive, transform_buffer_count (components->_drive_count), path_it, _MAX_DRIVE - 1);
+        CRTL::strncpy_s (components->_drive, transform_buffer_count (components->_drive_count), path_it, _MAX_DRIVE - 1);
       }
 
       path_it = p + 1;
@@ -153,7 +153,7 @@ static errno_t __cdecl common_splitpath_internal (
         return errno = ERANGE;
       }
 
-      Nirvana::strncpy_s (components->_directory, transform_buffer_count (components->_directory_count), path_it, length);
+      CRTL::strncpy_s (components->_directory, transform_buffer_count (components->_directory_count), path_it, length);
     }
 
     path_it = last_slash;
@@ -174,7 +174,7 @@ static errno_t __cdecl common_splitpath_internal (
         return errno = ERANGE;
       }
 
-      Nirvana::strncpy_s (components->_file_name, transform_buffer_count (components->_file_name_count), path_it, length);
+      CRTL::strncpy_s (components->_file_name, transform_buffer_count (components->_file_name_count), path_it, length);
     }
 
     if (components->_extension) {
@@ -184,7 +184,7 @@ static errno_t __cdecl common_splitpath_internal (
         return errno = ERANGE;
       }
 
-      Nirvana::strncpy_s (components->_extension, transform_buffer_count (components->_extension_count), last_dot, length);
+      CRTL::strncpy_s (components->_extension, transform_buffer_count (components->_extension_count), last_dot, length);
     }
   } else {
     // No extension found; reset the extension and treat the remaining text
@@ -196,7 +196,7 @@ static errno_t __cdecl common_splitpath_internal (
         return errno = ERANGE;
       }
 
-      Nirvana::strncpy_s (components->_file_name, transform_buffer_count (components->_file_name_count), path_it, length);
+      CRTL::strncpy_s (components->_file_name, transform_buffer_count (components->_file_name_count), path_it, length);
     }
 
     if (components->_extension) {
