@@ -26,8 +26,11 @@
 #include "../Port/Module.h"
 #include <PortableExecutable.h>
 #include "win32.h"
+#include "WinWChar.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
+#include <fnctl.h>
+#include <ORB/Services.h>
 
 namespace Nirvana {
 namespace Core {
@@ -36,36 +39,49 @@ using namespace Windows;
 
 namespace Port {
 
-Module::Module (const StringView& file)
+Module::Module (AccessDirect::_ptr_type file) :
+	module_ (nullptr)
 {
-	WCHAR temp_path [MAX_PATH + 1];
-
+	StringW tmp_path;
+	Dir::_ref_type tmp_dir;
 	{
-		SharedStringW wpath;
-		append_wide (file, wpath);
-		DWORD att = GetFileAttributesW (wpath.c_str ());
-		if (att & FILE_ATTRIBUTE_DIRECTORY)
-			throw_BAD_PARAM (make_minor_errno (ENOENT));
-		WCHAR temp_dir [MAX_PATH + 1];
-		if (!GetTempPathW ((DWORD)countof(temp_dir), temp_dir))
+		WinWChar buf [MAX_PATH + 1];
+		DWORD cc = GetTempPathW ((DWORD)countof (buf), buf);
+		if (!cc)
 			throw_UNKNOWN ();
-		for (UINT uniq = GetTickCount ();; ++uniq) {
-			if (!GetTempFileNameW (temp_dir, WINWCS("nex"), uniq, temp_path))
-				throw_UNKNOWN ();
-			if (!CopyFileW (wpath.c_str (), temp_path, TRUE)) {
-				DWORD err = GetLastError ();
-				if (ERROR_FILE_EXISTS != err)
-					throw_UNKNOWN ();
-			} else
-				break;
-		}
+		IDL::String path;
+		append_utf8 (buf, buf + cc - 1, path);
+		tmp_path.assign (buf, cc);
+		CosNaming::Name tmp_dir_name;
+		g_system->append_path (tmp_dir_name, path, true);
+		auto ns = CosNaming::NamingContextExt::_narrow (CORBA::Core::Services::bind (CORBA::Core::Services::NameService));
+		tmp_dir = Dir::_narrow (ns->resolve (tmp_dir_name));
+		if (!tmp_dir)
+			throw_UNKNOWN ();
 	}
-	temp_path_ = temp_path;
-	void* mod = LoadLibraryW (temp_path_.c_str ());
+
 	try {
-		if (!mod)
+		AccessDirect::_ref_type tmp_file_access;
+
+		{
+			IDL::String name ("XXXXXX.nex");
+			tmp_file_access = AccessDirect::_narrow (tmp_dir->mkostemps (name, 4, O_DIRECT)->_to_object ());
+			tmp_file_ = tmp_file_access->file ();
+			tmp_path.append (name.begin (), name.end ());
+		}
+
+		{
+			IDL::Sequence <uint8_t> buf;
+			FileLock fl_none;
+			file->read (fl_none, 0, std::numeric_limits <uint32_t>::max (), LockType::LOCK_NONE, false, buf);
+			tmp_file_access->write (0, buf, fl_none, true);
+			tmp_file_access->close ();
+		}
+
+		module_ = LoadLibraryW (tmp_path.c_str ());
+		if (!module_)
 			throw_last_error ();
-		Nirvana::Core::PortableExecutable pe (mod);
+		Nirvana::Core::PortableExecutable pe (module_);
 		if (!pe.find_OLF_section (metadata_))
 			throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 		const COFF::PE32Header* pehdr = pe.pe32_header ();
@@ -75,15 +91,14 @@ Module::Module (const StringView& file)
 		unload ();
 		throw;
 	}
-	module_ = mod;
 }
 
 void Module::unload ()
 {
 	if (module_)
 		FreeLibrary (module_);
-	if (!temp_path_.empty ())
-		DeleteFileW (temp_path_.c_str ());
+	if (tmp_file_)
+		tmp_file_->remove ();
 }
 
 void Module::get_data_sections (DataSections& sections)

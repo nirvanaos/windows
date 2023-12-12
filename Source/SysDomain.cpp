@@ -29,6 +29,7 @@
 #include "win32.h"
 #include "WinWChar.h"
 #include "error2errno.h"
+#include <Nirvana/string_conv.h>
 
 namespace Nirvana {
 namespace Core {
@@ -95,6 +96,38 @@ uint32_t SysDomain::create_prot_domain (unsigned platform, const IDL::String& ho
 		throw_TIMEOUT ();
 
 	return pi.dwProcessId;
+}
+
+IDL::String SysDomain::get_platform_dir (unsigned platform)
+{
+	WinWChar path [MAX_PATH + 1];
+	DWORD cc = GetModuleFileNameW (nullptr, path, (DWORD)std::size (path));
+	if (!cc || cc == std::size (path))
+		throw_last_error ();
+
+	WinWChar* name = path + cc;
+	while (name > path) {
+		if ('\\' == *--name)
+			break;
+	}
+
+	const WinWChar x86 [] = WINWCS ("x86");
+	if (platform != PLATFORM) {
+		if (SystemInfo::SUPPORTED_PLATFORM_CNT <= 1)
+			throw_BAD_PARAM ();
+
+		const WinWChar* folder;
+		if (platform == PLATFORM_I386)
+			folder = x86;
+		else
+			throw_BAD_PARAM ();
+
+		name = std::copy (folder, folder + wcslen (folder), ++name);
+	}
+
+	IDL::String dir;
+	append_utf8 (path, name, dir);
+	return dir;
 }
 
 }

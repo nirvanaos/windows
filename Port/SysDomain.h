@@ -41,7 +41,7 @@ class SysDomain
 {
 	static const TimeBase::TimeT PROCESS_STARTUP_TIMEOUT = 10 * TimeBase::SECOND;
 
-public:
+protected:
 	uint32_t create_prot_domain (unsigned platform, const IDL::String& host, unsigned port);
 
 	void on_domain_start (uint32_t id) noexcept
@@ -52,6 +52,8 @@ public:
 			starting_map_.erase (f);
 		}
 	}
+
+	static IDL::String get_platform_dir (unsigned platform);
 
 private:
 	struct StartingProcess

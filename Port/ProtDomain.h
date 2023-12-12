@@ -37,8 +37,9 @@ namespace Port {
 /// Protection domain (process).
 class ProtDomain
 {
-public:
+protected:
 	static IDL::String user ();
+	static IDL::String binary_dir ();
 };
 
 }

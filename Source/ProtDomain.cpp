@@ -27,9 +27,14 @@
 #include "../Port/ProtDomain.h"
 #include <Lmcons.h>
 #include <Nirvana/string_conv.h>
+#include "WinWChar.h"
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
+
+using namespace Windows;
+
 namespace Port {
 
 IDL::String ProtDomain::user ()
@@ -41,6 +46,24 @@ IDL::String ProtDomain::user ()
 		Nirvana::append_utf8 (buf, buf + cc - 1, name);
 
 	return name;
+}
+
+IDL::String ProtDomain::binary_dir ()
+{
+	WinWChar path [MAX_PATH + 1];
+	DWORD cc = GetModuleFileNameW (nullptr, path, (DWORD)std::size (path));
+	if (!cc || cc == std::size (path))
+		throw_last_error ();
+
+	WinWChar* name = path + cc;
+	while (name > path) {
+		if ('\\' == *--name)
+			break;
+	}
+
+	IDL::String dir;
+	append_utf8 (path, name, dir);
+	return dir;
 }
 
 }

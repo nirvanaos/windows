@@ -29,10 +29,8 @@
 #pragma once
 
 #include <Nirvana/Nirvana.h>
-#include <Nirvana/ModuleInit.h>
+#include <Nirvana/File.h>
 #include <Section.h>
-#include <StringView.h>
-#include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
 namespace Core {
@@ -53,11 +51,10 @@ public:
 	}
 
 protected:
-	/// <summary>
+	/// Constructor
 	/// 
-	/// </summary>
-	/// <param name="file"></param>
-	Module (const StringView& file);
+	/// \param file Executable file access.
+	Module (AccessDirect::_ptr_type file);
 
 	~Module ()
 	{
@@ -75,7 +72,7 @@ private:
 private:
 	void* module_;
 	Section metadata_;
-	Nirvana::Core::Windows::SharedStringW temp_path_;
+	File::_ref_type tmp_file_;
 };
 
 }

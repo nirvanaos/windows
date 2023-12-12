@@ -107,7 +107,7 @@ StringW Dir::check_path (Name& n, bool dont_append_last) const
 	// Check all name components, except for the last one, as valid directories and then erase.
 	StringW path = get_path (n, dont_append_last);
 	if (n.size () > 1) {
-		do {
+		for (;;) {
 			DWORD att = GetFileAttributesW (path.c_str ());
 			if (0xFFFFFFFF == att) {
 				DWORD err = GetLastError ();
@@ -117,8 +117,10 @@ StringW Dir::check_path (Name& n, bool dont_append_last) const
 				throw NamingContext::NotFound (NamingContext::NotFoundReason::not_context, std::move (n));
 
 			n.erase (n.begin ());
+			if (n.size () <= 1)
+				break;
 			append_path (path, n.front ());
-		} while (n.size () > 1);
+		}
 
 		if (!dont_append_last)
 			append_path (path, n.front ());

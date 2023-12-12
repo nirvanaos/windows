@@ -91,11 +91,11 @@ bool FileSystem::translate_path (const IDL::String& path, IDL::String& translate
 				throw CosNaming::NamingContext::InvalidName ();
 		}
 
-		translated = "/mnt";
+		translated = "/mnt/";
 		translated += drive;
 		translated += ':';
+		find_pos = translated.size ();
 		translated += path.substr (2);
-		find_pos = 3;
 
 	} else {
 		find_pos = path.find ('\\');
@@ -106,7 +106,7 @@ bool FileSystem::translate_path (const IDL::String& path, IDL::String& translate
 		++find_pos;
 	}
 
-	while ((find_pos = translated.find ('\\')) != IDL::String::npos) {
+	while ((find_pos = translated.find ('\\', find_pos)) != IDL::String::npos) {
 		translated [find_pos] = '/';
 		++find_pos;
 	}
