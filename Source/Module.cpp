@@ -26,7 +26,6 @@
 #include "../Port/Module.h"
 #include <PortableExecutable.h>
 #include "win32.h"
-#include "WinWChar.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
 #include <fnctl.h>
@@ -66,8 +65,8 @@ Module::Module (AccessDirect::_ptr_type file) :
 		{
 			IDL::String name ("XXXXXX.nex");
 			tmp_file_access = AccessDirect::_narrow (tmp_dir->mkostemps (name, 4, O_DIRECT)->_to_object ());
-			tmp_file_ = tmp_file_access->file ();
 			tmp_path.append (name.begin (), name.end ());
+			temp_path_ = tmp_path;
 		}
 
 		{
@@ -97,8 +96,8 @@ void Module::unload ()
 {
 	if (module_)
 		FreeLibrary (module_);
-	if (tmp_file_)
-		tmp_file_->remove ();
+	if (!temp_path_.empty ())
+		DeleteFileW (temp_path_.c_str ());
 }
 
 void Module::get_data_sections (DataSections& sections)

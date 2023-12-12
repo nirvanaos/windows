@@ -31,6 +31,7 @@
 #include <Nirvana/Nirvana.h>
 #include <Nirvana/File.h>
 #include <Section.h>
+#include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
 namespace Core {
@@ -72,7 +73,7 @@ private:
 private:
 	void* module_;
 	Section metadata_;
-	File::_ref_type tmp_file_;
+	Nirvana::Core::Windows::SharedStringW temp_path_;
 };
 
 }
