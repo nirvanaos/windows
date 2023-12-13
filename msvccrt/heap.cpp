@@ -32,7 +32,7 @@ void* _realloc_base (void* p, size_t size)
 	return realloc (p, size);
 }
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 
 void* _malloc_dbg (size_t size, int block_type, const char* file_name, int line_number)
 {

@@ -82,7 +82,7 @@ void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline, ThreadWork
 		throw_NO_MEMORY ();
 	thread.neutral_context ().port ().attach (worker_fiber); // worker_fiber will be deleted in the neutral context destructor
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 	DWORD dbg_main_thread = GetCurrentThreadId ();
 #endif
 

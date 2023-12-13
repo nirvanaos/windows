@@ -203,7 +203,7 @@ void SchedulerProcess::completed (OVERLAPPED* ovl, uint32_t size, uint32_t error
 						return; // No _remove_ref here
 					}
 				}
-#ifdef _DEBUG
+#ifndef NDEBUG
 				else
 					assert (false);
 #endif

@@ -32,7 +32,7 @@
 #include <winternl.h>
 #include "DebugLog.h"
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 #include <DbgHelp.h>
 #endif
 
@@ -216,7 +216,7 @@ restart:
 					}
 					if (!VirtualAlloc (page->VirtualAddress, (region_end - page) * PAGE_SIZE,
 						MEM_COMMIT, PageState::READ_WRITE_PRIVATE)) {
-#ifdef _DEBUG
+#ifndef NDEBUG
 						DWORD err = GetLastError ();
 						MEMORY_BASIC_INFORMATION mbi;
 						VirtualQuery (page->VirtualAddress, &mbi, sizeof (mbi));
@@ -754,8 +754,8 @@ void* Memory::allocate (void* dst, size_t& size, unsigned flags)
 
 		if (!(Nirvana::Memory::RESERVED & flags)) {
 			try {
-#ifdef _DEBUG
-				uint32_t prot_mask = 
+#ifndef NDEBUG
+				uint32_t prot_mask =
 #endif
 					commit_no_check (ret, size, true);
 				assert (!(prot_mask & PageState::MASK_RO));
@@ -1271,7 +1271,7 @@ bool Memory::initialize () noexcept
 {
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
 /*
-#ifdef _DEBUG
+#ifndef NDEBUG
 	if (!IsDebuggerPresent ()) {
 		_CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
 		_CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);

@@ -94,7 +94,7 @@ const unsigned long STATUS_SIGNAL_BEGIN = 0xE0000000;
 /// to 1 January 1601 12:00:00 in seconds (Windows Time).
 const uint64_t WIN_TIME_OFFSET_SEC = 574862400UI64;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 const uint32_t PROCESS_PRIORITY_CLASS = ABOVE_NORMAL_PRIORITY_CLASS;
 #else
 const uint32_t PROCESS_PRIORITY_CLASS = HIGH_PRIORITY_CLASS;

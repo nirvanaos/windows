@@ -39,7 +39,7 @@ void* ExecContext::main_fiber_;
 std::atomic_flag ExecContext::main_fiber_allocated_ = ATOMIC_FLAG_INIT;
 Core::ExecContext* ExecContext::main_fiber_context_;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 unsigned long ExecContext::dbg_main_thread_id_;
 #endif
 

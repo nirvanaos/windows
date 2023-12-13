@@ -27,7 +27,7 @@
 #include "DebugLog.h"
 #include "app_data.h"
 
-//#ifdef _DEBUG
+//#ifndef NDEBUG
 #define DEBUG_SYMBOLS
 //#endif
 
@@ -49,7 +49,7 @@ void DebugLog::initialize () noexcept
 	InitializeCriticalSection (&cs_);
 #ifdef DEBUG_SYMBOLS
 	SymSetOptions (
-#ifndef _DEBUG
+#ifdef NDEBUG
 		SYMOPT_DEFERRED_LOADS |
 #endif
 		SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);

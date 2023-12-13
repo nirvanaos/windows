@@ -38,7 +38,7 @@ namespace Port {
 inline
 bool ExecContext::initialize () noexcept
 {
-#ifdef _DEBUG
+#ifndef NDEBUG
 	dbg_main_thread_id_ = GetCurrentThreadId ();
 #endif
 	if (FLS_OUT_OF_INDEXES == (current_ = FlsAlloc (nullptr)))

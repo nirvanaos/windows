@@ -60,7 +60,7 @@ void CompletionPort::thread_proc ()
 				error = GetLastError ();
 			reinterpret_cast <CompletionPortReceiver*> (key)->completed (ovl, size, error);
 		} else {
-#ifdef _DEBUG
+#ifndef NDEBUG
 			DWORD error = GetLastError ();
 			assert (ERROR_ABANDONED_WAIT_0 == error);
 #endif

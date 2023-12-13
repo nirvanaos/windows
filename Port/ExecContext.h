@@ -120,7 +120,7 @@ private:
 	static void* main_fiber_;
 	static std::atomic_flag main_fiber_allocated_;
 	static Core::ExecContext* main_fiber_context_;
-#ifdef _DEBUG
+#ifndef NDEBUG
 	static unsigned long dbg_main_thread_id_;
 #endif
 

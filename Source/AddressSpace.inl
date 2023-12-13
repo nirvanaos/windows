@@ -111,7 +111,7 @@ void AddressSpace <x64>::query (Address address, MBI& mbi) const
 #if !defined (_WIN64)
 	if (x64 && (HOST_PLATFORM == PLATFORM_X64)) {
 		DWORD64 ret = 0;
-#ifdef _DEBUG
+#ifndef NDEBUG
 		DWORD64 status =
 #endif
 			X64Call (wow64_func [WOW64_NtQueryVirtualMemory], 6, HANDLE_TO_DWORD64 (process_), address,
@@ -134,7 +134,7 @@ void AddressSpace <x64>::Block::protect (size_t offset, size_t size, uint32_t pr
 	if (x64 && (HOST_PLATFORM == PLATFORM_X64)) {
 		DWORD64 tmp_size = size;
 		DWORD64 old;
-#ifdef _DEBUG
+#ifndef NDEBUG
 		DWORD64 status = 
 #endif
 		X64Call (wow64_func [WOW64_NtProtectVirtualMemory], 5, HANDLE_TO_DWORD64 (space_.process ()),
@@ -287,7 +287,7 @@ void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store)
 	invalidate_state ();
 	if (old == INVALID_HANDLE_VALUE) {
 		// Block is reserved.
-#ifdef _DEBUG
+#ifndef NDEBUG
 		{
 			MBI mbi;
 			space_.query (address (), mbi);
@@ -300,7 +300,7 @@ void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store)
 		// Both results are normal.
 	} else {
 		// Block is committed.
-#ifdef _DEBUG
+#ifndef NDEBUG
 		{
 			MBI mbi;
 			space_.query (address (), mbi);
@@ -525,7 +525,7 @@ AddressSpace <x64>::~AddressSpace () noexcept
 					for (BlockInfo** p = page; p < end; ++p) {
 						BlockInfo* block = *p;
 						if (block) {
-#ifdef _DEBUG
+#ifndef NDEBUG
 							if (GetCurrentProcess () == process_) {
 								BYTE* address = (BYTE*)((p - directory64_) * SECOND_LEVEL_BLOCK * ALLOCATION_GRANULARITY);
 								for (BlockInfo* page = block, *end = block + SECOND_LEVEL_BLOCK; page != end; page += PAGE_SIZE / sizeof (BlockInfo)) {
@@ -554,7 +554,7 @@ AddressSpace <x64>::~AddressSpace () noexcept
 			}
 			verify (VirtualFree (directory64_, 0, MEM_RELEASE));
 		} else {
-#ifdef _DEBUG
+#ifndef NDEBUG
 			if (GetCurrentProcess () == process_) {
 				BYTE* address = 0;
 				for (BlockInfo* page = directory32_, *end = directory32_ + directory_size_; page < end; page += PAGE_SIZE / sizeof (BlockInfo)) {
