@@ -13,7 +13,7 @@
 //#include <stdlib.h>
 //#include <corecrt_internal_securecrt.h>
 //#include <corecrt_internal_traits.h>
-#include <CRTL/strcpy_s.h>
+#include <CRTL/impl/strcpy_s.h>
 #include <internal_shared.h>
 
 namespace
