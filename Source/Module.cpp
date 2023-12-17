@@ -63,7 +63,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 		AccessDirect::_ref_type tmp_file_access;
 
 		{
-			IDL::String name ("XXXXXX.nex");
+			IDL::String name (TEMP_MODULE_PREFIX "XXXXXX" TEMP_MODULE_EXT);
 			tmp_file_access = AccessDirect::_narrow (tmp_dir->mkostemps (name, 4, O_DIRECT)->_to_object ());
 			tmp_path.append (name.begin (), name.end ());
 			temp_path_ = tmp_path;

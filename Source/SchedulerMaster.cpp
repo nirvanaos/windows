@@ -275,7 +275,7 @@ SchedulerMaster::~SchedulerMaster ()
 	worker_threads_.terminate ();
 }
 
-void SchedulerMaster::create_folders ()
+inline void SchedulerMaster::create_folders ()
 {
 	WinWChar path [MAX_PATH + 1];
 	size_t cc = get_app_data_path (path, std::size (path), true);
@@ -294,6 +294,26 @@ void SchedulerMaster::create_folders ()
 	}
 }
 
+inline void SchedulerMaster::cleanup_temp_files ()
+{
+	WinWChar buf [MAX_PATH + 1];
+	DWORD cc = GetTempPathW ((DWORD)countof (buf), buf);
+	if (cc) {
+		const char mask [] = TEMP_MODULE_PREFIX "??????" TEMP_MODULE_EXT;
+		WinWChar* name = buf + cc;
+		std::copy (mask, mask + sizeof (mask), name);
+		WIN32_FIND_DATAW fd;
+		HANDLE hf = FindFirstFileW (buf, &fd);
+		if (hf != INVALID_HANDLE_VALUE) {
+			do {
+				wcscpy (name, fd.cFileName);
+				DeleteFileW (buf);
+			} while (FindNextFileW (hf, &fd));
+			FindClose (hf);
+		}
+	}
+}
+
 bool SchedulerMaster::run (StartupSys& startup)
 {
 	SetPriorityClass (GetCurrentProcess (), PROCESS_PRIORITY_CLASS);
@@ -309,6 +329,7 @@ bool SchedulerMaster::run (StartupSys& startup)
 		if (!WriteFile (sysdomainid_, &sys_process_id, sizeof (DWORD), &written, nullptr))
 			throw_INITIALIZE ();
 
+		cleanup_temp_files ();
 		create_folders ();
 
 		if (!create_process (FILE_FLAG_FIRST_PIPE_INSTANCE))

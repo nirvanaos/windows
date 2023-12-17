@@ -210,14 +210,15 @@ public:
 	void process_terminated (SchedulerProcess& process) noexcept;
 
 private:
-	void create_folders ();
+	static void create_folders ();
+	static void cleanup_temp_files ();
 	bool create_process (DWORD flags) noexcept;
 	
 	class ProcessStart;
 	class ProcessTerminate;
 
 	template <class R>
-	void call_sys_domain (SchedulerProcess& process) noexcept;
+	static void call_sys_domain (SchedulerProcess& process) noexcept;
 
 private:
 	/// Helper class for executing in the current process.

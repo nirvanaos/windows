@@ -52,6 +52,8 @@
 
 #define OBJ_NAME_PREFIX WINWCS ("Nirvana")
 #define MAILSLOT_PREFIX WINWCS ("\\\\.\\mailslot\\") OBJ_NAME_PREFIX WINWCS ("\\")
+#define TEMP_MODULE_PREFIX "nirvana"
+#define TEMP_MODULE_EXT ".nex"
 
 namespace Nirvana {
 namespace Core {
