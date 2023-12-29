@@ -36,7 +36,7 @@ void* _realloc_base (void* p, size_t size)
 
 void* _malloc_dbg (size_t size, int block_type, const char* file_name, int line_number)
 {
-	return Nirvana::c_malloc <HeapBlockHdrDbg> (size, file_name, line_number);
+	return Nirvana::c_malloc <HeapBlockHdrDbg> (alignof (std::max_align_t), size, file_name, line_number);
 }
 
 void* _calloc_dbg (
