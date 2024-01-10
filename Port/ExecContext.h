@@ -84,7 +84,7 @@ protected:
 
 public:
 	void convert_to_fiber () noexcept;
-	void convert_to_thread () noexcept;
+	static void convert_to_thread () noexcept;
 
 	void attach (void* fiber) noexcept
 	{

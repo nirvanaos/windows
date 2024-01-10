@@ -64,8 +64,7 @@ void ExecContext::current (Core::ExecContext* context) noexcept
 inline
 void ExecContext::convert_to_thread () noexcept
 {
-	assert (fiber_);
-	fiber_ = nullptr;
+	// Static function, thread object may be already destructed here.
 	verify (ConvertFiberToThread ());
 }
 

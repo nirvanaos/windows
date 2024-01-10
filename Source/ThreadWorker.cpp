@@ -41,7 +41,8 @@ unsigned long __stdcall ThreadWorker::thread_proc (ThreadWorker* _this)
 	Port::Thread::current (&thread);
 	thread.neutral_context ().port ().convert_to_fiber ();
 	SchedulerBase::singleton ().worker_thread_proc ();
-	thread.neutral_context ().port ().convert_to_thread ();
+	Port::ExecContext::convert_to_thread ();
+	thread.neutral_context ().port ().detach (); // Prevent DeleteFiber in ~ExecContext ()
 	return 0;
 }
 

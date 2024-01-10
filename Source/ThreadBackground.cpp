@@ -37,8 +37,7 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 {
 	Core::ThreadBackground& thread = static_cast <Core::ThreadBackground&> (*_this);
 	Port::Thread::current (&thread);
-	ExecContext& context = thread.neutral_context ().port ();
-	context.convert_to_fiber ();
+	thread.neutral_context ().port ().convert_to_fiber ();
 
 	for (;;) {
 		WaitForSingleObject (_this->event_, INFINITE);
@@ -48,9 +47,10 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 		RevertToSelf ();
 	}
 	
-	context.convert_to_thread ();
-	Port::Thread::current (nullptr);
 	thread.on_thread_proc_end ();
+
+	// The object may be destructed here
+	ExecContext::convert_to_thread ();
 	return 0;
 }
 
@@ -63,6 +63,8 @@ ThreadBackground::ThreadBackground () :
 
 ThreadBackground::~ThreadBackground ()
 {
+	neutral_context ().port ().detach (); // Prevent DeleteFiber in ~ExecContext ()
+
 	CloseHandle (event_);
 }
 
