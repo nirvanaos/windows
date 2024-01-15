@@ -120,6 +120,8 @@ void ExecContext::convert_to_fiber () noexcept
 NIRVANA_NORETURN void ExecContext::raise (int signal)
 {
 	RaiseException (Windows::STATUS_SIGNAL_BEGIN + signal, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+	// Under some circumstances, RaiseException can return.
+	unrecoverable_error (signal);
 }
 
 }
