@@ -24,6 +24,8 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
+#include "initialize.h"
+#include "CmdLineParser.h"
 #include "SchedulerMaster.h"
 #include "SchedulerSlave.h"
 #include "shutdown.h"
@@ -31,7 +33,7 @@
 #include "DebugLog.h"
 #include <StartupProt.h>
 #include <StartupSys.h>
-#include "start.h"
+#include <initterm.h>
 
 namespace Nirvana {
 namespace Core {
@@ -110,4 +112,18 @@ int nirvana (int argc, char* argv [], char* envp []) noexcept
 }
 }
 
-NIRVANA_MAIN (nirvana)
+extern "C" DWORD WinMainCRTStartup (void);
+
+extern "C" DWORD nirvana_startup (void)
+{
+	if (!Nirvana::Core::Windows::initialize_windows ())
+		return -1;
+	return WinMainCRTStartup ();
+}
+
+int CALLBACK WinMain (HINSTANCE, HINSTANCE, LPSTR, int)
+{
+	Nirvana::Core::initialize0 ();
+	Nirvana::Core::Windows::CmdLineParser cmdline;
+	return Nirvana::Core::Windows::nirvana (cmdline.argc (), cmdline.argv (), cmdline.envp ());
+}
