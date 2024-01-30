@@ -47,6 +47,8 @@ public:
 	static void initialize () noexcept;
 	static void terminate () noexcept;
 
+	static bool initialized () noexcept;
+
 protected:
 	Timer ();
 	~Timer ();

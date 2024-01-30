@@ -116,6 +116,11 @@ void Timer::terminate () noexcept
 	pool_.terminate ();
 }
 
+bool Timer::initialized () noexcept
+{
+	return pool_.initialized;
+}
+
 Timer::Timer () :
 	timer_ (pool_.timer_create (*this))
 {}

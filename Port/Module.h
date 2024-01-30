@@ -57,6 +57,7 @@ protected:
 	/// \param file Executable file access.
 	Module (AccessDirect::_ptr_type file);
 
+	/// Destructor
 	~Module ()
 	{
 		unload ();
@@ -67,13 +68,13 @@ protected:
 	/// \param sections List of r/w data sections
 	void get_data_sections (DataSections& sections);
 
-private:
-	void unload ();
+	/// Unload module (only for executables).
+	void unload () noexcept;
 
 private:
 	void* module_;
 	Section metadata_;
-	Nirvana::Core::Windows::SharedStringW temp_path_;
+	Nirvana::Core::Windows::StringW temp_path_;
 };
 
 }

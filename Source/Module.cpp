@@ -30,6 +30,8 @@
 #include <Nirvana/string_conv.h>
 #include <fnctl.h>
 #include <ORB/Services.h>
+#include "../Port/Timer.h"
+#include <TimerEvent.h>
 
 namespace Nirvana {
 namespace Core {
@@ -65,8 +67,9 @@ Module::Module (AccessDirect::_ptr_type file) :
 		{
 			IDL::String name (TEMP_MODULE_PREFIX "XXXXXX" TEMP_MODULE_EXT);
 			tmp_file_access = AccessDirect::_narrow (tmp_dir->mkostemps (name, 4, O_DIRECT)->_to_object ());
+			// The name is ASCII so we can append it without a conversion
 			tmp_path.append (name.begin (), name.end ());
-			temp_path_ = tmp_path;
+			temp_path_ = std::move (tmp_path);
 		}
 
 		{
@@ -77,7 +80,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 			tmp_file_access->close ();
 		}
 
-		module_ = LoadLibraryW (tmp_path.c_str ());
+		module_ = LoadLibraryW (temp_path_.c_str ());
 		if (!module_)
 			throw_last_error ();
 		Nirvana::Core::PortableExecutable pe (module_);
@@ -92,12 +95,29 @@ Module::Module (AccessDirect::_ptr_type file) :
 	}
 }
 
-void Module::unload ()
+void Module::unload () noexcept
 {
-	if (module_)
-		FreeLibrary (module_);
-	if (!temp_path_.empty ())
-		DeleteFileW (temp_path_.c_str ());
+	if (module_) {
+		verify (FreeLibrary (module_));
+		module_ = nullptr;
+	}
+	if (!temp_path_.empty ()) {
+		StringW path (std::move (temp_path_));
+		if (!DeleteFileW (path.c_str ())) {
+
+			static const DWORD WAIT_MS = 100;
+
+			if (Timer::initialized ()) {
+				TimerEvent timer;
+				timer.set (0, TimeBase::MILLISECOND * WAIT_MS, 0);
+				timer.wait ();
+			} else {
+				// System shutdown started, timers are not working.
+				Sleep (WAIT_MS);
+			}
+			verify (DeleteFileW (path.c_str ()));
+		}
+	}
 }
 
 void Module::get_data_sections (DataSections& sections)
