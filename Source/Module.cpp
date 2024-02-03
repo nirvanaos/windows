@@ -103,20 +103,22 @@ void Module::unload () noexcept
 	}
 	if (!temp_path_.empty ()) {
 		StringW path (std::move (temp_path_));
-		if (!DeleteFileW (path.c_str ())) {
-
-			static const DWORD WAIT_MS = 100;
-
+		static const DWORD RETRY_WAIT_MS = 100;
+		unsigned retry_cnt = 10;
+		while (retry_cnt && !DeleteFileW (path.c_str ())) {
+			assert (ERROR_ACCESS_DENIED == GetLastError ());
+			if (!--retry_cnt)
+				break;
 			if (Timer::initialized ()) {
 				TimerEvent timer;
-				timer.set (0, TimeBase::MILLISECOND * WAIT_MS, 0);
+				timer.set (0, TimeBase::MILLISECOND * RETRY_WAIT_MS, 0);
 				timer.wait ();
 			} else {
 				// System shutdown started, timers are not working.
-				Sleep (WAIT_MS);
+				Sleep (RETRY_WAIT_MS);
 			}
-			verify (DeleteFileW (path.c_str ()));
 		}
+		assert (retry_cnt);
 	}
 }
 
