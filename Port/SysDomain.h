@@ -30,6 +30,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include <MapUnorderedUnstable.h>
+#include <UserAllocator.h>
 #include <TimerEvent.h>
 
 namespace Nirvana {

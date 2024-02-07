@@ -27,7 +27,8 @@
 #include "SchedulerMaster.h"
 #include "app_data.h"
 #include <StartupSys.h>
-#include <SysDomain.h>
+#include <SysManager.h>
+#include <Chrono.h>
 #include <ORB/Services.h>
 #include "error2errno.h"
 #include "../Port/Security.h"
@@ -412,7 +413,7 @@ void SchedulerMaster::reschedule (DeadlineTime deadline, SchedulerProcess& proce
 class SchedulerMaster::ProcessStart : public Runnable
 {
 public:
-	ProcessStart (Ref <SysDomain>&& sd, SchedulerProcess& process) :
+	ProcessStart (Ref <SysManager>&& sd, SchedulerProcess& process) :
 		sys_domain_ (std::move (sd)),
 		process_ (&process)
 	{}
@@ -421,14 +422,14 @@ private:
 	virtual void run () override;
 
 private:
-	Ref <SysDomain> sys_domain_;
+	Ref <SysManager> sys_domain_;
 	Ref <SchedulerProcess> process_;
 };
 
 class SchedulerMaster::ProcessTerminate : public Runnable
 {
 public:
-	ProcessTerminate (Ref <SysDomain>&& sd, SchedulerProcess& process) :
+	ProcessTerminate (Ref <SysManager>&& sd, SchedulerProcess& process) :
 		sys_domain_ (std::move (sd)),
 		process_ (&process)
 	{}
@@ -437,16 +438,16 @@ private:
 	virtual void run () override;
 
 private:
-	Ref <SysDomain> sys_domain_;
+	Ref <SysManager> sys_domain_;
 	Ref <SchedulerProcess> process_;
 };
 
 template <class R> inline
 void SchedulerMaster::call_sys_domain (SchedulerProcess& process) noexcept
 {
-	Ref <SysDomain> sys_domain;
+	Ref <SysManager> sys_domain;
 	Ref <SyncContext> sync_context;
-	SysDomain::get_call_context (sys_domain, sync_context);
+	SysManager::get_call_context (sys_domain, sync_context);
 	ExecDomain::async_call <R> (Chrono::make_deadline (SYS_DOMAIN_CALL_DEADLINE),
 		*sync_context, nullptr, std::move (sys_domain), std::ref (process));
 }
