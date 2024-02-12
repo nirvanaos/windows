@@ -31,6 +31,7 @@
 #include <Nirvana/Nirvana.h>
 #include <Nirvana/File.h>
 #include <Section.h>
+#include <HeapAllocator.h>
 #include "../Windows/Source/WinWChar.h"
 
 namespace Nirvana {
@@ -72,9 +73,12 @@ protected:
 	void unload () noexcept;
 
 private:
+	typedef std::basic_string <Windows::WinWChar, std::char_traits <Windows::WinWChar>,
+		HeapAllocator <Windows::WinWChar> > FilePath;
+
 	void* module_;
 	Section metadata_;
-	Nirvana::Core::Windows::StringW temp_path_;
+	FilePath temp_path_;
 };
 
 }

@@ -41,9 +41,10 @@ using namespace Windows;
 namespace Port {
 
 Module::Module (AccessDirect::_ptr_type file) :
-	module_ (nullptr)
+	module_ (nullptr),
+	temp_path_ (MemContext::current ().heap ())
 {
-	StringW tmp_path;
+	FilePath tmp_path (temp_path_.get_allocator ());
 	Dir::_ref_type tmp_dir;
 	{
 		WinWChar buf [MAX_PATH + 1];
@@ -102,7 +103,7 @@ void Module::unload () noexcept
 		module_ = nullptr;
 	}
 	if (!temp_path_.empty ()) {
-		StringW path (std::move (temp_path_));
+		FilePath path (std::move (temp_path_));
 		static const DWORD RETRY_WAIT_MS = 100;
 		unsigned retry_cnt = 10;
 		while (retry_cnt && !DeleteFileW (path.c_str ())) {
