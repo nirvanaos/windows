@@ -1,3 +1,3 @@
 #pragma once
-#include <Nirvana/Nirvana.h>
+#include <CORBA/CORBA.h>
 #include "win32.h"
