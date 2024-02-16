@@ -8,6 +8,7 @@
 *       arbitrary path name
 *
 *******************************************************************************/
+#include <math.h>
 #include <corecrt_startup.h>
 //#include <mbctype.h>
 //#include <stdlib.h>
