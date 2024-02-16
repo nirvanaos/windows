@@ -55,7 +55,7 @@ void DebugLog::initialize () noexcept
 		SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
 	char path [MAX_PATH + 1];
 	GetModuleFileNameA (nullptr, path, sizeof (path));
-	*strrchr (path, '\\') = '\0';
+	*(char*)strrchr (path, '\\') = '\0';
 	if (!SymInitialize (GetCurrentProcess (), path, TRUE)) {
 		char buf [_MAX_ITOSTR_BASE16_COUNT];
 		_itoa (GetLastError (), buf, 16);

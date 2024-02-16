@@ -39,6 +39,9 @@
 #define WINVER 0x0A00
 #define _WIN32_WINNT 0x0A00
 #define _ONECORE
+
+extern "C" int _wcsicmp (wchar_t const* _String1, wchar_t const* _String2);
+
 #include <windows.h>
 
 // "interface" is used as identifier in ORB.

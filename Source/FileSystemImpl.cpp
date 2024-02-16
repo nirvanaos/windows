@@ -190,7 +190,7 @@ DirItemId FileSystemImpl::get_sbin (const IDL::String&, bool& may_cache)
 	DWORD cc = GetModuleFileNameW (nullptr, buf, (DWORD)std::size (buf));
 	if (!cc)
 		throw_win_error_sys (GetLastError ());
-	*wcsrchr (buf, '\\') = 0;
+	*(char*)wcsrchr (buf, '\\') = 0;
 
 	return dir_path_to_id (buf);
 }
