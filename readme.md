@@ -15,11 +15,6 @@ Standard Nirvana porting headers.
 
 The sources and internal headers to build Nirvana for Windows port library.
 
-### ./msvccrt
-
-The sources of the MSVC support library intended for building
-Nirvana core without the MSVC UCRT library.
-
 ### ./msvcstl
 
 The sources of the MSVC support library intended for building
