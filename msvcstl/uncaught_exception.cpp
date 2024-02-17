@@ -4,7 +4,7 @@
 #include <Nirvana/Nirvana.h>
 
 #include <eh.h>
-#include <exception>
+
 _STD_BEGIN
 
 _CRTIMP2_PURE bool __CLRCALL_PURE_OR_CDECL uncaught_exception() noexcept { // report if handling a throw
