@@ -56,7 +56,7 @@ extern "C" int _wcsicmp (wchar_t const* _String1, wchar_t const* _String2);
 #define OBJ_NAME_PREFIX WINWCS ("Nirvana")
 #define MAILSLOT_PREFIX WINWCS ("\\\\.\\mailslot\\") OBJ_NAME_PREFIX WINWCS ("\\")
 #define TEMP_MODULE_PREFIX "nirvana"
-#define TEMP_MODULE_EXT ".nex"
+#define TEMP_MODULE_EXT ".tmp"
 
 namespace Nirvana {
 namespace Core {
