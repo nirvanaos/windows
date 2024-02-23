@@ -131,7 +131,7 @@ void Module::get_data_sections (DataSections& sections)
 			&& !COFF::is_section (*s, ".msvcjmc")
 			&& !COFF::is_section (*s, OLF_BIND)
 			)
-			sections.push_front ({ pe.section_address (*s), s->VirtualSize });
+			sections.push_back ({ pe.section_address (*s), s->VirtualSize });
 	}
 }
 
