@@ -98,6 +98,7 @@ private:
 	void reschedule (DeadlineTime deadline, DeadlineTime old);
 	void enqueue_buffer (OVERLAPPED* buf) noexcept;
 	void dispatch_message (const void* msg, size_t size);
+	void broken_pipe ();
 
 	virtual void completed (OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept override;
 

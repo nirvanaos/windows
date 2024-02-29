@@ -89,8 +89,15 @@ void SchedulerProcess::enqueue_buffer (OVERLAPPED* buf) noexcept
 {
 	_add_ref ();
 	zero (*buf);
-	if (!ReadFile (pipe_, BufferPool::data (buf), sizeof (SchedulerMessage::Buffer), nullptr, buf))
-		assert (ERROR_IO_PENDING == GetLastError ());
+	if (!ReadFile (pipe_, BufferPool::data (buf), sizeof (SchedulerMessage::Buffer), nullptr, buf)) {
+		uint32_t err = GetLastError ();
+		if (ERROR_BROKEN_PIPE == err)
+			broken_pipe ();
+#ifndef NDEBUG
+		else
+			assert (ERROR_IO_PENDING == GetLastError ());
+#endif
+	}
 }
 
 inline
@@ -182,14 +189,19 @@ void SchedulerProcess::reschedule (DeadlineTime deadline, DeadlineTime old)
 	scheduler_.reschedule (deadline, *this, old);
 }
 
+void SchedulerProcess::broken_pipe ()
+{
+	if (!terminated_.test_and_set ()) {
+		scheduler_.process_terminated (*this);
+		if (!valid_cnt_.decrement_seq ())
+			terminate ();
+	}
+}
+
 void SchedulerProcess::completed (OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
 {
 	if (ERROR_BROKEN_PIPE == error) {
-		if (!terminated_.test_and_set ()) {
-			scheduler_.process_terminated (*this);
-			if (!valid_cnt_.decrement_seq ())
-				terminate ();
-		}
+		broken_pipe ();
 	} else {
 		assert (!error);
 		if (!error) {
