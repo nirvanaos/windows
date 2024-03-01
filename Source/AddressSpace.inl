@@ -119,7 +119,7 @@ void AddressSpace <x64>::query (Address address, MBI& mbi) const
 		assert (!status);
 	} else
 #endif
-		verify (VirtualQueryEx (process_, (void*)(uintptr_t)address, (MEMORY_BASIC_INFORMATION*)&mbi,
+		NIRVANA_VERIFY (VirtualQueryEx (process_, (void*)(uintptr_t)address, (MEMORY_BASIC_INFORMATION*)&mbi,
 			sizeof (mbi)));
 }
 
@@ -144,7 +144,7 @@ void AddressSpace <x64>::Block::protect (size_t offset, size_t size, uint32_t pr
 #endif
 	{
 		unsigned long old;
-		verify (VirtualProtectEx (space_.process (), (void*)(uintptr_t)addr, size, protection, &old));
+		NIRVANA_VERIFY (VirtualProtectEx (space_.process (), (void*)(uintptr_t)addr, size, protection, &old));
 	}
 }
 
@@ -268,7 +268,7 @@ bool AddressSpace <x64>::Block::exclusive_lock ()
 template <bool x64> inline
 void AddressSpace <x64>::close_mapping (HANDLE hm) const
 {
-	verify (DuplicateHandle (process_, hm, nullptr, nullptr, 0, FALSE, DUPLICATE_CLOSE_SOURCE));
+	NIRVANA_VERIFY (DuplicateHandle (process_, hm, nullptr, nullptr, 0, FALSE, DUPLICATE_CLOSE_SOURCE));
 }
 
 template <bool x64>
@@ -307,7 +307,7 @@ void AddressSpace <x64>::Block::map (HANDLE mapping_map, HANDLE mapping_store)
 			assert (MEM_COMMIT == mbi.State);
 		}
 #endif
-		verify (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
+		NIRVANA_VERIFY (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
 		space_.close_mapping (old);
 	}
 
@@ -322,7 +322,7 @@ void AddressSpace <x64>::Block::unmap ()
 	HANDLE hm = mapping ();
 	assert (hm);
 	if (INVALID_HANDLE_VALUE != hm) {
-		verify (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
+		NIRVANA_VERIFY (space_.unmap (address (), MEM_PRESERVE_PLACEHOLDER));
 		state_ = State::RESERVED;
 		space_.close_mapping (hm);
 		mapping (INVALID_HANDLE_VALUE);
@@ -519,7 +519,7 @@ AddressSpace <x64>::~AddressSpace () noexcept
 			BlockInfo** end = directory64_ + (directory_size_ + SECOND_LEVEL_BLOCK - 1) / SECOND_LEVEL_BLOCK;
 			for (BlockInfo** page = directory64_; page < end; page += PAGE_SIZE / sizeof (BlockInfo**)) {
 				MEMORY_BASIC_INFORMATION mbi;
-				verify (VirtualQuery (page, &mbi, sizeof (mbi)));
+				NIRVANA_VERIFY (VirtualQuery (page, &mbi, sizeof (mbi)));
 				if (mbi.State == MEM_COMMIT) {
 					BlockInfo** end = page + PAGE_SIZE / sizeof (BlockInfo**);
 					for (BlockInfo** p = page; p < end; ++p) {
@@ -529,7 +529,7 @@ AddressSpace <x64>::~AddressSpace () noexcept
 							if (GetCurrentProcess () == process_) {
 								BYTE* address = (BYTE*)((p - directory64_) * SECOND_LEVEL_BLOCK * ALLOCATION_GRANULARITY);
 								for (BlockInfo* page = block, *end = block + SECOND_LEVEL_BLOCK; page != end; page += PAGE_SIZE / sizeof (BlockInfo)) {
-									verify (VirtualQuery (page, &mbi, sizeof (mbi)));
+									NIRVANA_VERIFY (VirtualQuery (page, &mbi, sizeof (mbi)));
 									if (mbi.State == MEM_COMMIT) {
 										for (BlockInfo* p = page, *end = page + PAGE_SIZE / sizeof (BlockInfo); p != end; ++p, address += ALLOCATION_GRANULARITY) {
 											HANDLE hm = p->mapping.handle ();
@@ -547,19 +547,19 @@ AddressSpace <x64>::~AddressSpace () noexcept
 								}
 							}
 #endif
-							verify (UnmapViewOfFile (block));
+							NIRVANA_VERIFY (UnmapViewOfFile (block));
 						}
 					}
 				}
 			}
-			verify (VirtualFree (directory64_, 0, MEM_RELEASE));
+			NIRVANA_VERIFY (VirtualFree (directory64_, 0, MEM_RELEASE));
 		} else {
 #ifndef NDEBUG
 			if (GetCurrentProcess () == process_) {
 				BYTE* address = 0;
 				for (BlockInfo* page = directory32_, *end = directory32_ + directory_size_; page < end; page += PAGE_SIZE / sizeof (BlockInfo)) {
 					MEMORY_BASIC_INFORMATION mbi;
-					verify (VirtualQuery (page, &mbi, sizeof (mbi)));
+					NIRVANA_VERIFY (VirtualQuery (page, &mbi, sizeof (mbi)));
 					if (mbi.State == MEM_COMMIT) {
 						for (BlockInfo* p = page, *end = page + PAGE_SIZE / sizeof (BlockInfo); p != end; ++p, address += ALLOCATION_GRANULARITY) {
 							HANDLE hm = p->mapping.handle ();
@@ -577,7 +577,7 @@ AddressSpace <x64>::~AddressSpace () noexcept
 				}
 			}
 #endif
-			verify (UnmapViewOfFile (directory32_));
+			NIRVANA_VERIFY (UnmapViewOfFile (directory32_));
 		}
 		CloseHandle (mapping_);
 		CloseHandle (file_);
@@ -600,7 +600,7 @@ BlockInfo* AddressSpace <x64>::block_ptr (Address address, bool commit)
 					throw_NO_MEMORY ();
 			} else {
 				MEMORY_BASIC_INFORMATION mbi;
-				verify (VirtualQuery (pp, &mbi, sizeof (mbi)));
+				NIRVANA_VERIFY (VirtualQuery (pp, &mbi, sizeof (mbi)));
 				if (mbi.State != MEM_COMMIT)
 					return nullptr;
 			}
@@ -731,13 +731,13 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 		if (begin_mbi.BaseAddress) {
 			SSize realloc = begin - address (begin_mbi.AllocationBase);
 			if (realloc > 0)
-				verify (free (address (begin_mbi.AllocationBase), realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
+				NIRVANA_VERIFY (free (address (begin_mbi.AllocationBase), realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 
 		if (end_mbi.BaseAddress) {
 			SSize realloc = (SSize )(address (end_mbi.BaseAddress) + end_mbi.RegionSize - end);
 			if (realloc > 0)
-				verify (free (end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
+				NIRVANA_VERIFY (free (end, realloc, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER));
 		}
 	}
 
@@ -750,7 +750,7 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 			MBI mbi;
 			query (p, mbi);
 			assert (mbi.State == MEM_RESERVE);
-			verify (free (p, 0, MEM_RELEASE));
+			NIRVANA_VERIFY (free (p, 0, MEM_RELEASE));
 			Address region_end = (Address)((uintptr_t)mbi.BaseAddress + mbi.RegionSize);
 			if (region_end > end)
 				region_end = end;
@@ -761,7 +761,7 @@ void AddressSpace <x64>::release (Address dst, size_t size)
 				p += ALLOCATION_GRANULARITY;
 			}
 		} else {
-			verify (unmap (p, 0));
+			NIRVANA_VERIFY (unmap (p, 0));
 			close_mapping (mapping);
 			p += ALLOCATION_GRANULARITY;
 		}

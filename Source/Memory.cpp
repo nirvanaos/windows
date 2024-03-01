@@ -75,7 +75,7 @@ inline ULONG handle_count (HANDLE h)
 
 void BlockState::query (HANDLE process)
 {
-	verify (QueryWorkingSetEx (process, page_state, sizeof (page_state)));
+	NIRVANA_VERIFY (QueryWorkingSetEx (process, page_state, sizeof (page_state)));
 	PageState* ps = page_state;
 	do {
 		assert (ps->VirtualAttributes.Valid || 0 == ps->VirtualAttributes.Win32Protection);
@@ -83,7 +83,7 @@ void BlockState::query (HANDLE process)
 		// For such pages we call VirtualQuery to obtain memory protection.
 		if (!ps->VirtualAttributes.Valid && ps->VirtualAttributes.Shared) {
 			MEMORY_BASIC_INFORMATION mbi;
-			verify (VirtualQueryEx (process, ps->VirtualAddress, &mbi, sizeof (mbi)));
+			NIRVANA_VERIFY (VirtualQueryEx (process, ps->VirtualAddress, &mbi, sizeof (mbi)));
 			BYTE* end = (BYTE*)mbi.BaseAddress + mbi.RegionSize;
 			do {
 				ps->VirtualAttributes.Win32Protection = mbi.Protect;
@@ -378,7 +378,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 			}
 
 		} catch (...) {
-			verify (UnmapViewOfFile (ptmp));
+			NIRVANA_VERIFY (UnmapViewOfFile (ptmp));
 			// Restore write access
 			for (const DWORD* p = page_protection, *end = p + PAGES_PER_BLOCK; p != end; ++p) {
 				DWORD protection = *p;
@@ -389,7 +389,7 @@ void Memory::Block::remap (const CopyReadOnly* copy_rgn)
 		}
 
 		// Unmap memory section from the temporary address.
-		verify (UnmapViewOfFile (ptmp));
+		NIRVANA_VERIFY (UnmapViewOfFile (ptmp));
 
 		// Change this block mapping to the new.
 		map (hm, hm);
@@ -569,7 +569,7 @@ repeat:
 				if (!ptmp)
 					throw_NO_MEMORY ();
 				real_copy ((const BYTE*)src, (const BYTE*)src + size, ptmp + offset);
-				verify (UnmapViewOfFile (ptmp));
+				NIRVANA_VERIFY (UnmapViewOfFile (ptmp));
 				if (PageState::MASK_RW & page_state)
 					change_protection (offset, size, Nirvana::Memory::READ_ONLY);
 			}
@@ -603,7 +603,7 @@ void Memory::Block::decommit (size_t offset, size_t size)
 				} else if (has_data (offset, size)) {
 					// Disable access to decommitted pages. We can't use VirtualFree and MEM_DECOMMIT with mapped memory.
 					protect (offset, size, PageState::DECOMMITTED | PAGE_REVERT_TO_FILE_MAP);
-					verify (VirtualAlloc ((BYTE*)address () + offset, size, MEM_RESET, PageState::DECOMMITTED));
+					NIRVANA_VERIFY (VirtualAlloc ((BYTE*)address () + offset, size, MEM_RESET, PageState::DECOMMITTED));
 
 					// Invalidate block state.
 					invalidate_state ();
@@ -692,7 +692,7 @@ bool Memory::Block::is_private (size_t offset, size_t size)
 
 inline void Memory::query (const void* address, MEMORY_BASIC_INFORMATION& mbi) noexcept
 {
-	verify (VirtualQuery (address, &mbi, sizeof (mbi)));
+	NIRVANA_VERIFY (VirtualQuery (address, &mbi, sizeof (mbi)));
 }
 
 HANDLE Memory::new_mapping ()
@@ -1233,7 +1233,7 @@ long __stdcall exception_filter (EXCEPTION_POINTERS* pex)
 				block->mapping.unlock ();
 			} else {
 				MEMORY_BASIC_INFORMATION mbi;
-				verify (VirtualQuery (address, &mbi, sizeof (mbi)));
+				NIRVANA_VERIFY (VirtualQuery (address, &mbi, sizeof (mbi)));
 				block->mapping.unlock ();
 				if (pex->ExceptionRecord->ExceptionInformation [0]) { // Write access
 					if (mbi.Protect & PageState::MASK_RW)

@@ -82,7 +82,7 @@ public:
 
 	static void impersonate (const Security::Context& sec_context) noexcept
 	{
-		verify (ImpersonateLoggedOnUser (sec_context));
+		NIRVANA_VERIFY (ImpersonateLoggedOnUser (sec_context));
 	}
 
 	///@}

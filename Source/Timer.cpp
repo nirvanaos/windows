@@ -47,9 +47,9 @@ struct Timer::Pool
 			Windows::NEUTRAL_FIBER_STACK_COMMIT
 		};
 
-		verify (SetThreadpoolStackInformation (thread_pool, &si));
+		NIRVANA_VERIFY (SetThreadpoolStackInformation (thread_pool, &si));
 		SetThreadpoolThreadMaximum (thread_pool, Port::SystemInfo::hardware_concurrency ());
-		verify (SetThreadpoolThreadMinimum (thread_pool, 0));
+		NIRVANA_VERIFY (SetThreadpoolThreadMinimum (thread_pool, 0));
 
 		SetThreadpoolCallbackPool (&callback_environ, thread_pool);
 

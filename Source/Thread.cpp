@@ -41,7 +41,7 @@ void Thread::create (PTHREAD_START_ROUTINE thread_proc, void* param, int priorit
 	if (!handle_)
 		throw_NO_MEMORY ();
 	if (THREAD_PRIORITY_NORMAL != priority)
-		verify (SetThreadPriority (handle_, priority));
+		NIRVANA_VERIFY (SetThreadPriority (handle_, priority));
 }
 
 }

@@ -92,7 +92,7 @@ public:
 		void clear () noexcept
 		{
 			if (data_) {
-				verify (CloseHandle ((void*)(uintptr_t)data_));
+				NIRVANA_VERIFY (CloseHandle ((void*)(uintptr_t)data_));
 				data_ = 0;
 			}
 		}

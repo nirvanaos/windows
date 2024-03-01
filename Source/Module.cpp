@@ -99,7 +99,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 void Module::unload () noexcept
 {
 	if (module_) {
-		verify (FreeLibrary (module_));
+		NIRVANA_VERIFY (FreeLibrary (module_));
 		module_ = nullptr;
 	}
 	if (!temp_path_.empty ()) {

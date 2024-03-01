@@ -75,7 +75,7 @@ void ThreadBackground::start ()
 
 void ThreadBackground::resume () noexcept
 {
-	verify (SetEvent (event_));
+	NIRVANA_VERIFY (SetEvent (event_));
 }
 
 }

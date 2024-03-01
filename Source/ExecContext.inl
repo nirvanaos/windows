@@ -65,7 +65,7 @@ inline
 void ExecContext::convert_to_thread () noexcept
 {
 	// Static function, thread object may be already destructed here.
-	verify (ConvertFiberToThread ());
+	NIRVANA_VERIFY (ConvertFiberToThread ());
 }
 
 }

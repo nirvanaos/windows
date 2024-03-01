@@ -45,7 +45,7 @@ bool ex2signal (EXCEPTION_POINTERS* pex, siginfo_t& siginfo) noexcept
 				if (pex->ExceptionRecord->ExceptionInformation [0]) {
 					// Write access
 					MEMORY_BASIC_INFORMATION mbi;
-					verify (VirtualQuery (p, &mbi, sizeof (mbi)));
+					NIRVANA_VERIFY (VirtualQuery (p, &mbi, sizeof (mbi)));
 					if (mbi.State != MEM_COMMIT)
 						siginfo.si_code = SEGV_MAPERR;
 					else

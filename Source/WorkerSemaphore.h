@@ -50,7 +50,7 @@ public:
 	WorkerSemaphore ()
 	{
 		handles_ [0] = nullptr;
-		verify (handles_ [1] = CreateEventW (nullptr, true, FALSE, nullptr));
+		NIRVANA_VERIFY (handles_ [1] = CreateEventW (nullptr, true, FALSE, nullptr));
 	}
 
 	~WorkerSemaphore ()
