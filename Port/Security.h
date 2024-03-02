@@ -128,7 +128,7 @@ public:
 
 	static bool is_valid_context (ContextABI context) noexcept;
 
-	static Context get_domain_context ();
+	static Context get_prot_domain_context ();
 };
 
 }

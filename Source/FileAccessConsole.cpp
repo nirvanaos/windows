@@ -34,6 +34,11 @@ using namespace Windows;
 
 namespace Port {
 
+unsigned FileAccessConsole::access_mode () noexcept
+{
+	return O_RDWR;
+}
+
 FileAccessConsole::Init::Init () :
 	out (INVALID_HANDLE_VALUE),
 	in (INVALID_HANDLE_VALUE),

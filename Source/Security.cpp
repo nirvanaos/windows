@@ -75,7 +75,7 @@ bool Security::is_valid_context (ContextABI context) noexcept
 	return len != 0;
 }
 
-Security::Context Security::get_domain_context ()
+Security::Context Security::get_prot_domain_context ()
 {
 	HANDLE token;
 	if (!OpenProcessToken (GetCurrentProcess (), TOKEN_READ | TOKEN_DUPLICATE | TOKEN_IMPERSONATE, &token))

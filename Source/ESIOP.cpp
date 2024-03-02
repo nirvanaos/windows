@@ -50,7 +50,7 @@ void send_shutdown (ProtDomainId domain_id)
 	if (!process)
 		throw_last_error ();
 
-	Nirvana::Core::Port::Security::Context local_context = Nirvana::Core::Port::Security::get_domain_context ();
+	Nirvana::Core::Port::Security::Context local_context = Nirvana::Core::Port::Security::get_prot_domain_context ();
 
 	HANDLE token2;
 	if (!DuplicateHandle (GetCurrentProcess (), local_context, process, &token2, 0, FALSE,

@@ -1,4 +1,3 @@
-/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -24,40 +23,47 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_FILEACCESSCONSOLE_H_
-#define NIRVANA_CORE_PORT_FILEACCESSCONSOLE_H_
+#ifndef NIRVANA_CORE_WINDOWS_SECURITYINFO_H_
+#define NIRVANA_CORE_WINDOWS_SECURITYINFO_H_
 #pragma once
 
-#include "../Source/FileAccessConsoleBase.h"
+#include "win32.h"
+#include <AclAPI.h>
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
 
-class FileAccessConsole : public Windows::FileAccessConsoleBase
+class SecurityInfo
 {
 public:
-	FileAccessConsole (FileChar* file) :
-		FileAccessConsole (file, Init ())
-	{}
+	SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type);
 
-	~FileAccessConsole ();
+	~SecurityInfo ()
+	{
+		LocalFree (psd_);
+	}
 
-	static unsigned access_mode () noexcept;
+	PSID owner () const noexcept
+	{
+		return owner_;
+	}
+
+	PSID group () const noexcept
+	{
+		return group_;
+	}
+
+	PACL dacl () const noexcept
+	{
+		return dacl_;
+	}
 
 private:
-	struct Init
-	{
-		void* out;
-		void* in;
-		unsigned mode;
-
-		Init ();
-	};
-
-	FileAccessConsole (FileChar* file, const Init& init) :
-		FileAccessConsoleBase (file, init.mode, init.out, init.in)
-	{}
+	PSECURITY_DESCRIPTOR psd_;
+	PSID owner_;
+	PSID group_;
+	PACL dacl_;
 };
 
 }

@@ -82,7 +82,7 @@ Security::Context OtherDomainBase::create_security_context () const
 	if (!sc.empty ())
 		return create_security_context (sc);
 
-	return create_security_context (Security::get_domain_context ());
+	return create_security_context (Security::get_prot_domain_context ());
 }
 
 }
