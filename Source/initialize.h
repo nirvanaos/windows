@@ -31,6 +31,7 @@
 #include "ErrConsole.h"
 #include "../Port/SystemInfo.h"
 #include "../Port/Chrono.h"
+#include "../Port/Security.h"
 
 namespace Nirvana {
 namespace Core {
@@ -41,7 +42,11 @@ bool initialize_windows (void)
 {
   Port::SystemInfo::initialize ();
   Port::Chrono::initialize ();
-  if (!(Port::Thread::initialize () && Heap::initialize ())) {
+  if (
+    !Port::Thread::initialize () ||
+    !Core::Heap::initialize () ||
+    !Port::Security::initialize ()
+  ) {
     ErrConsole () << "INITIALIZE" << '\n';
     return false;
   }

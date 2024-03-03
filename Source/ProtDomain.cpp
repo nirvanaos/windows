@@ -37,17 +37,6 @@ using namespace Windows;
 
 namespace Port {
 
-IDL::String ProtDomain::user ()
-{
-	IDL::String name;
-	WCHAR buf [UNLEN + 1];
-	DWORD cc = (DWORD)std::size (buf);
-	if (GetUserNameW (buf, &cc))
-		Nirvana::append_utf8 (buf, buf + cc - 1, name);
-
-	return name;
-}
-
 IDL::String ProtDomain::binary_dir ()
 {
 	WinWChar path [MAX_PATH + 1];

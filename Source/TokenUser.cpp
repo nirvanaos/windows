@@ -1,4 +1,3 @@
-/// \file
 /*
 * Nirvana Core. Windows port library.
 *
@@ -24,25 +23,29 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_PROTDOMAIN_H_
-#define NIRVANA_CORE_PORT_PROTDOMAIN_H_
-#pragma once
-
-#include <Nirvana/Nirvana.h>
+#include "pch.h"
+#include "TokenUser.h"
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
 
-/// Protection domain (process).
-class ProtDomain
+TokenUser::TokenUser (HANDLE token)
 {
-protected:
-	static IDL::String binary_dir ();
-};
+	DWORD len = 0;
+	GetTokenInformation (token, ::TokenUser, nullptr, 0, &len);
+	if (!len)
+		throw_last_error ();
+	size_ = len;
+	buffer_ = g_memory->allocate (nullptr, size_, 0);
+	if (!GetTokenInformation (token, ::TokenUser, buffer_, len, &len)) {
+		DWORD err = GetLastError ();
+		g_memory->release (buffer_, size_);
+		throw_win_error_sys (err);
+	}
+}
 
 }
 }
 }
-
-#endif

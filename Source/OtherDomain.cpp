@@ -66,23 +66,18 @@ inline bool OtherDomainBase::is_64_bit () const noexcept
 	return x64;
 }
 
-inline
 Security::Context OtherDomainBase::create_security_context (
-	const Security::Context& local_context) const
+	const Nirvana::Core::Security::Context& local_context,
+	HANDLE target_process)
 {
-	HANDLE h;
-	if (!DuplicateHandle (GetCurrentProcess (), local_context, process_, &h, 0, false, DUPLICATE_SAME_ACCESS))
+	HANDLE token;
+	if (!DuplicateHandle (GetCurrentProcess (),
+		local_context.port (),
+		target_process, &token, 0, false, DUPLICATE_SAME_ACCESS)
+		)
 		throw_last_error ();
-	return Security::Context ((Security::ContextABI)(uintptr_t)h);
-}
 
-Security::Context OtherDomainBase::create_security_context () const
-{
-	const Security::Context& sc = ExecDomain::current ().security_context ();
-	if (!sc.empty ())
-		return create_security_context (sc);
-
-	return create_security_context (Security::get_prot_domain_context ());
+	return Security::Context ((Nirvana::Core::Security::Context::ABI)(uintptr_t)token);
 }
 
 }

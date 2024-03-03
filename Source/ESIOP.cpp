@@ -25,11 +25,12 @@
 */
 #include "pch.h"
 #include <ORB/ESIOP.h>
-#include <Port/Security.h>
+#include "../Port/OtherDomain.h"
 #include "Mailslot.h"
 #include "object_name.h"
 #include "error2errno.h"
 
+using namespace Nirvana::Core;
 using namespace Nirvana::Core::Windows;
 
 namespace ESIOP {
@@ -46,26 +47,25 @@ void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) n
 
 void send_shutdown (ProtDomainId domain_id)
 {
-	HANDLE process = OpenProcess (PROCESS_DUP_HANDLE, false, domain_id);
+	Handle process = OpenProcess (PROCESS_DUP_HANDLE, false, domain_id);
 	if (!process)
 		throw_last_error ();
 
-	Nirvana::Core::Port::Security::Context local_context = Nirvana::Core::Port::Security::get_prot_domain_context ();
+	Security::Context sc = Windows::OtherDomainBase::create_security_context (
+		Nirvana::Core::Security::prot_domain_context (), process);
 
-	HANDLE token2;
-	if (!DuplicateHandle (GetCurrentProcess (), local_context, process, &token2, 0, FALSE,
-		DUPLICATE_SAME_ACCESS))
+	HANDLE token;
+	if (!DuplicateHandle (GetCurrentProcess (),
+		Nirvana::Core::Security::prot_domain_context ().port (),
+		process, &token, 0, false, DUPLICATE_SAME_ACCESS)
+		)
 		throw_last_error ();
 
-	try {
-		Shutdown msg ((Nirvana::Core::Port::Security::ContextABI)(uintptr_t)token2);
-		Mailslot ms;
-		ms.open (object_name (MAILSLOT_PREFIX, domain_id));
-		ms.send (msg);
-	} catch (...) {
-		CloseHandle (token2);
-		throw;
-	}
+	Shutdown msg ((Nirvana::Core::Security::Context::ABI)(uintptr_t)token);
+	Mailslot ms;
+	ms.open (object_name (MAILSLOT_PREFIX, domain_id));
+	ms.send (msg);
+	sc.detach ();
 }
 
 }

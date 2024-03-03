@@ -29,31 +29,16 @@
 #pragma once
 
 #include "WinWChar.h"
-#include <stdlib.h>
+#include "Handle.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
 /// Mailslot class.
-class Mailslot
+class Mailslot : public Handle
 {
 public:
-	Mailslot () :
-		mailslot_ ((void*)(intptr_t)-1)
-	{}
-
-	Mailslot (Mailslot&& src) :
-		mailslot_ (src.mailslot_)
-	{
-		src.mailslot_ = nullptr;
-	}
-
-	~Mailslot ()
-	{
-		close ();
-	}
-
 	bool open (const WinWChar* name);
 
 	template <typename Msg>
@@ -63,16 +48,6 @@ public:
 	}
 
 	void send (const void* msg, uint32_t size);
-
-	void close ();
-
-	bool is_open () const
-	{
-		return mailslot_ != (void*)(intptr_t)-1;
-	}
-
-private:
-	void* mailslot_;
 };
 
 }

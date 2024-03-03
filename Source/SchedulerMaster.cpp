@@ -502,7 +502,7 @@ void SchedulerMaster::ProcessStart::run ()
 		if (!OpenProcessToken (process, TOKEN_READ, &token))
 			throw_last_error ();
 
-		Port::Security::Context context ((Port::Security::ContextABI)(uintptr_t)token);
+		Port::Security::Context context ((Port::Security::Context::ABI)(uintptr_t)token);
 		sys_domain_->domain_created (process_->process_id (), platform, context.security_id ());
 	} catch (...) {
 		// TODO: Log

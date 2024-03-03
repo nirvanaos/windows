@@ -46,16 +46,16 @@ class Thread;
 class Security
 {
 public:
-	typedef uint32_t ContextABI;
-
 	class Context
 	{
 	public:
-		Context () :
+		typedef uint32_t ABI;
+
+		Context () noexcept :
 			data_ (0)
 		{}
 
-		explicit Context (ContextABI data) :
+		explicit Context (ABI data) noexcept :
 			data_ (data)
 		{}
 
@@ -104,7 +104,7 @@ public:
 
 		SecurityId security_id () const;
 
-		ContextABI abi () const noexcept
+		ABI abi () const noexcept
 		{
 			return data_;
 		}
@@ -120,15 +120,21 @@ public:
 		}
 
 	private:
-		ContextABI duplicate () const;
+		ABI duplicate () const;
 
 	private:
-		ContextABI data_;
+		ABI data_;
 	};
 
-	static bool is_valid_context (ContextABI context) noexcept;
+	static bool is_valid_context (Context::ABI context) noexcept;
 
-	static Context get_prot_domain_context ();
+	static const Context& prot_domain_context () noexcept;
+
+	static bool initialize () noexcept;
+	static void terminate () noexcept;
+
+private:
+	static void* domain_context_;
 };
 
 }

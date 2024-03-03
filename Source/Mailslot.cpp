@@ -32,9 +32,8 @@ namespace Windows {
 
 bool Mailslot::open (const WinWChar* name)
 {
-	assert (INVALID_HANDLE_VALUE == mailslot_);
-	mailslot_ = CreateFileW (name, GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-	if (INVALID_HANDLE_VALUE == mailslot_) {
+	attach (CreateFileW (name, GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+	if (!is_valid ()) {
 		DWORD err = GetLastError ();
 		if (ERROR_FILE_NOT_FOUND == err)
 			return false;
@@ -43,18 +42,10 @@ bool Mailslot::open (const WinWChar* name)
 	return true;
 }
 
-void Mailslot::close ()
-{
-	if (INVALID_HANDLE_VALUE != mailslot_) {
-		CloseHandle (mailslot_);
-		mailslot_ = INVALID_HANDLE_VALUE;
-	}
-}
-
 void Mailslot::send (const void* msg, uint32_t size)
 {
 	DWORD cb;
-	if (!WriteFile (mailslot_, msg, size, &cb, nullptr))
+	if (!WriteFile (*this, msg, size, &cb, nullptr))
 		throw_COMM_FAILURE ();
 }
 

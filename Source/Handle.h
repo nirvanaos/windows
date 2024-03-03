@@ -24,21 +24,75 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_PROTDOMAIN_H_
-#define NIRVANA_CORE_PORT_PROTDOMAIN_H_
+#ifndef NIRVANA_CORE_WINDOWS_HANDLE_H_
+#define NIRVANA_CORE_WINDOWS_HANDLE_H_
 #pragma once
 
-#include <Nirvana/Nirvana.h>
+#include <stdint.h>
+#include <assert.h>
+
+extern "C" __declspec (dllimport)
+int __stdcall CloseHandle (void* handle);
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
 
-/// Protection domain (process).
-class ProtDomain
+class Handle
 {
+public:
+	Handle () noexcept :
+		h_ (nullptr)
+	{}
+
+	Handle (void* h) noexcept :
+		h_ (h)
+	{}
+
+	Handle (Handle&& src) noexcept :
+		h_ (src.h_)
+	{
+		src.h_ = nullptr;
+	}
+
+	~Handle ()
+	{
+		if (is_valid ())
+			CloseHandle (h_);
+	}
+
+	bool is_valid () const noexcept
+	{
+		return h_ && h_ != invalid ();
+	}
+	
+	void close () noexcept
+	{
+		if (is_valid ()) {
+			CloseHandle (h_);
+			h_ = nullptr;
+		}
+	}
+
+	operator void* () const noexcept
+	{
+		return h_;
+	}
+
 protected:
-	static IDL::String binary_dir ();
+	static void* invalid () noexcept
+	{
+		return (void*)(intptr_t)-1;
+	}
+
+	void attach (HANDLE h) noexcept
+	{
+		assert (!is_valid ());
+		h_ = h;
+	}
+
+private:
+	void* h_;
 };
 
 }

@@ -41,6 +41,9 @@ typedef void* HANDLE;
 extern "C" __declspec (dllimport)
 int __stdcall ImpersonateLoggedOnUser (HANDLE hToken);
 
+extern "C" __declspec (dllimport)
+int __stdcall RevertToSelf ();
+
 namespace Nirvana {
 namespace Core {
 
@@ -82,7 +85,10 @@ public:
 
 	static void impersonate (const Security::Context& sec_context) noexcept
 	{
-		NIRVANA_VERIFY (ImpersonateLoggedOnUser (sec_context));
+		if (sec_context.empty ())
+			NIRVANA_VERIFY (RevertToSelf ());
+		else
+			NIRVANA_VERIFY (ImpersonateLoggedOnUser (sec_context));
 	}
 
 	///@}

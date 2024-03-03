@@ -38,7 +38,6 @@ SecurityInfo::SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type) :
 		&owner_, &group_, &dacl_, nullptr, &psd_);
 	if (err)
 		throw_win_error_sys (err);
-
 }
 
 }

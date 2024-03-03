@@ -71,7 +71,7 @@ protected:
 	{
 		// Code here will be called immediately after each test (right
 		// before the destructor).
-		if (mailslot_.is_open ()) {
+		if (mailslot_.is_valid ()) {
 			Message msg{ 0, 0 };
 			mailslot_.send (msg);
 			WaitForSingleObject (other_process_handle_, INFINITE);
@@ -117,7 +117,7 @@ protected:
 				break;
 		}
 
-		if (!mailslot_.is_open ()) {
+		if (!mailslot_.is_valid ()) {
 			TerminateProcess (pi.hProcess, 1);
 			ADD_FAILURE ();
 		} else {

@@ -26,6 +26,7 @@
 #include "pch.h"
 #include "../Port/Security.h"
 #include "error2errno.h"
+#include "TokenUser.h"
 
 namespace Nirvana {
 namespace Core {
@@ -34,7 +35,25 @@ using Windows::throw_last_error;
 
 namespace Port {
 
-Security::ContextABI Security::Context::duplicate () const
+void* Security::domain_context_;
+
+bool Security::initialize () noexcept
+{
+	return OpenProcessToken (GetCurrentProcess (), TOKEN_READ | TOKEN_DUPLICATE | TOKEN_IMPERSONATE,
+		&domain_context_);
+}
+
+void Security::terminate () noexcept
+{
+	CloseHandle (domain_context_);
+}
+
+const Security::Context& Security::prot_domain_context () noexcept
+{
+	return *reinterpret_cast <const Security::Context*> (&domain_context_);
+}
+
+Security::Context::ABI Security::Context::duplicate () const
 {
 	if (!data_)
 		return 0;
@@ -44,7 +63,7 @@ Security::ContextABI Security::Context::duplicate () const
 	if (!DuplicateHandle (process, (HANDLE)(uintptr_t)data_, process, &h, 0, false, DUPLICATE_SAME_ACCESS))
 		throw_last_error ();
 	assert ((uintptr_t)h <= 0xFFFFFFFF);
-	return (ContextABI)(uintptr_t)h;
+	return (ABI)(uintptr_t)h;
 }
 
 SecurityId Security::Context::security_id () const
@@ -52,20 +71,15 @@ SecurityId Security::Context::security_id () const
 	if (!data_)
 		throw_BAD_PARAM ();
 
-	DWORD len = 0;
-	GetTokenInformation (*this, TokenUser, nullptr, 0, &len);
-	if (!len)
-		throw_last_error ();
-	std::vector <uint8_t> buf ((size_t)len);
-	if (!GetTokenInformation (*this, TokenUser, buf.data (), len, &len))
-		throw_last_error ();
+	Windows::TokenUser user (*this);
 
-	PSID sid = ((const TOKEN_USER*)buf.data ())->User.Sid;
-	len = GetLengthSid (sid);
+	PSID sid = user->User.Sid;
+
+	size_t len = GetLengthSid (sid);
 	return SecurityId ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);
 }
 
-bool Security::is_valid_context (ContextABI context) noexcept
+bool Security::is_valid_context (Context::ABI context) noexcept
 {
 	if (!context)
 		return false;
@@ -73,14 +87,6 @@ bool Security::is_valid_context (ContextABI context) noexcept
 	DWORD len = 0;
 	GetTokenInformation ((HANDLE)(uintptr_t)context, TokenUser, nullptr, 0, &len);
 	return len != 0;
-}
-
-Security::Context Security::get_prot_domain_context ()
-{
-	HANDLE token;
-	if (!OpenProcessToken (GetCurrentProcess (), TOKEN_READ | TOKEN_DUPLICATE | TOKEN_IMPERSONATE, &token))
-		Windows::throw_last_error ();
-	return Context ((ContextABI)(uintptr_t)token);
 }
 
 }

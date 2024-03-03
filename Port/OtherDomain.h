@@ -47,7 +47,14 @@ public:
 		Mailslot::send (msg, (uint32_t)size);
 	}
 
-	Nirvana::Core::Security::Context create_security_context () const;
+	Nirvana::Core::Security::Context create_security_context () const
+	{
+		return create_security_context (Nirvana::Core::Security::Context::current (), process_);
+	}
+
+	static Nirvana::Core::Security::Context create_security_context (
+		const Nirvana::Core::Security::Context& local_context,
+		HANDLE target_process);
 
 protected:
 	HANDLE process () const noexcept
@@ -60,10 +67,6 @@ protected:
 protected:
 	OtherDomainBase (ProtDomainId domain_id);
 	~OtherDomainBase ();
-
-private:
-	Nirvana::Core::Security::Context create_security_context (
-		const Nirvana::Core::Security::Context& local_context) const;
 
 private:
 	HANDLE process_;

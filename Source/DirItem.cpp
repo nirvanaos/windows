@@ -27,6 +27,7 @@
 #include "DirItem.h"
 #include "error2errno.h"
 #include "SecurityInfo.h"
+#include "TokenUser.h"
 #include <unistd.h>
 
 namespace Nirvana {
@@ -66,7 +67,7 @@ DirItem::~DirItem ()
 void* DirItem::get_handle () noexcept
 {
 	if (INVALID_HANDLE_VALUE == handle_) {
-		handle_ = CreateFileW (path (), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+		handle_ = CreateFileW (path (), READ_CONTROL, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 			nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
 		if (INVALID_HANDLE_VALUE != handle_) {
@@ -196,29 +197,34 @@ void DirItem::query_block_size (void* handle) noexcept
 
 uint_fast16_t DirItem::access ()
 {
-	SecurityInfo si (handle (), SE_FILE_OBJECT);
+	HANDLE h = get_handle ();
+	if (INVALID_HANDLE_VALUE == h)
+		return 0;
 
-	SecurityId sid = ExecDomain::current ().security_context ().security_id ();
+	Windows::SecurityInfo si (h, SE_FILE_OBJECT);
+
+	Windows::TokenUser user (Security::Context::current ().port ());
 
 	TRUSTEE_W trustee;
 	trustee.pMultipleTrustee = nullptr;
 	trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
 	trustee.TrusteeForm = TRUSTEE_IS_SID;
 	trustee.TrusteeType = TRUSTEE_IS_USER;
-	trustee.ptstrName = (LPWCH)sid.data ();
+	trustee.ptstrName = (LPWCH)user->User.Sid;
 
 	ACCESS_MASK mask = 0;
-	DWORD err = GetEffectiveRightsFromAclW (si.dacl (), &trustee, &mask);
+	DWORD err;
 
+	err = GetEffectiveRightsFromAclW (si.dacl (), &trustee, &mask);
 	if (err)
 		throw_win_error_sys (err);
 
 	uint_fast16_t ret = F_OK;
-	if (mask & GENERIC_READ)
+	if (mask & FILE_READ_DATA)
 		ret |= R_OK;
-	if (mask & GENERIC_WRITE)
+	if (mask & FILE_WRITE_DATA)
 		ret |= W_OK;
-	if (mask & GENERIC_EXECUTE)
+	if (mask & FILE_EXECUTE)
 		ret |= X_OK;
 
 	return ret;
