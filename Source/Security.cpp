@@ -35,22 +35,26 @@ using Windows::throw_last_error;
 
 namespace Port {
 
-void* Security::domain_context_;
+void* Security::process_token_;
+unsigned Security::everyone_ [SECURITY_MAX_SID_SIZE / sizeof (unsigned)];
 
 bool Security::initialize () noexcept
 {
-	return OpenProcessToken (GetCurrentProcess (), TOKEN_READ | TOKEN_DUPLICATE | TOKEN_IMPERSONATE,
-		&domain_context_);
+	if (!OpenProcessToken (GetCurrentProcess (), TOKEN_READ | TOKEN_DUPLICATE | TOKEN_IMPERSONATE,
+		&process_token_)
+		)
+		return false;
+	
+	DWORD cb = sizeof (everyone_);
+	if (!CreateWellKnownSid (WinWorldSid, nullptr, &everyone_, &cb))
+		return false;
+
+	return true;
 }
 
 void Security::terminate () noexcept
 {
-	CloseHandle (domain_context_);
-}
-
-const Security::Context& Security::prot_domain_context () noexcept
-{
-	return *reinterpret_cast <const Security::Context*> (&domain_context_);
+	CloseHandle (process_token_);
 }
 
 Security::Context::ABI Security::Context::duplicate () const
@@ -73,10 +77,7 @@ SecurityId Security::Context::security_id () const
 
 	Windows::TokenUser user (*this);
 
-	PSID sid = user->User.Sid;
-
-	size_t len = GetLengthSid (sid);
-	return SecurityId ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);
+	return make_security_id (user->User.Sid);
 }
 
 bool Security::is_valid_context (Context::ABI context) noexcept
@@ -87,6 +88,13 @@ bool Security::is_valid_context (Context::ABI context) noexcept
 	DWORD len = 0;
 	GetTokenInformation ((HANDLE)(uintptr_t)context, TokenUser, nullptr, 0, &len);
 	return len != 0;
+}
+
+SecurityId Security::make_security_id (PSID sid)
+{
+	size_t len = GetLengthSid (sid);
+	assert (len);
+	return SecurityId ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);
 }
 
 }

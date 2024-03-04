@@ -33,6 +33,8 @@
 extern "C" __declspec (dllimport)
 int __stdcall CloseHandle (void* handle);
 
+typedef void* PSID;
+
 namespace Nirvana {
 
 typedef IDL::Sequence <CORBA::Octet> SecurityId;
@@ -128,13 +130,26 @@ public:
 
 	static bool is_valid_context (Context::ABI context) noexcept;
 
-	static const Context& prot_domain_context () noexcept;
+	static const Context& prot_domain_context () noexcept
+	{
+		return *reinterpret_cast <const Security::Context*> (&process_token_);
+	}
+
+	//------ Windows-specific ------------
+
+	static SecurityId make_security_id (PSID sid);
 
 	static bool initialize () noexcept;
 	static void terminate () noexcept;
 
+	static PSID everyone () noexcept
+	{
+		return &everyone_;
+	}
+
 private:
-	static void* domain_context_;
+	static void* process_token_;
+	static unsigned everyone_ [];
 };
 
 }

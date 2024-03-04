@@ -28,7 +28,9 @@
 #include "error2errno.h"
 #include "SecurityInfo.h"
 #include "TokenUser.h"
+#include "../Port/Security.h"
 #include <unistd.h>
+#include <sys/stat.h>
 
 namespace Nirvana {
 namespace Core {
@@ -164,11 +166,43 @@ void DirItem::stat (FileStat& st)
 	BY_HANDLE_FILE_INFORMATION att;
 	get_attributes (att);
 
-	st.ino (make64 (att.nFileIndexLow, att.nFileIndexHigh));
+	st.id (id ());
+
+	SecurityInfo si (handle (), SE_FILE_OBJECT);
+
+	st.owner (Port::Security::make_security_id (si.owner ()));
+	st.group (Port::Security::make_security_id (si.group ()));
+
+	uint_fast16_t mode = FileType::directory == type_ ? S_IFDIR : S_IFREG;
+	ACCESS_MASK mask = si.get_effective_rights (si.owner (), TRUSTEE_IS_USER);
+	if (mask & FILE_READ_DATA)
+		mode |= S_IRUSR;
+	if (mask & FILE_WRITE_DATA)
+		mode |= S_IWUSR;
+	if (mask & FILE_EXECUTE)
+		mode |= S_IXUSR;
+
+	mask = si.get_effective_rights (si.group (), TRUSTEE_IS_GROUP);
+	if (mask & FILE_READ_DATA)
+		mode |= S_IRGRP;
+	if (mask & FILE_WRITE_DATA)
+		mode |= S_IWGRP;
+	if (mask & FILE_EXECUTE)
+		mode |= S_IXGRP;
+
+	mask = si.get_effective_rights (Port::Security::everyone (), TRUSTEE_IS_GROUP);
+	if (mask & FILE_READ_DATA)
+		mode |= S_IROTH;
+	if (mask & FILE_WRITE_DATA)
+		mode |= S_IWOTH;
+	if (mask & FILE_EXECUTE)
+		mode |= S_IXOTH;
+
+	st.mode (mode);
+
 	st.dev (att.dwVolumeSerialNumber);
 	st.size (make64 (att.nFileSizeLow, att.nFileSizeHigh));
 	st.nlink (att.nNumberOfLinks);
-	st.type ((uint16_t)type_);
 	st.creation_time ().time (make_time (att.ftCreationTime));
 	st.last_access_time ().time (make_time (att.ftLastAccessTime));
 	st.last_write_time ().time (make_time (att.ftLastWriteTime));
@@ -205,19 +239,7 @@ uint_fast16_t DirItem::access ()
 
 	Windows::TokenUser user (Security::Context::current ().port ());
 
-	TRUSTEE_W trustee;
-	trustee.pMultipleTrustee = nullptr;
-	trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-	trustee.TrusteeForm = TRUSTEE_IS_SID;
-	trustee.TrusteeType = TRUSTEE_IS_USER;
-	trustee.ptstrName = (LPWCH)user->User.Sid;
-
-	ACCESS_MASK mask = 0;
-	DWORD err;
-
-	err = GetEffectiveRightsFromAclW (si.dacl (), &trustee, &mask);
-	if (err)
-		throw_win_error_sys (err);
+	ACCESS_MASK mask = si.get_effective_rights (user->User.Sid, TRUSTEE_IS_USER);
 
 	uint_fast16_t ret = F_OK;
 	if (mask & FILE_READ_DATA)

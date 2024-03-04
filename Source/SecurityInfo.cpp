@@ -34,10 +34,29 @@ namespace Windows {
 SecurityInfo::SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type) :
 	psd_ (nullptr)
 {
-	DWORD err = GetSecurityInfo (handle, obj_type, DACL_SECURITY_INFORMATION,
+	DWORD err = GetSecurityInfo (handle, obj_type, 
+		OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION
+		| UNPROTECTED_DACL_SECURITY_INFORMATION,
 		&owner_, &group_, &dacl_, nullptr, &psd_);
 	if (err)
 		throw_win_error_sys (err);
+}
+
+ACCESS_MASK SecurityInfo::get_effective_rights (PSID sid, TRUSTEE_TYPE type) const
+{
+	TRUSTEE_W trustee;
+	trustee.pMultipleTrustee = nullptr;
+	trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+	trustee.TrusteeForm = TRUSTEE_IS_SID;
+	trustee.TrusteeType = type;
+	trustee.ptstrName = (LPWCH)sid;
+
+	ACCESS_MASK mask = 0;
+	DWORD err = GetEffectiveRightsFromAclW (dacl (), &trustee, &mask);
+	if (err)
+		throw_win_error_sys (err);
+
+	return mask;
 }
 
 }

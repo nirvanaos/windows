@@ -59,6 +59,8 @@ public:
 		return dacl_;
 	}
 
+	ACCESS_MASK get_effective_rights (PSID sid, TRUSTEE_TYPE type) const;
+
 private:
 	PSECURITY_DESCRIPTOR psd_;
 	PSID owner_;
