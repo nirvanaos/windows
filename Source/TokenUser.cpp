@@ -38,10 +38,10 @@ TokenUser::TokenUser (HANDLE token)
 	if (!len)
 		throw_last_error ();
 	size_ = len;
-	buffer_ = g_memory->allocate (nullptr, size_, 0);
+	buffer_ = memory->allocate (nullptr, size_, 0);
 	if (!GetTokenInformation (token, ::TokenUser, buffer_, len, &len)) {
 		DWORD err = GetLastError ();
-		g_memory->release (buffer_, size_);
+		memory->release (buffer_, size_);
 		throw_win_error_sys (err);
 	}
 }

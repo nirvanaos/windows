@@ -27,7 +27,7 @@ extern "C" int __cdecl _register_onexit_function (_onexit_table_t* const table, 
 extern "C" int __cdecl _crt_atexit (_PVFV const function)
 {
   try {
-    Nirvana::g_module->atexit (function);
+    Nirvana::module->atexit (function);
   } catch (...) {
     return ENOMEM;
   }
