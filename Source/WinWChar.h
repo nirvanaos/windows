@@ -46,7 +46,7 @@ typedef char16_t WinWChar;
 #endif
 
 /// Windows wide string.
-typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, UserAllocator <WinWChar> > StringW;
+typedef std::basic_string <WinWChar, std::char_traits <WinWChar> > StringW;
 
 /// Windows wide string shared.
 typedef std::basic_string <WinWChar, std::char_traits <WinWChar>, SharedAllocator <WinWChar> > SharedStringW;

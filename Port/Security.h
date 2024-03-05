@@ -135,6 +135,8 @@ public:
 		return *reinterpret_cast <const Security::Context*> (&process_token_);
 	}
 
+	static IDL::String get_name (const SecurityId& id);
+
 	//------ Windows-specific ------------
 
 	static SecurityId make_security_id (PSID sid);

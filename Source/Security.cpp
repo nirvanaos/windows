@@ -27,11 +27,10 @@
 #include "../Port/Security.h"
 #include "error2errno.h"
 #include "TokenUser.h"
+#include <Nirvana/string_conv.h>
 
 namespace Nirvana {
 namespace Core {
-
-using Windows::throw_last_error;
 
 namespace Port {
 
@@ -65,7 +64,7 @@ Security::Context::ABI Security::Context::duplicate () const
 	HANDLE process = GetCurrentProcess ();
 	HANDLE h;
 	if (!DuplicateHandle (process, (HANDLE)(uintptr_t)data_, process, &h, 0, false, DUPLICATE_SAME_ACCESS))
-		throw_last_error ();
+		Windows::throw_last_error ();
 	assert ((uintptr_t)h <= 0xFFFFFFFF);
 	return (ABI)(uintptr_t)h;
 }
@@ -95,6 +94,67 @@ SecurityId Security::make_security_id (PSID sid)
 	size_t len = GetLengthSid (sid);
 	assert (len);
 	return SecurityId ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);
+}
+
+class NameBuf
+{
+public:
+	NameBuf () :
+		ptr_ (static_),
+		size_ (std::size (static_))
+	{}
+
+	size_t size () const noexcept
+	{
+		return size_;
+	}
+
+	void size (size_t cc)
+	{
+		dynamic_.resize (cc - 1);
+		ptr_ = const_cast <Windows::WinWChar*> (dynamic_.data ());
+		size_ = cc;
+	}
+
+	Windows::WinWChar* ptr () const noexcept
+	{
+		return ptr_;
+	}
+
+private:
+	Windows::WinWChar static_ [128];
+	Windows::StringW dynamic_;
+	Windows::WinWChar* ptr_;
+	size_t size_;
+};
+
+IDL::String Security::get_name (const SecurityId& id)
+{
+	NameBuf name, domain;
+	SID_NAME_USE use;
+	DWORD name_cc, domain_cc;
+	for (;;) {
+		name_cc = (DWORD)name.size ();
+		domain_cc = (DWORD)domain.size ();
+		if (!LookupAccountSidW (nullptr, (PSID)id.data (), name.ptr (), &name_cc, domain.ptr (), &domain_cc, &use)) {
+			DWORD err = GetLastError ();
+			if (ERROR_INSUFFICIENT_BUFFER != err)
+				Windows::throw_win_error_sys (err);
+		} else
+			break;
+
+		if (name_cc > name.size ())
+			name.size (name_cc);
+		if (domain_cc > domain.size ())
+			domain.size (domain_cc);
+	}
+
+	IDL::String ret;
+	ret.reserve (name_cc + 1 + domain_cc);
+	append_utf8 (name.ptr (), name.ptr () + name_cc, ret);
+	ret += '/';
+	append_utf8 (domain.ptr (), domain.ptr () + domain_cc, ret);
+	return ret;
 }
 
 }

@@ -40,7 +40,7 @@ public:
 	
 	~TokenUser ()
 	{
-		MemContext::current ().heap ().release (buffer_, size_);
+		memory->release (buffer_, size_);
 	}
 
 	const TOKEN_USER* operator -> () const noexcept

@@ -28,9 +28,6 @@
 #include "error2errno.h"
 #include "SecurityInfo.h"
 #include "TokenUser.h"
-#include "../Port/Security.h"
-#include <unistd.h>
-#include <sys/stat.h>
 
 namespace Nirvana {
 namespace Core {
@@ -168,36 +165,12 @@ void DirItem::stat (FileStat& st)
 
 	st.id (id ());
 
-	SecurityInfo si (handle (), SE_FILE_OBJECT);
+	SecurityInfoDirItem si (handle ());
 
 	st.owner (Port::Security::make_security_id (si.owner ()));
 	st.group (Port::Security::make_security_id (si.group ()));
 
-	uint_fast16_t mode = FileType::directory == type_ ? S_IFDIR : S_IFREG;
-	ACCESS_MASK mask = si.get_effective_rights (si.owner (), TRUSTEE_IS_USER);
-	if (mask & FILE_READ_DATA)
-		mode |= S_IRUSR;
-	if (mask & FILE_WRITE_DATA)
-		mode |= S_IWUSR;
-	if (mask & FILE_EXECUTE)
-		mode |= S_IXUSR;
-
-	mask = si.get_effective_rights (si.group (), TRUSTEE_IS_GROUP);
-	if (mask & FILE_READ_DATA)
-		mode |= S_IRGRP;
-	if (mask & FILE_WRITE_DATA)
-		mode |= S_IWGRP;
-	if (mask & FILE_EXECUTE)
-		mode |= S_IXGRP;
-
-	mask = si.get_effective_rights (Port::Security::everyone (), TRUSTEE_IS_GROUP);
-	if (mask & FILE_READ_DATA)
-		mode |= S_IROTH;
-	if (mask & FILE_WRITE_DATA)
-		mode |= S_IWOTH;
-	if (mask & FILE_EXECUTE)
-		mode |= S_IXOTH;
-
+	uint_fast16_t mode = si.get_mode () | (FileType::directory == type_ ? S_IFDIR : S_IFREG);
 	st.mode (mode);
 
 	st.dev (att.dwVolumeSerialNumber);
@@ -235,21 +208,8 @@ uint_fast16_t DirItem::access ()
 	if (INVALID_HANDLE_VALUE == h)
 		return 0;
 
-	Windows::SecurityInfo si (h, SE_FILE_OBJECT);
-
-	Windows::TokenUser user (Security::Context::current ().port ());
-
-	ACCESS_MASK mask = si.get_effective_rights (user->User.Sid, TRUSTEE_IS_USER);
-
-	uint_fast16_t ret = F_OK;
-	if (mask & FILE_READ_DATA)
-		ret |= R_OK;
-	if (mask & FILE_WRITE_DATA)
-		ret |= W_OK;
-	if (mask & FILE_EXECUTE)
-		ret |= X_OK;
-
-	return ret;
+	Windows::SecurityInfoDirItem si (h);
+	return si.get_access (Security::Context::current ().port ());
 }
 
 }

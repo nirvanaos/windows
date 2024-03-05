@@ -35,8 +35,7 @@ SecurityInfo::SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type) :
 	psd_ (nullptr)
 {
 	DWORD err = GetSecurityInfo (handle, obj_type, 
-		OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION
-		| UNPROTECTED_DACL_SECURITY_INFORMATION,
+		OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
 		&owner_, &group_, &dacl_, nullptr, &psd_);
 	if (err)
 		throw_win_error_sys (err);

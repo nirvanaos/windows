@@ -28,8 +28,7 @@
 #include "win32.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
-#include <fnctl.h>
-#include <sys/stat.h>
+#include <Nirvana/posix.h>
 #include <ORB/Services.h>
 #include "../Port/Timer.h"
 #include <TimerEvent.h>

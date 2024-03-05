@@ -28,7 +28,7 @@
 #include "error2errno.h"
 #include "MessageBroker.h"
 #include "RequestOverlapped.h"
-#include <fnctl.h>
+#include <Nirvana/posix.h>
 
 namespace Nirvana {
 namespace Core {

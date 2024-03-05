@@ -28,7 +28,9 @@
 #pragma once
 
 #include "win32.h"
+#include "TokenUser.h"
 #include <AclAPI.h>
+#include <Nirvana/posix.h>
 
 namespace Nirvana {
 namespace Core {
@@ -66,6 +68,60 @@ private:
 	PSID owner_;
 	PSID group_;
 	PACL dacl_;
+};
+
+class SecurityInfoDirItem : public SecurityInfo
+{
+public:
+	SecurityInfoDirItem (HANDLE handle) :
+		SecurityInfo (handle, SE_FILE_OBJECT)
+	{}
+
+	unsigned get_mode () const
+	{
+		unsigned mode = 0;
+		ACCESS_MASK mask = get_effective_rights (owner (), TRUSTEE_IS_USER);
+		if (mask & FILE_READ_DATA)
+			mode |= S_IRUSR;
+		if (mask & FILE_WRITE_DATA)
+			mode |= S_IWUSR;
+		if (mask & FILE_EXECUTE)
+			mode |= S_IXUSR;
+
+		mask = get_effective_rights (group (), TRUSTEE_IS_GROUP);
+		if (mask & FILE_READ_DATA)
+			mode |= S_IRGRP;
+		if (mask & FILE_WRITE_DATA)
+			mode |= S_IWGRP;
+		if (mask & FILE_EXECUTE)
+			mode |= S_IXGRP;
+
+		mask = get_effective_rights (Port::Security::everyone (), TRUSTEE_IS_GROUP);
+		if (mask & FILE_READ_DATA)
+			mode |= S_IROTH;
+		if (mask & FILE_WRITE_DATA)
+			mode |= S_IWOTH;
+		if (mask & FILE_EXECUTE)
+			mode |= S_IXOTH;
+		return mode;
+	}
+
+	unsigned get_access (const Port::Security::Context& token) const
+	{
+		TokenUser user (token);
+
+		ACCESS_MASK mask = get_effective_rights (user->User.Sid, TRUSTEE_IS_USER);
+
+		unsigned ret = F_OK;
+		if (mask & FILE_READ_DATA)
+			ret |= R_OK;
+		if (mask & FILE_WRITE_DATA)
+			ret |= W_OK;
+		if (mask & FILE_EXECUTE)
+			ret |= X_OK;
+		return ret;
+	}
+
 };
 
 }
