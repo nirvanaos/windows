@@ -88,13 +88,15 @@ public:
 		if (mask & FILE_EXECUTE)
 			mode |= S_IXUSR;
 
-		mask = get_effective_rights (group (), TRUSTEE_IS_GROUP);
-		if (mask & FILE_READ_DATA)
-			mode |= S_IRGRP;
-		if (mask & FILE_WRITE_DATA)
-			mode |= S_IWGRP;
-		if (mask & FILE_EXECUTE)
-			mode |= S_IXGRP;
+		if (!IsWellKnownSid (group (), WinNullSid)) {
+			mask = get_effective_rights (group (), TRUSTEE_IS_GROUP);
+			if (mask & FILE_READ_DATA)
+				mode |= S_IRGRP;
+			if (mask & FILE_WRITE_DATA)
+				mode |= S_IWGRP;
+			if (mask & FILE_EXECUTE)
+				mode |= S_IXGRP;
+		}
 
 		mask = get_effective_rights (Port::Security::everyone (), TRUSTEE_IS_GROUP);
 		if (mask & FILE_READ_DATA)

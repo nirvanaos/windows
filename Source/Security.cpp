@@ -91,9 +91,13 @@ bool Security::is_valid_context (Context::ABI context) noexcept
 
 SecurityId Security::make_security_id (PSID sid)
 {
-	size_t len = GetLengthSid (sid);
-	assert (len);
-	return SecurityId ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);
+	SecurityId id;
+	if (!IsWellKnownSid (sid, WinNullSid)) {
+		size_t len = GetLengthSid (sid);
+		assert (len);
+		id.assign ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);
+	}
+	return id;
 }
 
 class NameBuf
@@ -130,30 +134,34 @@ private:
 
 IDL::String Security::get_name (const SecurityId& id)
 {
-	NameBuf name, domain;
-	SID_NAME_USE use;
-	DWORD name_cc, domain_cc;
-	for (;;) {
-		name_cc = (DWORD)name.size ();
-		domain_cc = (DWORD)domain.size ();
-		if (!LookupAccountSidW (nullptr, (PSID)id.data (), name.ptr (), &name_cc, domain.ptr (), &domain_cc, &use)) {
-			DWORD err = GetLastError ();
-			if (ERROR_INSUFFICIENT_BUFFER != err)
-				Windows::throw_win_error_sys (err);
-		} else
-			break;
+	IDL::String ret;
 
-		if (name_cc > name.size ())
-			name.size (name_cc);
-		if (domain_cc > domain.size ())
-			domain.size (domain_cc);
+	if (!id.empty ()) {
+		NameBuf name, domain;
+		SID_NAME_USE use;
+		DWORD name_cc, domain_cc;
+		for (;;) {
+			name_cc = (DWORD)name.size ();
+			domain_cc = (DWORD)domain.size ();
+			if (!LookupAccountSidW (nullptr, (PSID)id.data (), name.ptr (), &name_cc, domain.ptr (), &domain_cc, &use)) {
+				DWORD err = GetLastError ();
+				if (ERROR_INSUFFICIENT_BUFFER != err)
+					Windows::throw_win_error_sys (err);
+			} else
+				break;
+
+			if (name_cc > name.size ())
+				name.size (name_cc);
+			if (domain_cc > domain.size ())
+				domain.size (domain_cc);
+		}
+
+		ret.reserve (name_cc + 1 + domain_cc);
+		append_utf8 (name.ptr (), name.ptr () + name_cc, ret);
+		ret += '/';
+		append_utf8 (domain.ptr (), domain.ptr () + domain_cc, ret);
 	}
 
-	IDL::String ret;
-	ret.reserve (name_cc + 1 + domain_cc);
-	append_utf8 (name.ptr (), name.ptr () + name_cc, ret);
-	ret += '/';
-	append_utf8 (domain.ptr (), domain.ptr () + domain_cc, ret);
 	return ret;
 }
 
