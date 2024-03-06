@@ -27,7 +27,7 @@
 #include "DirItem.h"
 #include "error2errno.h"
 #include "SecurityInfo.h"
-#include "TokenUser.h"
+#include "TokenInformation.h"
 
 namespace Nirvana {
 namespace Core {

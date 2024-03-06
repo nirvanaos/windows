@@ -35,9 +35,9 @@ namespace Core {
 namespace Windows {
 
 bool FileAccess::open (Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
-	uint32_t flags_and_attributes)
+	uint32_t flags_and_attributes, _SECURITY_ATTRIBUTES* psi)
 {
-	handle_ = file.open (access, share_mode, creation_disposition, flags_and_attributes);
+	handle_ = file.open (access, share_mode, creation_disposition, flags_and_attributes, psi);
 	if (INVALID_HANDLE_VALUE == handle_)
 		return false;
 	MessageBroker::completion_port ().add_receiver (handle_, *this);

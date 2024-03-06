@@ -30,6 +30,8 @@
 
 #include "../Source/DirItem.h"
 
+struct _SECURITY_ATTRIBUTES;
+
 namespace Nirvana {
 namespace Core {
 
@@ -113,7 +115,7 @@ private:
 	friend class FileAccessDirect;
 
 	void* open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
-		uint32_t flags_and_attributes);
+		uint32_t flags_and_attributes, _SECURITY_ATTRIBUTES* psi);
 
 	uint32_t block_size () const noexcept
 	{

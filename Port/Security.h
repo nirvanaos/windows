@@ -156,7 +156,7 @@ public:
 
 	static PSID creator_group () noexcept
 	{
-		return creator_owner_;
+		return creator_group_;
 	}
 
 private:

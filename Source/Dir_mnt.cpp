@@ -87,11 +87,11 @@ void Dir_mnt::create_link (CosNaming::Name& n, const DirItemId& target, unsigned
 	return Base::create_link (n, target, flags);
 }
 
-DirItemId Dir_mnt::create_dir (CosNaming::Name& n) const
+DirItemId Dir_mnt::create_dir (CosNaming::Name& n, unsigned mode) const
 {
 	if (n.size () <= 1)
 		throw CORBA::NO_PERMISSION ();
-	return Base::create_dir (n);
+	return Base::create_dir (n, mode);
 }
 
 }

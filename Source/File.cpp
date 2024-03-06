@@ -75,10 +75,10 @@ FileType File::type () noexcept
 }
 
 void* File::open (uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
-	uint32_t flags_and_attributes)
+	uint32_t flags_and_attributes, _SECURITY_ATTRIBUTES* psi)
 {
 	HANDLE h = CreateFileW (path (),
-		access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
+		access, share_mode, psi, creation_disposition, flags_and_attributes, nullptr);
 
 	if (INVALID_HANDLE_VALUE == h)
 		error_check_exist ();

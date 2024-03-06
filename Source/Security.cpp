@@ -26,7 +26,7 @@
 #include "pch.h"
 #include "../Port/Security.h"
 #include "error2errno.h"
-#include "TokenUser.h"
+#include "TokenInformation.h"
 #include <Nirvana/string_conv.h>
 #include <sddl.h>
 

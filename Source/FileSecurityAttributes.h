@@ -23,8 +23,8 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_WINDOWS_TOKENUSER_H_
-#define NIRVANA_CORE_WINDOWS_TOKENUSER_H_
+#ifndef NIRVANA_CORE_WINDOWS_FILESECURITYATTRIBUTES_H_
+#define NIRVANA_CORE_WINDOWS_FILESECURITYATTRIBUTES_H_
 #pragma once
 
 #include "win32.h"
@@ -33,24 +33,22 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-class TokenUser
+class FileSecurityAttributes
 {
 public:
-	TokenUser (HANDLE token);
-	
-	~TokenUser ()
-	{
-		memory->release (buffer_, size_);
-	}
+	FileSecurityAttributes ();
+	~FileSecurityAttributes ();
 
-	const TOKEN_USER* operator -> () const noexcept
+	void initialize (unsigned mode, bool dir);
+
+	SECURITY_ATTRIBUTES* security_attributes () const noexcept
 	{
-		return (const TOKEN_USER*)buffer_;
+		return psa_;
 	}
 
 private:
-	void* buffer_;
-	size_t size_;
+	SECURITY_ATTRIBUTES* psa_;
+	SECURITY_ATTRIBUTES sa_;
 };
 
 }

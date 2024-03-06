@@ -28,6 +28,7 @@
 #include "error2errno.h"
 #include "MessageBroker.h"
 #include "RequestOverlapped.h"
+#include "FileSecurityAttributes.h"
 #include <Nirvana/posix.h>
 
 namespace Nirvana {
@@ -40,18 +41,28 @@ namespace Port {
 FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, Pos& size, Size& block_size)
 {
 	uint32_t creation;
+	bool init_attr = false;
 	if (flags & O_CREAT) {
 		if (flags & O_EXCL) {
 			if (flags & O_TRUNC)
 				creation = TRUNCATE_EXISTING;
-			else
+			else {
 				creation = CREATE_NEW;
-		} else if (flags & O_TRUNC)
+				init_attr = true;
+			}
+		} else if (flags & O_TRUNC) {
 			creation = CREATE_ALWAYS;
-		else
+			init_attr = true;
+		} else {
 			creation = OPEN_ALWAYS;
+			init_attr = true;
+		}
 	} else
 		creation = OPEN_EXISTING;
+
+	FileSecurityAttributes fsa;
+	if (init_attr)
+		fsa.initialize (mode, false);
 
 	// We allow Windows users to read and delete file opened by the Nirvana,
 	// but do not allow write to it.
@@ -60,7 +71,7 @@ FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, P
 	if (!open (file, GENERIC_READ | GENERIC_WRITE, SHARE_MODE, creation, FILE_FLAG_OVERLAPPED
 		| FILE_ATTRIBUTE_NORMAL
 		| FILE_FLAG_NO_BUFFERING
-		| FILE_FLAG_WRITE_THROUGH)
+		| FILE_FLAG_WRITE_THROUGH, fsa.security_attributes ())
 		) {
 
 		if (flags & O_ACCMODE)
@@ -69,7 +80,7 @@ FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, P
 		if (!open (file, GENERIC_READ, SHARE_MODE, creation, FILE_FLAG_OVERLAPPED
 			| FILE_ATTRIBUTE_NORMAL
 			| FILE_FLAG_NO_BUFFERING
-			| FILE_FLAG_WRITE_THROUGH)
+			| FILE_FLAG_WRITE_THROUGH, fsa.security_attributes ())
 			)
 				throw_last_error ();
 	}

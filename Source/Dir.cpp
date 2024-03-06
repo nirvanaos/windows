@@ -28,6 +28,7 @@
 #include "DirIterator.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
+#include "FileSecurityAttributes.h"
 
 using namespace CosNaming;
 using CosNaming::Core::NamingContextRoot;
@@ -175,11 +176,13 @@ void Dir::unlink (Name& n) const
 	unlink (path.c_str (), att);
 }
 
-DirItemId Dir::create_dir (Name& n) const
+DirItemId Dir::create_dir (Name& n, unsigned mode) const
 {
 	StringW path = check_path (n);
 
-	if (!CreateDirectoryW (path.c_str (), nullptr)) {
+	Windows::FileSecurityAttributes fsa;
+	fsa.initialize (mode, true);
+	if (!CreateDirectoryW (path.c_str (), fsa.security_attributes ())) {
 		DWORD err = GetLastError ();
 		if (ERROR_ALREADY_EXISTS == err)
 			throw NamingContext::AlreadyBound ();

@@ -126,7 +126,7 @@ protected:
 	/// 
 	/// \param n Directory name.
 	/// \returns New directory unique id.
-	virtual DirItemId create_dir (CosNaming::Name& n) const;
+	virtual DirItemId create_dir (CosNaming::Name& n, unsigned mode) const;
 
 	/// Make new file id.
 	/// 

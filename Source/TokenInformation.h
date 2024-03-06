@@ -23,41 +23,55 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "SecurityInfo.h"
-#include <AclAPI.h>
-#include "error2errno.h"
+#ifndef NIRVANA_CORE_WINDOWS_TOKENINFORMATION_H_
+#define NIRVANA_CORE_WINDOWS_TOKENINFORMATION_H_
+#pragma once
+
+#include "win32.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-SecurityInfo::SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type) :
-	psd_ (nullptr)
+class TokenInformation
 {
-	DWORD err = GetSecurityInfo (handle, obj_type, 
-		OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
-		&owner_, &group_, &dacl_, nullptr, &psd_);
-	if (err)
-		throw_win_error_sys (err);
-}
+protected:
+	TokenInformation (HANDLE token, TOKEN_INFORMATION_CLASS type);
+	
+	~TokenInformation ()
+	{
+		memory->release (buffer_, size_);
+	}
 
-ACCESS_MASK SecurityInfo::get_effective_rights (PSID sid, TRUSTEE_TYPE type) const
+	const void* data () const noexcept
+	{
+		return buffer_;
+	}
+
+private:
+	void* buffer_;
+	size_t size_;
+};
+
+template <class T, TOKEN_INFORMATION_CLASS type>
+class TokenInfo : private TokenInformation
 {
-	TRUSTEE_W trustee;
-	trustee.pMultipleTrustee = nullptr;
-	trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-	trustee.TrusteeForm = TRUSTEE_IS_SID;
-	trustee.TrusteeType = type;
-	trustee.ptstrName = (LPWCH)sid;
+public:
+	TokenInfo (HANDLE token) :
+		TokenInformation (token, type)
+	{}
 
-	ACCESS_MASK mask = 0;
-	DWORD err = GetEffectiveRightsFromAclW (dacl (), &trustee, &mask);
-	if (err)
-		throw_win_error_sys (err);
+	const T* operator -> () const noexcept
+	{
+		return (T*)data ();
+	}
+};
 
-	return mask;
-}
+typedef TokenInfo <TOKEN_USER, ::TokenUser> TokenUser;
+typedef TokenInfo <TOKEN_GROUPS, ::TokenGroups> TokenGroups;
 
 }
 }
 }
+
+#endif

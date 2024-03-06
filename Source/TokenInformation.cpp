@@ -24,22 +24,22 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
-#include "TokenUser.h"
+#include "TokenInformation.h"
 #include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-TokenUser::TokenUser (HANDLE token)
+TokenInformation::TokenInformation (HANDLE token, TOKEN_INFORMATION_CLASS type)
 {
 	DWORD len = 0;
-	GetTokenInformation (token, ::TokenUser, nullptr, 0, &len);
+	GetTokenInformation (token, type, nullptr, 0, &len);
 	if (!len)
 		throw_last_error ();
 	size_ = len;
-	buffer_ = memory->allocate (nullptr, size_, 0);
-	if (!GetTokenInformation (token, ::TokenUser, buffer_, len, &len)) {
+	buffer_ = (TOKEN_USER*)memory->allocate (nullptr, size_, 0);
+	if (!GetTokenInformation (token, type, buffer_, len, &len)) {
 		DWORD err = GetLastError ();
 		memory->release (buffer_, size_);
 		throw_win_error_sys (err);

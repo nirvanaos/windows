@@ -47,7 +47,7 @@ protected:
 	~FileAccess ();
 
 	bool open (Port::File& file, uint32_t access, uint32_t share_mode, uint32_t creation_disposition,
-		uint32_t flags_and_attributes);
+		uint32_t flags_and_attributes, _SECURITY_ATTRIBUTES* psi);
 
 	unsigned flags () const noexcept
 	{

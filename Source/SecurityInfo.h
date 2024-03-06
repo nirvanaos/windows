@@ -28,7 +28,8 @@
 #pragma once
 
 #include "win32.h"
-#include "TokenUser.h"
+#include "TokenInformation.h"
+#include "../Port/Security.h"
 #include <AclAPI.h>
 #include <Nirvana/posix.h>
 

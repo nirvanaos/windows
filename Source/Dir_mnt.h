@@ -45,7 +45,7 @@ public:
 	virtual StringW get_path (CosNaming::Name& n, bool create_file) const override;
 	virtual void unlink (CosNaming::Name& n) const override;
 	virtual void create_link (CosNaming::Name& n, const DirItemId& target, unsigned flags) const override;
-	virtual DirItemId create_dir (CosNaming::Name& n) const override;
+	virtual DirItemId create_dir (CosNaming::Name& n, unsigned mode) const override;
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 };
 
