@@ -28,14 +28,25 @@
 #include "error2errno.h"
 #include "TokenUser.h"
 #include <Nirvana/string_conv.h>
+#include <sddl.h>
+
+#define WELL_KNOWN_SID_SIZE (SECURITY_SID_SIZE (1) + sizeof (unsigned) - 1) / sizeof (unsigned)
 
 namespace Nirvana {
 namespace Core {
-
 namespace Port {
 
 void* Security::process_token_;
-unsigned Security::everyone_ [SECURITY_MAX_SID_SIZE / sizeof (unsigned)];
+
+unsigned Security::everyone_ [WELL_KNOWN_SID_SIZE];
+unsigned Security::creator_owner_ [WELL_KNOWN_SID_SIZE];
+unsigned Security::creator_group_ [WELL_KNOWN_SID_SIZE];
+
+static inline BOOL create_well_known_sid (unsigned* p, WELL_KNOWN_SID_TYPE t)
+{
+	DWORD cb = WELL_KNOWN_SID_SIZE * sizeof (unsigned);
+	return CreateWellKnownSid (WinWorldSid, nullptr, p, &cb);
+}
 
 bool Security::initialize () noexcept
 {
@@ -44,11 +55,10 @@ bool Security::initialize () noexcept
 		)
 		return false;
 	
-	DWORD cb = sizeof (everyone_);
-	if (!CreateWellKnownSid (WinWorldSid, nullptr, &everyone_, &cb))
-		return false;
-
-	return true;
+	return
+		create_well_known_sid (everyone_, WinWorldSid) &&
+		create_well_known_sid (creator_owner_, WinCreatorOwnerSid) &&
+		create_well_known_sid (creator_group_, WinCreatorGroupSid);
 }
 
 void Security::terminate () noexcept

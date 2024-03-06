@@ -98,7 +98,7 @@ public:
 				mode |= S_IXGRP;
 		}
 
-		mask = get_effective_rights (Port::Security::everyone (), TRUSTEE_IS_GROUP);
+		mask = get_effective_rights (Port::Security::everyone (), TRUSTEE_IS_WELL_KNOWN_GROUP);
 		if (mask & FILE_READ_DATA)
 			mode |= S_IROTH;
 		if (mask & FILE_WRITE_DATA)

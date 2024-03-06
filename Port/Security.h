@@ -146,12 +146,24 @@ public:
 
 	static PSID everyone () noexcept
 	{
-		return &everyone_;
+		return everyone_;
+	}
+
+	static PSID creator_owner () noexcept
+	{
+		return creator_owner_;
+	}
+
+	static PSID creator_group () noexcept
+	{
+		return creator_owner_;
 	}
 
 private:
 	static void* process_token_;
 	static unsigned everyone_ [];
+	static unsigned creator_owner_ [];
+	static unsigned creator_group_ [];
 };
 
 }
