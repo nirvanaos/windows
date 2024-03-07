@@ -26,7 +26,7 @@ protected:
 	{
 		// Code here will be called immediately after the constructor (right
 		// before each test).
-		Nirvana::Core::Port::Security::initialize ();
+		ASSERT_TRUE (Nirvana::Core::Port::Security::initialize ());
 	}
 
 	virtual void TearDown ()
@@ -66,19 +66,25 @@ TEST_F (TestSecurity, CreateFile)
 	ASSERT_LT (GetTempPathW ((DWORD)std::size (tmp_path), tmp_path), (DWORD)std::size (tmp_path));
 	Windows::WinWChar tmp_name [MAX_PATH];
 
-	static const unsigned modes [] = {
-		//S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP,
-		S_IRUSR | S_IWUSR | S_IRGRP,
-		S_IRUSR | S_IWUSR
+	struct Mode
+	{
+		unsigned requested, expected;
 	};
 
-	for (unsigned mode : modes) {
+	static const Mode modes [] = {
+		{ 0, S_IRWXU },
+		{ S_IRWXU, S_IRWXU },
+		{ S_IRUSR | S_IWUSR, S_IRUSR | S_IWUSR },
+		{ S_IRUSR | S_IWUSR | S_IROTH, S_IRUSR | S_IWUSR | S_IROTH },
+		{ S_IRUSR | S_IWUSR | S_IRGRP, S_IRUSR | S_IWUSR | S_IRGRP }
+	};
+
+	for (const Mode& mode : modes) {
 		ASSERT_NE (GetTempFileNameW (tmp_path, L"tst", 0, tmp_name), 0);
 
 		DeleteFileW (tmp_name);
 
-		Windows::FileSecurityAttributes sa;
-		sa.initialize (mode, false);
+		Windows::FileSecurityAttributes sa (Port::Security::prot_domain_context (), mode.requested, false);
 
 		Windows::Handle handle = CreateFileW (tmp_name, GENERIC_READ | GENERIC_WRITE, 0,
 			sa.security_attributes (), CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -96,7 +102,11 @@ TEST_F (TestSecurity, CreateFile)
 		handle.close ();
 		DeleteFileW (tmp_name);
 
-		EXPECT_EQ (mode1 & (S_IRWXU | S_IRWXG), mode);
+		unsigned expected_mode = mode.expected;
+		if (group_id.empty ())
+			expected_mode &= ~S_IRWXG;
+
+		EXPECT_EQ (mode1, expected_mode);
 	}
 }
 

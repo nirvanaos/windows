@@ -39,6 +39,12 @@ SecurityInfo::SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type) :
 		&owner_, &group_, &dacl_, nullptr, &psd_);
 	if (err)
 		throw_win_error_sys (err);
+
+	if (
+		IsWellKnownSid (group_, WinAccountDomainUsersSid)
+		|| IsWellKnownSid (group_, WinNullSid)
+		)
+		group_ = nullptr;
 }
 
 ACCESS_MASK SecurityInfo::get_effective_rights (PSID sid, TRUSTEE_TYPE type) const

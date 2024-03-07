@@ -62,7 +62,7 @@ FileAccessDirect::FileAccessDirect (File& file, unsigned flags, unsigned mode, P
 
 	FileSecurityAttributes fsa;
 	if (init_attr)
-		fsa.initialize (mode, false);
+		fsa = FileSecurityAttributes (Core::Security::Context::current ().port (), mode, false);
 
 	// We allow Windows users to read and delete file opened by the Nirvana,
 	// but do not allow write to it.

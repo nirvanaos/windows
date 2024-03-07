@@ -27,6 +27,7 @@
 #define NIRVANA_CORE_WINDOWS_FILESECURITYATTRIBUTES_H_
 #pragma once
 
+#include "../Port/Security.h"
 #include "win32.h"
 
 namespace Nirvana {
@@ -36,10 +37,25 @@ namespace Windows {
 class FileSecurityAttributes
 {
 public:
-	FileSecurityAttributes ();
-	~FileSecurityAttributes ();
+	FileSecurityAttributes () noexcept;
+	FileSecurityAttributes (const Port::Security::Context& context, unsigned mode, bool dir);
+	
+	FileSecurityAttributes (FileSecurityAttributes&& src) noexcept
+	{
+		move (std::move (src));
+	}
 
-	void initialize (unsigned mode, bool dir);
+	~FileSecurityAttributes ()
+	{
+		clear ();
+	}
+
+	FileSecurityAttributes& operator = (FileSecurityAttributes&& src)
+	{
+		clear ();
+		move (std::move (src));
+		return *this;
+	}
 
 	SECURITY_ATTRIBUTES* security_attributes () const noexcept
 	{
@@ -47,8 +63,13 @@ public:
 	}
 
 private:
+	void clear () noexcept;
+	void move (FileSecurityAttributes&& src) noexcept;
+
+private:
 	SECURITY_ATTRIBUTES* psa_;
 	SECURITY_ATTRIBUTES sa_;
+	PACL acl_;
 };
 
 }

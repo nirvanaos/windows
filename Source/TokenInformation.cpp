@@ -31,7 +31,8 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-TokenInformation::TokenInformation (HANDLE token, TOKEN_INFORMATION_CLASS type)
+TokenInformation::TokenInformation (HANDLE token, TOKEN_INFORMATION_CLASS type) :
+	TokenInformation ()
 {
 	DWORD len = 0;
 	GetTokenInformation (token, type, nullptr, 0, &len);
@@ -44,6 +45,20 @@ TokenInformation::TokenInformation (HANDLE token, TOKEN_INFORMATION_CLASS type)
 		memory->release (buffer_, size_);
 		throw_win_error_sys (err);
 	}
+}
+
+void TokenInformation::clear () noexcept
+{
+	if (buffer_)
+		memory->release (buffer_, size_);
+}
+
+void TokenInformation::move (TokenInformation&& src) noexcept
+{
+	buffer_ = src.buffer_;
+	size_ = src.size_;
+	src.buffer_ = nullptr;
+	src.size_ = 0;
 }
 
 }

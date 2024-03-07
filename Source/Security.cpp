@@ -39,13 +39,12 @@ namespace Port {
 void* Security::process_token_;
 
 unsigned Security::everyone_ [WELL_KNOWN_SID_SIZE];
-unsigned Security::creator_owner_ [WELL_KNOWN_SID_SIZE];
-unsigned Security::creator_group_ [WELL_KNOWN_SID_SIZE];
 
-static inline BOOL create_well_known_sid (unsigned* p, WELL_KNOWN_SID_TYPE t)
+static inline bool create_well_known_sid (unsigned* p, WELL_KNOWN_SID_TYPE t)
 {
 	DWORD cb = WELL_KNOWN_SID_SIZE * sizeof (unsigned);
-	return CreateWellKnownSid (WinWorldSid, nullptr, p, &cb);
+	BOOL ret = CreateWellKnownSid (WinWorldSid, nullptr, p, &cb);
+	return ret && cb <= WELL_KNOWN_SID_SIZE * sizeof (unsigned);
 }
 
 bool Security::initialize () noexcept
@@ -56,9 +55,7 @@ bool Security::initialize () noexcept
 		return false;
 	
 	return
-		create_well_known_sid (everyone_, WinWorldSid) &&
-		create_well_known_sid (creator_owner_, WinCreatorOwnerSid) &&
-		create_well_known_sid (creator_group_, WinCreatorGroupSid);
+		create_well_known_sid (everyone_, WinWorldSid);
 }
 
 void Security::terminate () noexcept
@@ -102,7 +99,7 @@ bool Security::is_valid_context (Context::ABI context) noexcept
 SecurityId Security::make_security_id (PSID sid)
 {
 	SecurityId id;
-	if (!IsWellKnownSid (sid, WinNullSid)) {
+	if (sid && !IsWellKnownSid (sid, WinNullSid)) {
 		size_t len = GetLengthSid (sid);
 		assert (len);
 		id.assign ((const CORBA::Octet*)sid, (const CORBA::Octet*)sid + len);

@@ -89,7 +89,7 @@ public:
 		if (mask & FILE_EXECUTE)
 			mode |= S_IXUSR;
 
-		if (!IsWellKnownSid (group (), WinNullSid)) {
+		if (group ()) {
 			mask = get_effective_rights (group (), TRUSTEE_IS_GROUP);
 			if (mask & FILE_READ_DATA)
 				mode |= S_IRGRP;

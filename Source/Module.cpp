@@ -67,8 +67,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 
 		{
 			IDL::String name (TEMP_MODULE_PREFIX "XXXXXX" TEMP_MODULE_EXT);
-			tmp_file_access = AccessDirect::_narrow (tmp_dir->mkostemps (name, 4, O_DIRECT, S_IRWXU
-				)->_to_object ());
+			tmp_file_access = AccessDirect::_narrow (tmp_dir->mkostemps (name, 4, O_DIRECT, 0)->_to_object ());
 			// The name is ASCII so we can append it without a conversion
 			tmp_path.append (name.begin (), name.end ());
 			temp_path_ = std::move (tmp_path);

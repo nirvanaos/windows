@@ -180,8 +180,7 @@ DirItemId Dir::create_dir (Name& n, unsigned mode) const
 {
 	StringW path = check_path (n);
 
-	Windows::FileSecurityAttributes fsa;
-	fsa.initialize (mode, true);
+	Windows::FileSecurityAttributes fsa (Core::Security::Context::current ().port (), mode, true);
 	if (!CreateDirectoryW (path.c_str (), fsa.security_attributes ())) {
 		DWORD err = GetLastError ();
 		if (ERROR_ALREADY_EXISTS == err)

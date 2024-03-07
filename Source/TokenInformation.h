@@ -36,17 +36,44 @@ namespace Windows {
 class TokenInformation
 {
 protected:
+	TokenInformation () noexcept :
+		buffer_ (nullptr),
+		size_ (0)
+	{}
+
 	TokenInformation (HANDLE token, TOKEN_INFORMATION_CLASS type);
+
+	TokenInformation (TokenInformation&& src) noexcept
+	{
+		move (std::move (src));
+	}
 	
 	~TokenInformation ()
 	{
-		memory->release (buffer_, size_);
+		clear ();
+	}
+
+	TokenInformation& operator = (TokenInformation&& src) noexcept
+	{
+		clear ();
+		move (std::move (src));
+		return *this;
 	}
 
 	const void* data () const noexcept
 	{
+		assert (buffer_);
 		return buffer_;
 	}
+
+	bool empty () const noexcept
+	{
+		return !buffer_;
+	}
+
+private:
+	void clear () noexcept;
+	void move (TokenInformation&& src) noexcept;
 
 private:
 	void* buffer_;
@@ -57,9 +84,15 @@ template <class T, TOKEN_INFORMATION_CLASS type>
 class TokenInfo : private TokenInformation
 {
 public:
+	TokenInfo () noexcept
+	{}
+
 	TokenInfo (HANDLE token) :
 		TokenInformation (token, type)
 	{}
+
+	TokenInfo (TokenInfo&&) noexcept = default;
+	TokenInfo& operator = (TokenInfo&& src) noexcept = default;
 
 	const T* operator -> () const noexcept
 	{
@@ -69,6 +102,8 @@ public:
 
 typedef TokenInfo <TOKEN_USER, ::TokenUser> TokenUser;
 typedef TokenInfo <TOKEN_GROUPS, ::TokenGroups> TokenGroups;
+typedef TokenInfo <TOKEN_OWNER, ::TokenOwner> TokenOwner;
+typedef TokenInfo <TOKEN_PRIMARY_GROUP, ::TokenPrimaryGroup> TokenPrimaryGroup;
 
 }
 }

@@ -28,18 +28,21 @@
 #include <Nirvana/posix.h>
 #include <AccCtrl.h>
 #include <AclAPI.h>
+#include "TokenInformation.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-FileSecurityAttributes::FileSecurityAttributes () :
-	psa_ (nullptr)
+FileSecurityAttributes::FileSecurityAttributes () noexcept :
+	psa_ (nullptr),
+	acl_ (nullptr)
 {
 	zero (sa_);
 }
 
-void FileSecurityAttributes::initialize (unsigned mode, bool dir)
+FileSecurityAttributes::FileSecurityAttributes (const Port::Security::Context& context, unsigned mode, bool dir) :
+	FileSecurityAttributes ()
 {
 	if (mode) {
 
@@ -51,31 +54,38 @@ void FileSecurityAttributes::initialize (unsigned mode, bool dir)
 		EXPLICIT_ACCESS_W ea [3];
 		zero (ea);
 
+		TokenOwner owner (context);
+		TokenPrimaryGroup primary_group;
+
 		ea [0].grfAccessMode = SET_ACCESS;
 		ea [0].grfInheritance = inheritance;
 		ea [0].Trustee.TrusteeType = TRUSTEE_IS_USER;
-		ea [0].Trustee.ptstrName = (LPWCH)Port::Security::creator_owner ();
+		ea [0].Trustee.ptstrName = (LPWCH)owner->Owner;
 		if (mode & S_IRUSR)
-			ea [0].grfAccessPermissions |= FILE_READ_DATA;
+			ea [0].grfAccessPermissions |= FILE_GENERIC_READ;
 		if (mode & S_IWUSR)
-			ea [0].grfAccessPermissions |= FILE_WRITE_DATA;
+			ea [0].grfAccessPermissions |= FILE_GENERIC_WRITE;
 		if (mode & S_IXUSR)
-			ea [0].grfAccessPermissions |= FILE_EXECUTE;
+			ea [0].grfAccessPermissions |= FILE_GENERIC_EXECUTE;
 		EXPLICIT_ACCESS_W* ea_end = ea + 1;
 
-//		if (mode & S_IRWXG) {
-			ea_end->grfAccessMode = SET_ACCESS;
-			ea_end->grfInheritance = inheritance;
-			ea_end->Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-			ea_end->Trustee.ptstrName = (LPWCH)Port::Security::creator_group ();
-			if (mode & S_IRGRP)
-				ea_end->grfAccessPermissions |= FILE_READ_DATA;
-			if (mode & S_IWGRP)
-				ea_end->grfAccessPermissions |= FILE_WRITE_DATA;
-			if (mode & S_IXGRP)
-				ea_end->grfAccessPermissions |= FILE_EXECUTE;
-			++ea_end;
-//		}
+		if (mode & S_IRWXG) {
+			primary_group = TokenPrimaryGroup (context);
+			PSID group = primary_group->PrimaryGroup;
+			if (!IsWellKnownSid (group, WinAccountDomainUsersSid)) {
+				ea_end->grfAccessMode = SET_ACCESS;
+				ea_end->grfInheritance = inheritance;
+				ea_end->Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+				ea_end->Trustee.ptstrName = (LPWCH)group;
+				if (mode & S_IRGRP)
+					ea_end->grfAccessPermissions |= FILE_GENERIC_READ;
+				if (mode & S_IWGRP)
+					ea_end->grfAccessPermissions |= FILE_GENERIC_WRITE;
+				if (mode & S_IXGRP)
+					ea_end->grfAccessPermissions |= FILE_GENERIC_EXECUTE;
+				++ea_end;
+			}
+		}
 
 		if (mode & S_IRWXO) {
 			ea_end->grfAccessMode = SET_ACCESS;
@@ -83,17 +93,16 @@ void FileSecurityAttributes::initialize (unsigned mode, bool dir)
 			ea_end->Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
 			ea_end->Trustee.ptstrName = (LPWCH)Port::Security::everyone ();
 			if (mode & S_IROTH)
-				ea_end->grfAccessPermissions |= FILE_READ_DATA;
+				ea_end->grfAccessPermissions |= FILE_GENERIC_READ;
 			if (mode & S_IWOTH)
-				ea_end->grfAccessPermissions |= FILE_WRITE_DATA;
+				ea_end->grfAccessPermissions |= FILE_GENERIC_WRITE;
 			if (mode & S_IXOTH)
-				ea_end->grfAccessPermissions |= FILE_EXECUTE;
+				ea_end->grfAccessPermissions |= FILE_GENERIC_EXECUTE;
 			++ea_end;
 		}
 
 		// Create a new ACL that contains the new ACEs.
-		PACL acl = nullptr;
-		DWORD err = SetEntriesInAclW ((ULONG)(ea_end - ea), ea, nullptr, &acl);
+		DWORD err = SetEntriesInAclW ((ULONG)(ea_end - ea), ea, nullptr, &acl_);
 		if (err)
 			Windows::throw_win_error_sys (err);
 
@@ -107,19 +116,16 @@ void FileSecurityAttributes::initialize (unsigned mode, bool dir)
 				Windows::throw_last_error ();
 
 			// Add the ACL to the security descriptor.
-			if (!SetSecurityDescriptorDacl (sa_.lpSecurityDescriptor, true, acl, false))
+			if (!SetSecurityDescriptorDacl (sa_.lpSecurityDescriptor, true, acl_, false))
 				Windows::throw_last_error ();
-
-			LocalFree (acl);
-			acl = nullptr;
 
 			// Initialize a security attributes structure.
 			sa_.nLength = sizeof (SECURITY_ATTRIBUTES);
 			psa_ = &sa_;
 
 		} catch (...) {
-			if (acl)
-				LocalFree (acl);
+			if (acl_)
+				LocalFree (acl_);
 			if (sa_.lpSecurityDescriptor)
 				memory->release (sa_.lpSecurityDescriptor, SECURITY_DESCRIPTOR_MIN_LENGTH);
 			throw;
@@ -127,10 +133,22 @@ void FileSecurityAttributes::initialize (unsigned mode, bool dir)
 	}
 }
 
-FileSecurityAttributes::~FileSecurityAttributes ()
+void FileSecurityAttributes::clear () noexcept
 {
 	if (sa_.lpSecurityDescriptor)
 		memory->release (sa_.lpSecurityDescriptor, SECURITY_DESCRIPTOR_MIN_LENGTH);
+	if (acl_)
+		LocalFree (acl_);
+}
+
+void FileSecurityAttributes::move (FileSecurityAttributes&& src) noexcept
+{
+	sa_ = src.sa_;
+	acl_ = src.acl_;
+	if (src.psa_)
+		psa_ = &sa_;
+	else
+		psa_ = nullptr;
 }
 
 }
