@@ -149,6 +149,9 @@ void FileSecurityAttributes::move (FileSecurityAttributes&& src) noexcept
 		psa_ = &sa_;
 	else
 		psa_ = nullptr;
+	src.acl_ = nullptr;
+	src.psa_ = nullptr;
+	src.sa_.lpSecurityDescriptor = nullptr;
 }
 
 }
