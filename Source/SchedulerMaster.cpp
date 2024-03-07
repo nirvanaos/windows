@@ -422,46 +422,46 @@ void SchedulerMaster::reschedule (DeadlineTime deadline, SchedulerProcess& proce
 	}
 }
 
-class SchedulerMaster::ProcessStart : public Runnable
+class SchedulerMaster::SysDomainCall : public SysManager::AsyncCall
 {
-public:
-	ProcessStart (Ref <SysManager>&& sd, SchedulerProcess& process) :
-		sys_domain_ (std::move (sd)),
+protected:
+	SysDomainCall (Nirvana::SysManager::_ref_type&& ref, SysManager& impl, SchedulerProcess& process) :
+		SysManager::AsyncCall (std::move (ref), impl),
 		process_ (&process)
 	{}
 
-private:
-	virtual void run () override;
-
-private:
-	Ref <SysManager> sys_domain_;
+protected:
 	Ref <SchedulerProcess> process_;
 };
 
-class SchedulerMaster::ProcessTerminate : public Runnable
+class SchedulerMaster::ProcessStart : public SysDomainCall
 {
 public:
-	ProcessTerminate (Ref <SysManager>&& sd, SchedulerProcess& process) :
-		sys_domain_ (std::move (sd)),
-		process_ (&process)
+	ProcessStart (Nirvana::SysManager::_ref_type&& ref, SysManager& impl,
+		SchedulerProcess& process) noexcept :
+		SysDomainCall (std::move (ref), impl, process)
 	{}
 
 private:
 	virtual void run () override;
+};
+
+class SchedulerMaster::ProcessTerminate : public SysDomainCall
+{
+public:
+	ProcessTerminate (Nirvana::SysManager::_ref_type&& ref, SysManager& impl,
+		SchedulerProcess& process) noexcept :
+		SysDomainCall (std::move (ref), impl, process)
+	{}
 
 private:
-	Ref <SysManager> sys_domain_;
-	Ref <SchedulerProcess> process_;
+	virtual void run () override;
 };
 
 template <class R> inline
-void SchedulerMaster::call_sys_domain (SchedulerProcess& process) noexcept
+void SchedulerMaster::call_sys_domain (SchedulerProcess& process)
 {
-	Ref <SysManager> sys_domain;
-	Ref <SyncContext> sync_context;
-	SysManager::get_call_context (sys_domain, sync_context);
-	ExecDomain::async_call <R> (Chrono::make_deadline (SYS_DOMAIN_CALL_DEADLINE),
-		*sync_context, nullptr, std::move (sys_domain), std::ref (process));
+	SysManager::async_call <R> (Chrono::make_deadline (SYS_DOMAIN_CALL_DEADLINE), std::ref (process));
 }
 
 inline
@@ -503,7 +503,7 @@ void SchedulerMaster::ProcessStart::run ()
 			throw_last_error ();
 
 		Port::Security::Context context ((Port::Security::Context::ABI)(uintptr_t)token);
-		sys_domain_->domain_created (process_->process_id (), platform, context.security_id ());
+		sys_manager ().domain_created (process_->process_id (), platform, context.security_id ());
 	} catch (...) {
 		// TODO: Log
 		assert (false);
@@ -513,7 +513,7 @@ void SchedulerMaster::ProcessStart::run ()
 
 void SchedulerMaster::ProcessTerminate::run ()
 {
-	sys_domain_->domain_destroyed (process_->process_id ());
+	sys_manager ().domain_destroyed (process_->process_id ());
 }
 
 void SchedulerMaster::shutdown () noexcept

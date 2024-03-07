@@ -215,11 +215,12 @@ private:
 	static void cleanup_temp_files ();
 	bool create_process (DWORD flags) noexcept;
 	
+	class SysDomainCall;
 	class ProcessStart;
 	class ProcessTerminate;
 
 	template <class R>
-	static void call_sys_domain (SchedulerProcess& process) noexcept;
+	static void call_sys_domain (SchedulerProcess& process);
 
 private:
 	/// Helper class for executing in the current process.
