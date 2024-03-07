@@ -46,26 +46,9 @@ void Debugger::output_debug_string (System::DebugEvent level, const char* msg)
 
 bool Debugger::debug_break ()
 {
-	if (IsDebuggerPresent ()) {
-		__debugbreak ();
-		return true;
-	}
-
-	// If we are out of the execution domain, for example, in the postman thread,
-	// __debugbreak will cause unhandled exception and stack trace.
-	Runnable* r = nullptr;
-	Core::Thread* th = Thread::current ();
-	if (th) {
-		ExecDomain* ed = th->exec_domain ();
-		if (ed)
-			r = ed->runnable ();
-	}
-	if (!r) {
-		__debugbreak ();
-		return true;
-	}
-
-	return false;
+	// If debugger is not present, __debugbreak will cause unhandled exception and stack trace.
+	__debugbreak ();
+	return IsDebuggerPresent ();
 }
 
 bool Debugger::is_debugger_present () noexcept
