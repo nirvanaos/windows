@@ -50,7 +50,7 @@ public:
 		clear ();
 	}
 
-	FileSecurityAttributes& operator = (FileSecurityAttributes&& src)
+	FileSecurityAttributes& operator = (FileSecurityAttributes&& src) noexcept
 	{
 		clear ();
 		move (std::move (src));
