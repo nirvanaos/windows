@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_PORT_FILEACCESSCONSOLEBASE_H_
 #pragma once
 
-#include <FileAccessChar.h>
+#include <FileAccessChar_impl.h>
 
 namespace Nirvana {
 namespace Core {
