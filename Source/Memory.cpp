@@ -26,7 +26,7 @@
 #include "pch.h"
 #include "AddressSpace.inl"
 #include <Nirvana/real_copy.h>
-#include <SyncContext.h>
+#include <ExecDomain.h>
 #include <signal.h>
 #include "ex2signal.h"
 #include <winternl.h>

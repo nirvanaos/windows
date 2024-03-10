@@ -32,6 +32,7 @@
 #include "app_data.h"
 #include "object_name.h"
 #include "MessageBroker.h"
+#include <unrecoverable_error.h>
 
 //#define DEBUG_SHUTDOWN
 

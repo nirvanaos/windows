@@ -24,6 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
+#include <Security.h>
 #include "DirItem.h"
 #include "error2errno.h"
 #include "SecurityInfo.h"
