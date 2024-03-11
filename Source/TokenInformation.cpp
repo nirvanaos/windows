@@ -39,10 +39,10 @@ TokenInformation::TokenInformation (HANDLE token, TOKEN_INFORMATION_CLASS type) 
 	if (!len)
 		throw_last_error ();
 	size_ = len;
-	buffer_ = (TOKEN_USER*)memory->allocate (nullptr, size_, 0);
+	buffer_ = (TOKEN_USER*)the_memory->allocate (nullptr, size_, 0);
 	if (!GetTokenInformation (token, type, buffer_, len, &len)) {
 		DWORD err = GetLastError ();
-		memory->release (buffer_, size_);
+		the_memory->release (buffer_, size_);
 		throw_win_error_sys (err);
 	}
 }
@@ -50,7 +50,7 @@ TokenInformation::TokenInformation (HANDLE token, TOKEN_INFORMATION_CLASS type) 
 void TokenInformation::clear () noexcept
 {
 	if (buffer_)
-		memory->release (buffer_, size_);
+		the_memory->release (buffer_, size_);
 }
 
 void TokenInformation::move (TokenInformation&& src) noexcept

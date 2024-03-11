@@ -28,7 +28,7 @@ extern "C" void __cdecl _invalid_parameter (
   std::string file;
   if (file_name)
     Nirvana::append_utf8 (file_name, file);
-  Nirvana::system->debug_event (Nirvana::System::DebugEvent::DEBUG_ERROR, msg, file, line_number);
+  Nirvana::the_system->debug_event (Nirvana::System::DebugEvent::DEBUG_ERROR, msg, file, line_number);
 }
 
 extern "C" void __cdecl _invalid_parameter_noinfo ()

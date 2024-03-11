@@ -110,7 +110,7 @@ FileSecurityAttributes::FileSecurityAttributes (const Port::Security::Context& c
 
 			// Initialize a security descriptor.
 			size_t cb = SECURITY_DESCRIPTOR_MIN_LENGTH;
-			sa_.lpSecurityDescriptor = (SECURITY_DESCRIPTOR*)memory->allocate (0, cb, Memory::ZERO_INIT);
+			sa_.lpSecurityDescriptor = (SECURITY_DESCRIPTOR*)the_memory->allocate (0, cb, Memory::ZERO_INIT);
 
 			if (!InitializeSecurityDescriptor (sa_.lpSecurityDescriptor, SECURITY_DESCRIPTOR_REVISION))
 				Windows::throw_last_error ();
@@ -127,7 +127,7 @@ FileSecurityAttributes::FileSecurityAttributes (const Port::Security::Context& c
 			if (acl_)
 				LocalFree (acl_);
 			if (sa_.lpSecurityDescriptor)
-				memory->release (sa_.lpSecurityDescriptor, SECURITY_DESCRIPTOR_MIN_LENGTH);
+				the_memory->release (sa_.lpSecurityDescriptor, SECURITY_DESCRIPTOR_MIN_LENGTH);
 			throw;
 		}
 	}
@@ -136,7 +136,7 @@ FileSecurityAttributes::FileSecurityAttributes (const Port::Security::Context& c
 void FileSecurityAttributes::clear () noexcept
 {
 	if (sa_.lpSecurityDescriptor)
-		memory->release (sa_.lpSecurityDescriptor, SECURITY_DESCRIPTOR_MIN_LENGTH);
+		the_memory->release (sa_.lpSecurityDescriptor, SECURITY_DESCRIPTOR_MIN_LENGTH);
 	if (acl_)
 		LocalFree (acl_);
 }

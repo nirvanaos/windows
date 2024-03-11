@@ -55,7 +55,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 		append_utf8 (buf, buf + cc - 1, path);
 		tmp_path.assign (buf, cc);
 		CosNaming::Name tmp_dir_name;
-		system->append_path (tmp_dir_name, path, true);
+		the_system->append_path (tmp_dir_name, path, true);
 		auto ns = CosNaming::NamingContextExt::_narrow (CORBA::Core::Services::bind (CORBA::Core::Services::NameService));
 		tmp_dir = Dir::_narrow (ns->resolve (tmp_dir_name));
 		if (!tmp_dir)
