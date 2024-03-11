@@ -35,12 +35,12 @@ class TmpBuf
 public:
 	TmpBuf (size_t cnt) :
 		size_ (cnt * sizeof (T)),
-		p_ ((T*)Nirvana::memory->allocate (nullptr, size_, 0))
+		p_ ((T*)Nirvana::the_memory->allocate (nullptr, size_, 0))
 	{}
 
 	~TmpBuf ()
 	{
-		Nirvana::memory->release (p_, size_);
+		Nirvana::the_memory->release (p_, size_);
 	}
 
 	operator T* () const noexcept
