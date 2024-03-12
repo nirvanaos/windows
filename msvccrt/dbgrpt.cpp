@@ -1,5 +1,5 @@
 #include <Nirvana/Formatter.h>
-#include <Nirvana/System.h>
+#include <Nirvana/Debugger.h>
 #include <Nirvana/string_conv.h>
 #include <crtdbg.h>
 
@@ -18,7 +18,7 @@ extern "C" int __cdecl _CrtDbgReport (
 	append_format_v (s, format, arglist);
 	va_end (arglist);
 
-	Nirvana::the_system->debug_event ((Nirvana::System::DebugEvent)(report_type + 1), s,
+	Nirvana::the_debugger->debug_event ((Nirvana::Debugger::DebugEvent)(report_type + 1), s,
 		file_name, line_number);
 
 	return 0;
@@ -47,7 +47,7 @@ extern "C" int __cdecl _CrtDbgReportW (
 	append_utf8 (s, msg);
 	append_utf8 (file_name, sfn);
 
-	Nirvana::the_system->debug_event ((Nirvana::System::DebugEvent)(report_type + 1), msg, sfn, line_number);
+	Nirvana::the_debugger->debug_event ((Nirvana::Debugger::DebugEvent)(report_type + 1), msg, sfn, line_number);
 
 	return 0;
 }

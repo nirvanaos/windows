@@ -29,7 +29,7 @@
 #pragma once
 
 #include <Nirvana/Nirvana.h>
-#include <Nirvana/System.h>
+#include <Nirvana/Debugger.h>
 
 namespace Nirvana {
 namespace Core {
@@ -41,7 +41,7 @@ class Debugger
 public:
 	/// \brief Prints message to debug output.
 	/// \param msg The message.
-	static void output_debug_string (System::DebugEvent level, const char* msg);
+	static void output_debug_string (Nirvana::Debugger::DebugEvent level, const char* msg);
 
 	/// \brief Debug break.
 	/// 

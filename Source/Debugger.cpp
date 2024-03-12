@@ -33,14 +33,14 @@ namespace Nirvana {
 namespace Core {
 namespace Port {
 
-void Debugger::output_debug_string (System::DebugEvent level, const char* msg)
+void Debugger::output_debug_string (Nirvana::Debugger::DebugEvent level, const char* msg)
 {
 	// Use shared string to avoid possible infinite recursion in assertions.
 	if (IsDebuggerPresent ()) {
 		Windows::SharedStringW ws;
 		append_wide (msg, ws);
 		OutputDebugStringW (ws.c_str ());
-	} else if (level > System::DebugEvent::DEBUG_INFO || Windows::DebugLog::trace_)
+	} else if (level > Nirvana::Debugger::DebugEvent::DEBUG_INFO || Windows::DebugLog::trace_)
 		Windows::DebugLog () << msg;
 }
 
