@@ -116,6 +116,8 @@ public:
 			data_ = 0;
 		}
 
+		//------ Windows-specific ------------
+
 		operator void* () const noexcept
 		{
 			return (void*)(uintptr_t)data_;

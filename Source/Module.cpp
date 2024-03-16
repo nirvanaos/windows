@@ -29,6 +29,7 @@
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
 #include <Nirvana/posix.h>
+#include <Nirvana/System.h>
 #include <ORB/Services.h>
 #include "../Port/Timer.h"
 #include <TimerEvent.h>

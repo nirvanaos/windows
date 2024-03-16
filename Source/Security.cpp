@@ -152,8 +152,12 @@ IDL::String Security::get_name (const SecurityId& id)
 			domain_cc = (DWORD)domain.size ();
 			if (!LookupAccountSidW (nullptr, (PSID)id.data (), name.ptr (), &name_cc, domain.ptr (), &domain_cc, &use)) {
 				DWORD err = GetLastError ();
-				if (ERROR_INSUFFICIENT_BUFFER != err)
-					Windows::throw_win_error_sys (err);
+				if (ERROR_INSUFFICIENT_BUFFER != err) {
+					if (ERROR_NONE_MAPPED == err)
+						throw_BAD_PARAM ();
+					else
+						Windows::throw_win_error_sys (err);
+				}
 			} else
 				break;
 
