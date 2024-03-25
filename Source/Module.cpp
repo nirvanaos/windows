@@ -76,9 +76,8 @@ Module::Module (AccessDirect::_ptr_type file) :
 
 		{
 			IDL::Sequence <uint8_t> buf;
-			FileLock fl_none;
-			file->read (fl_none, 0, std::numeric_limits <uint32_t>::max (), LockType::LOCK_NONE, false, buf);
-			tmp_file_access->write (0, buf, fl_none, true);
+			file->read (0, std::numeric_limits <uint32_t>::max (), buf);
+			tmp_file_access->write (0, buf, false);
 			tmp_file_access->close ();
 		}
 
