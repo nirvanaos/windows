@@ -25,7 +25,7 @@
 */
 #include "FileSecurityAttributes.h"
 #include "error2errno.h"
-#include <Nirvana/posix.h>
+#include <Nirvana/posix_defs.h>
 #include <AccCtrl.h>
 #include <AclAPI.h>
 #include "TokenInformation.h"

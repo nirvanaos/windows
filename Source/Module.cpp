@@ -28,8 +28,8 @@
 #include "win32.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
-#include <Nirvana/posix.h>
-#include <Nirvana/System.h>
+#include <Nirvana/posix_defs.h>
+#include <Nirvana/POSIX.h>
 #include <ORB/Services.h>
 #include "../Port/Timer.h"
 #include <TimerEvent.h>
@@ -56,7 +56,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 		append_utf8 (buf, buf + cc - 1, path);
 		tmp_path.assign (buf, cc);
 		CosNaming::Name tmp_dir_name;
-		the_system->append_path (tmp_dir_name, path, true);
+		the_posix->append_path (tmp_dir_name, path, true);
 		auto ns = CosNaming::NamingContextExt::_narrow (CORBA::Core::Services::bind (CORBA::Core::Services::NameService));
 		tmp_dir = Dir::_narrow (ns->resolve (tmp_dir_name));
 		if (!tmp_dir)

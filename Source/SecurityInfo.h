@@ -31,7 +31,7 @@
 #include "TokenInformation.h"
 #include "../Port/Security.h"
 #include <AclAPI.h>
-#include <Nirvana/posix.h>
+#include <Nirvana/posix_defs.h>
 
 namespace Nirvana {
 namespace Core {
