@@ -1072,13 +1072,15 @@ void* Memory::copy (void* dst, void* src, size_t& size, unsigned flags)
 			}
 
 			if (flags & Nirvana::Memory::SRC_DECOMMIT) {
-				// Release or decommit source. Regions can overlap.
-				Region reg = {src, size};
+				// Release or decommit source region. Source and target regions can overlap.
+				Region reg = {src, size}; // source region
 				if (flags & (Nirvana::Memory::SRC_RELEASE & ~Nirvana::Memory::SRC_DECOMMIT)) {
-					if (reg.subtract (round_up (dst, ALLOCATION_GRANULARITY), round_down ((BYTE*)dst + size, ALLOCATION_GRANULARITY)))
+					// Release
+					if (reg.subtract (round_down (dst, ALLOCATION_GRANULARITY), round_up ((BYTE*)dst + size, ALLOCATION_GRANULARITY)))
 						release (reg.ptr, reg.size);
 				} else {
-					if (reg.subtract (round_up (dst, PAGE_SIZE), round_down ((BYTE*)dst + size, PAGE_SIZE)))
+					// Decommit
+					if (reg.subtract (round_down (dst, PAGE_SIZE), round_up ((BYTE*)dst + size, PAGE_SIZE)))
 						decommit (reg.ptr, reg.size);
 				}
 			}
