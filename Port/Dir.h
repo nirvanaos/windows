@@ -139,6 +139,8 @@ protected:
 	/// \returns Unique pointer to CosNaming::Core::Iterator object.
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 
+	unsigned check_access (CosNaming::Name& n) const;
+
 	///@}
 
 protected:
@@ -146,7 +148,7 @@ protected:
 	Dir (const DirItemId& id);
 	Dir ();
 
-	// Append first name component if it not last or dont_append_last false.
+	// Append first name component if it not last or dont_append_last=false.
 	// May be overriden.
 	virtual Windows::StringW get_path (CosNaming::Name& n, bool dont_append_last) const;
 

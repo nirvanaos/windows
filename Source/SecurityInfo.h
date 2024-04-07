@@ -32,6 +32,7 @@
 #include "../Port/Security.h"
 #include <AclAPI.h>
 #include <Nirvana/posix_defs.h>
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
@@ -40,11 +41,65 @@ namespace Windows {
 class SecurityInfo
 {
 public:
-	SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type);
+	SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type) :
+		psd_ (nullptr),
+		owner_ (nullptr),
+		group_ (nullptr),
+		dacl_ (nullptr),
+		error_ (0)
+	{
+		DWORD err = GetSecurityInfo (handle, obj_type,
+			OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
+			&owner_, &group_, &dacl_, nullptr, &psd_);
+		if (err)
+			throw_win_error_sys (err);
+
+		if (
+			IsWellKnownSid (group_, WinAccountDomainUsersSid)
+			|| IsWellKnownSid (group_, WinNullSid)
+			)
+			group_ = nullptr;
+	}
+
+	SecurityInfo (LPCWSTR name, SE_OBJECT_TYPE obj_type) :
+		psd_ (nullptr),
+		owner_ (nullptr),
+		group_ (nullptr),
+		dacl_ (nullptr),
+		error_ (0)
+	{
+		DWORD err = GetNamedSecurityInfoW (name, obj_type,
+			OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
+			&owner_, &group_, &dacl_, nullptr, &psd_);
+
+		if (err) {
+			switch (err) {
+			case ERROR_FILE_NOT_FOUND:
+			case ERROR_PATH_NOT_FOUND:
+			case ERROR_ACCESS_DENIED:
+				error_ = err;
+				break;
+
+			default:
+				throw_win_error_sys (err);
+			}
+		} else {
+			if (
+				IsWellKnownSid (group_, WinAccountDomainUsersSid)
+				|| IsWellKnownSid (group_, WinNullSid)
+				)
+				group_ = nullptr;
+		}
+	}
 
 	~SecurityInfo ()
 	{
 		LocalFree (psd_);
+	}
+
+	DWORD error () const noexcept
+	{
+		return error_;
 	}
 
 	PSID owner () const noexcept
@@ -69,6 +124,7 @@ private:
 	PSID owner_;
 	PSID group_;
 	PACL dacl_;
+	DWORD error_;
 };
 
 class SecurityInfoDirItem : public SecurityInfo
@@ -76,6 +132,10 @@ class SecurityInfoDirItem : public SecurityInfo
 public:
 	SecurityInfoDirItem (HANDLE handle) :
 		SecurityInfo (handle, SE_FILE_OBJECT)
+	{}
+
+	SecurityInfoDirItem (LPCWSTR path) :
+		SecurityInfo (path, SE_FILE_OBJECT)
 	{}
 
 	unsigned get_mode () const

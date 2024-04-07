@@ -24,28 +24,10 @@
 *  popov.nirvana@gmail.com
 */
 #include "SecurityInfo.h"
-#include <AclAPI.h>
-#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
-
-SecurityInfo::SecurityInfo (HANDLE handle, SE_OBJECT_TYPE obj_type) :
-	psd_ (nullptr)
-{
-	DWORD err = GetSecurityInfo (handle, obj_type, 
-		OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
-		&owner_, &group_, &dacl_, nullptr, &psd_);
-	if (err)
-		throw_win_error_sys (err);
-
-	if (
-		IsWellKnownSid (group_, WinAccountDomainUsersSid)
-		|| IsWellKnownSid (group_, WinNullSid)
-		)
-		group_ = nullptr;
-}
 
 ACCESS_MASK SecurityInfo::get_effective_rights (PSID sid, TRUSTEE_TYPE type) const
 {

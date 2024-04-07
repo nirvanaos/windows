@@ -30,6 +30,7 @@
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
 #include "FileSecurityAttributes.h"
+#include "SecurityInfo.h"
 
 using namespace CosNaming;
 using CosNaming::Core::NamingContextRoot;
@@ -239,6 +240,23 @@ void Dir::remove ()
 		if (!RemoveDirectoryW (path ()))
 			throw_last_error ();
 	}
+}
+
+unsigned Dir::check_access (CosNaming::Name& n) const
+{
+	Windows::StringW path = get_path (n, false);
+	for (const auto nc : n) {
+		append_path (path, nc);
+		DWORD att = GetFileAttributesW (path.c_str ());
+		if (0xFFFFFFFF == att)
+			return 0;
+	}
+
+	Windows::SecurityInfoDirItem si (path.c_str ());
+	if (si.error ())
+		return F_OK;
+	else
+		return si.get_access (Core::Security::Context::current ().port ());
 }
 
 }
