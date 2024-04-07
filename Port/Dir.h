@@ -125,8 +125,11 @@ protected:
 	/// Create directory.
 	/// 
 	/// \param n Directory name.
-	/// \returns New directory unique id.
-	virtual DirItemId create_dir (CosNaming::Name& n, unsigned mode) const;
+	/// \param mode The file permission bits of the new directory.
+	/// \param[out] pid Optional output DirItemId.
+	/// 
+	/// \returns `true` if a directory was created, `false` otherwise.
+	virtual bool create_dir (CosNaming::Name& n, unsigned mode, DirItemId* pid) const;
 
 	/// Make new file id.
 	/// 
@@ -139,7 +142,7 @@ protected:
 	/// \returns Unique pointer to CosNaming::Core::Iterator object.
 	virtual std::unique_ptr <CosNaming::Core::Iterator> make_iterator () const override;
 
-	unsigned check_access (CosNaming::Name& n) const;
+	unsigned access (CosNaming::Name& n) const;
 
 	///@}
 

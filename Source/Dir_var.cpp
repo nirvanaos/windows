@@ -67,11 +67,11 @@ void Dir_var::create_link (CosNaming::Name& n, const DirItemId& target, unsigned
 	Base::create_link (n, target, flags);
 }
 
-DirItemId Dir_var::create_dir (CosNaming::Name& n, unsigned mode) const
+bool Dir_var::create_dir (CosNaming::Name& n, unsigned mode, DirItemId* pid) const
 {
 	if (n.size () == 1 && is_tmp (n.front ()))
 		throw CORBA::INTERNAL (make_minor_errno (EEXIST));
-	return Base::create_dir (n, mode);
+	return Base::create_dir (n, mode, pid);
 }
 
 std::unique_ptr <CosNaming::Core::Iterator> Dir_var::make_iterator () const

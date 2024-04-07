@@ -203,16 +203,6 @@ void DirItem::query_block_size (void* handle) noexcept
 	}
 }
 
-uint_fast16_t DirItem::access ()
-{
-	HANDLE h = get_handle ();
-	if (INVALID_HANDLE_VALUE == h)
-		return 0;
-
-	Windows::SecurityInfoDirItem si (h);
-	return si.get_access (Security::Context::current ().port ());
-}
-
 }
 }
 }

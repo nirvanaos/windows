@@ -74,11 +74,6 @@ public:
 		Base::stat (st);
 	}
 
-	uint_fast16_t access ()
-	{
-		return Base::access ();
-	}
-
 protected:
 	/// File system object unique id.
 	const DirItemId& id () const noexcept

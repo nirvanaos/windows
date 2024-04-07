@@ -47,8 +47,6 @@ protected:
 		return type_;
 	}
 
-	uint_fast16_t access ();
-
 	void stat (FileStat& st);
 
 	const DirItemId& id () const noexcept

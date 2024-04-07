@@ -178,20 +178,25 @@ void Dir::unlink (Name& n) const
 	unlink (path.c_str (), att);
 }
 
-DirItemId Dir::create_dir (Name& n, unsigned mode) const
+bool Dir::create_dir (Name& n, unsigned mode, DirItemId* pid) const
 {
 	StringW path = check_path (n);
 
 	Windows::FileSecurityAttributes fsa (Core::Security::Context::current ().port (), mode, true);
+
+	bool ret = true;
 	if (!CreateDirectoryW (path.c_str (), fsa.security_attributes ())) {
 		DWORD err = GetLastError ();
 		if (ERROR_ALREADY_EXISTS == err)
-			throw NamingContext::AlreadyBound ();
+			ret = false;
 		else
 			throw_win_error_sys (err);
 	}
 
-	return FileSystemImpl::path_to_id (path.c_str (), n, Nirvana::FileType::directory);
+	if (pid)
+		*pid = FileSystemImpl::path_to_id (path.c_str (), n, Nirvana::FileType::directory);
+	
+	return ret;
 }
 
 DirItemId Dir::resolve_path (Name& n) const
@@ -242,7 +247,7 @@ void Dir::remove ()
 	}
 }
 
-unsigned Dir::check_access (CosNaming::Name& n) const
+unsigned Dir::access (CosNaming::Name& n) const
 {
 	Windows::StringW path = get_path (n, false);
 	for (const auto nc : n) {
