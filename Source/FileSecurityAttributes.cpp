@@ -49,7 +49,15 @@ FileSecurityAttributes::FileSecurityAttributes (const Port::Security::Context& c
 		if (!(mode & S_IRWXU))
 			mode |= S_IRWXU;
 
-		DWORD inheritance = dir ? SUB_CONTAINERS_AND_OBJECTS_INHERIT : NO_INHERITANCE;
+		DWORD write_permissions;
+		DWORD inheritance;
+		if (dir) {
+			inheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+			write_permissions = FILE_GENERIC_WRITE | FILE_DELETE_CHILD;
+		} else {
+			inheritance = NO_INHERITANCE;
+			write_permissions = FILE_GENERIC_WRITE;
+		}
 
 		EXPLICIT_ACCESS_W ea [3];
 		zero (ea);
@@ -61,30 +69,36 @@ FileSecurityAttributes::FileSecurityAttributes (const Port::Security::Context& c
 		ea [0].grfInheritance = inheritance;
 		ea [0].Trustee.TrusteeType = TRUSTEE_IS_USER;
 		ea [0].Trustee.ptstrName = (LPWCH)owner->Owner;
-		if (mode & S_IRUSR)
-			ea [0].grfAccessPermissions |= FILE_GENERIC_READ;
-		if (mode & S_IWUSR)
-			ea [0].grfAccessPermissions |= FILE_GENERIC_WRITE;
-		if (mode & S_IXUSR)
-			ea [0].grfAccessPermissions |= FILE_GENERIC_EXECUTE;
+		if ((mode & S_IRWXU) == S_IRWXU)
+			ea [0].grfAccessPermissions = FILE_ALL_ACCESS;
+		else {
+			if (mode & S_IRUSR)
+				ea [0].grfAccessPermissions |= FILE_GENERIC_READ;
+			if (mode & S_IWUSR)
+				ea [0].grfAccessPermissions |= write_permissions;
+			if (mode & S_IXUSR)
+				ea [0].grfAccessPermissions |= FILE_GENERIC_EXECUTE;
+		}
 		EXPLICIT_ACCESS_W* ea_end = ea + 1;
 
 		if (mode & S_IRWXG) {
 			primary_group = TokenPrimaryGroup (context);
 			PSID group = primary_group->PrimaryGroup;
-			if (!IsWellKnownSid (group, WinAccountDomainUsersSid)) {
-				ea_end->grfAccessMode = SET_ACCESS;
-				ea_end->grfInheritance = inheritance;
-				ea_end->Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-				ea_end->Trustee.ptstrName = (LPWCH)group;
+			ea_end->grfAccessMode = SET_ACCESS;
+			ea_end->grfInheritance = inheritance;
+			ea_end->Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+			ea_end->Trustee.ptstrName = (LPWCH)group;
+			if ((mode & S_IRWXG) == S_IRWXG)
+				ea_end->grfAccessPermissions = FILE_ALL_ACCESS;
+			else {
 				if (mode & S_IRGRP)
 					ea_end->grfAccessPermissions |= FILE_GENERIC_READ;
 				if (mode & S_IWGRP)
-					ea_end->grfAccessPermissions |= FILE_GENERIC_WRITE;
+					ea_end->grfAccessPermissions |= write_permissions;
 				if (mode & S_IXGRP)
 					ea_end->grfAccessPermissions |= FILE_GENERIC_EXECUTE;
-				++ea_end;
 			}
+			++ea_end;
 		}
 
 		if (mode & S_IRWXO) {
@@ -92,12 +106,16 @@ FileSecurityAttributes::FileSecurityAttributes (const Port::Security::Context& c
 			ea_end->grfInheritance = inheritance;
 			ea_end->Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
 			ea_end->Trustee.ptstrName = (LPWCH)Port::Security::everyone ();
-			if (mode & S_IROTH)
-				ea_end->grfAccessPermissions |= FILE_GENERIC_READ;
-			if (mode & S_IWOTH)
-				ea_end->grfAccessPermissions |= FILE_GENERIC_WRITE;
-			if (mode & S_IXOTH)
-				ea_end->grfAccessPermissions |= FILE_GENERIC_EXECUTE;
+			if ((mode & S_IRWXO) == S_IRWXO)
+				ea_end->grfAccessPermissions = FILE_ALL_ACCESS;
+			else {
+				if (mode & S_IROTH)
+					ea_end->grfAccessPermissions |= FILE_GENERIC_READ;
+				if (mode & S_IWOTH)
+					ea_end->grfAccessPermissions |= write_permissions;
+				if (mode & S_IXOTH)
+					ea_end->grfAccessPermissions |= FILE_GENERIC_EXECUTE;
+			}
 			++ea_end;
 		}
 

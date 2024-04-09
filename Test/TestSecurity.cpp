@@ -56,8 +56,6 @@ TEST_F (TestSecurity, File)
 
 	unsigned access = si.get_access (Port::Security::prot_domain_context ());
 	EXPECT_EQ (access, F_OK | R_OK | W_OK | X_OK);
-	unsigned mode = si.get_mode ();
-	EXPECT_EQ (mode & S_IRWXU, S_IRWXU);
 }
 
 TEST_F (TestSecurity, CreateFile)

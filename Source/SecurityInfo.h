@@ -53,11 +53,7 @@ public:
 			&owner_, &group_, &dacl_, nullptr, &psd_);
 		if (err)
 			throw_win_error_sys (err);
-
-		if (
-			IsWellKnownSid (group_, WinAccountDomainUsersSid)
-			|| IsWellKnownSid (group_, WinNullSid)
-			)
+		else if (IsWellKnownSid (group_, WinNullSid))
 			group_ = nullptr;
 	}
 
@@ -83,13 +79,8 @@ public:
 			default:
 				throw_win_error_sys (err);
 			}
-		} else {
-			if (
-				IsWellKnownSid (group_, WinAccountDomainUsersSid)
-				|| IsWellKnownSid (group_, WinNullSid)
-				)
-				group_ = nullptr;
-		}
+		} else if (IsWellKnownSid (group_, WinNullSid))
+			group_ = nullptr;
 	}
 
 	~SecurityInfo ()
@@ -119,6 +110,8 @@ public:
 
 	ACCESS_MASK get_effective_rights (PSID sid, TRUSTEE_TYPE type) const;
 
+	ACCESS_MASK get_rights (PSID trustee) const noexcept;
+
 private:
 	PSECURITY_DESCRIPTOR psd_;
 	PSID owner_;
@@ -141,7 +134,8 @@ public:
 	unsigned get_mode () const
 	{
 		unsigned mode = 0;
-		ACCESS_MASK mask = get_effective_rights (owner (), TRUSTEE_IS_USER);
+
+		ACCESS_MASK mask = get_rights (owner ());
 		if (mask & FILE_READ_DATA)
 			mode |= S_IRUSR;
 		if (mask & FILE_WRITE_DATA)
@@ -150,7 +144,7 @@ public:
 			mode |= S_IXUSR;
 
 		if (group ()) {
-			mask = get_effective_rights (group (), TRUSTEE_IS_GROUP);
+			mask = get_rights (group ());
 			if (mask & FILE_READ_DATA)
 				mode |= S_IRGRP;
 			if (mask & FILE_WRITE_DATA)
@@ -159,13 +153,14 @@ public:
 				mode |= S_IXGRP;
 		}
 
-		mask = get_effective_rights (Port::Security::everyone (), TRUSTEE_IS_WELL_KNOWN_GROUP);
+		mask = get_rights (Port::Security::everyone ());
 		if (mask & FILE_READ_DATA)
 			mode |= S_IROTH;
 		if (mask & FILE_WRITE_DATA)
 			mode |= S_IWOTH;
 		if (mask & FILE_EXECUTE)
 			mode |= S_IXOTH;
+
 		return mode;
 	}
 
