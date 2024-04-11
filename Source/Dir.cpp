@@ -250,7 +250,7 @@ void Dir::remove ()
 unsigned Dir::access (CosNaming::Name& n) const
 {
 	Windows::StringW path = get_path (n, false);
-	for (const auto nc : n) {
+	for (const auto& nc : n) {
 		append_path (path, nc);
 		DWORD att = GetFileAttributesW (path.c_str ());
 		if (0xFFFFFFFF == att)
