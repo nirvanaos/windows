@@ -1,0 +1,4 @@
+[submodule "pe/pe_bliss"]
+	path = pe/pe_bliss
+	url = https://github.com/nirvanaos/portable-executable-library.git
+	branch = develop
