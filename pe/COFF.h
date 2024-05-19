@@ -1,6 +1,5 @@
-/// \file
 /*
-* Nirvana Core. Windows port library.
+* Portable Executable file format support library.
 *
 * This is a part of the Nirvana project.
 *
@@ -24,49 +23,54 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#ifndef NIRVANA_CORE_PORT_SYSTEMINFO_H_
-#define NIRVANA_CORE_PORT_SYSTEMINFO_H_
+#ifndef NIRVANA_PE_COFF_H_
+#define NIRVANA_PE_COFF_H_
 #pragma once
 
 #include <Nirvana/Nirvana.h>
-#include <Nirvana/platform.h>
+#include "pe_bliss/pe_lib/pe_section.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
 
-/// System information class.
-class SystemInfo
+class COFF
 {
 public:
-	static void initialize () noexcept;
+	typedef pe_bliss::pe_win::image_section_header Section;
+	typedef pe_bliss::pe_win::image_file_header Header;
+	typedef std::conditional <sizeof (void*) == 4,
+		pe_bliss::pe_win::image_optional_header32,
+		pe_bliss::pe_win::image_optional_header64>::type PE32Header;
 
-	static unsigned int hardware_concurrency () noexcept
+	COFF (const void* addr) noexcept :
+		hdr_ ((const Header*)addr)
+	{}
+
+	const Header* header () const noexcept
 	{
-		return hardware_concurrency_;
+		return hdr_;
 	}
 
-	static const void* get_OLF_section (size_t& size) noexcept;
+	const PE32Header* pe32_header () const noexcept;
 
-	static_assert (HOST_PLATFORM == PLATFORM_X64 || HOST_PLATFORM == PLATFORM_I386,
-		"Unsupported host");
+	const Section* find_section (const char* name) const noexcept;
 
-#if defined (__GNUG__) || defined (__clang__)
-	static const size_t SUPPORTED_PLATFORM_CNT = 1;
-#else
-	static const size_t SUPPORTED_PLATFORM_CNT = (HOST_PLATFORM == PLATFORM_X64) ? 2 : 1;
-#endif
+	const Section* sections () const noexcept;
 
-	static const uint16_t* supported_platforms () noexcept;
+	uint32_t section_count () const noexcept
+	{
+		return hdr_->NumberOfSections;
+	}
+
+	static bool is_section (const Section& s, const char* name) noexcept;
 
 private:
-	static unsigned int hardware_concurrency_;
+	const Header* hdr_;
+
+	static const size_t SECTION_NAME_SIZE = 8;
 };
 
 }
 }
-}
 
 #endif
-
-

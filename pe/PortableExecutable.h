@@ -1,5 +1,5 @@
 /*
-* Nirvana Core. Windows port library.
+* Nirvana Core.
 *
 * This is a part of the Nirvana project.
 *
@@ -23,46 +23,41 @@
 * Send comments and/or bug reports to:
 *  popov.nirvana@gmail.com
 */
-#include "../Port/SystemInfo.h"
-#include <PortableExecutable.h>
-#include "win32.h"
+#ifndef NIRVANA_PE_PORTABLEEXECUTABLE_H_
+#define NIRVANA_PE_PORTABLEEXECUTABLE_H_
+#pragma once
+
+#include "COFF.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
 
-unsigned int SystemInfo::hardware_concurrency_;
-
-const uint16_t* SystemInfo::supported_platforms () noexcept
+class PortableExecutable : public COFF
 {
-	static uint16_t platforms_x64 [] = {
-		PLATFORM_X64,
-		PLATFORM_I386
-	};
+public:
+	PortableExecutable (const void* base_address);
 
-	static uint16_t platforms_i386 [] = {
-		PLATFORM_I386
-	};
+	const void* base_address () const noexcept
+	{
+		return base_address_;
+	}
 
-	if (HOST_PLATFORM == PLATFORM_X64)
-		return platforms_x64;
-	else
-		return platforms_i386;
-}
+	const void* section_address (const COFF::Section& s) const noexcept
+	{
+		return (const uint8_t*)base_address_ + s.VirtualAddress;
+	}
 
-void SystemInfo::initialize () noexcept
-{
-	::SYSTEM_INFO si;
-	::GetSystemInfo (&si);
-	hardware_concurrency_ = si.dwNumberOfProcessors;
-}
+	const void* find_OLF_section (size_t& size) const noexcept;
 
-const void* SystemInfo::get_OLF_section (size_t& size) noexcept
-{
-	PortableExecutable pe (GetModuleHandleW (nullptr));
-	return pe.find_OLF_section (size);
-}
+private:
+	static const void* get_COFF (const void* base_address);
+
+private:
+	const void* base_address_;
+};
+
 
 }
 }
-}
+
+#endif

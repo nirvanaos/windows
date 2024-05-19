@@ -1,6 +1,7 @@
 #include "../Port/Chrono.h"
 #include "../Port/Timer.h"
 #include "../Port/SystemInfo.h"
+#include "../Source/win32.h"
 #include <gtest/gtest.h>
 #include <atomic>
 

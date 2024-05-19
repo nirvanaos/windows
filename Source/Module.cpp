@@ -85,7 +85,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 		if (!module_)
 			throw_last_error ();
 		Nirvana::Core::PortableExecutable pe (module_);
-		if (!pe.find_OLF_section (metadata_))
+		if (!(metadata_.address = pe.find_OLF_section (metadata_.size)))
 			throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 		const COFF::PE32Header* pehdr = pe.pe32_header ();
 		if (!pehdr || pehdr->AddressOfEntryPoint)
