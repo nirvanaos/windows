@@ -29,6 +29,10 @@ Nirvana core without the MSVC STL library.
 
 Sources for various tests.
 
+### ./pe
+
+Portable executable file format support.
+
 ## How to build port libraries
 
 Before building the Nirvana core for Windows, have to build the following libraries.

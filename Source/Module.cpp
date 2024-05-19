@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/Module.h"
-#include <PortableExecutable.h>
+#include "../pe/PortableExecutable.h"
 #include "win32.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
@@ -131,7 +131,7 @@ void Module::get_data_sections (DataSections& sections)
 			&& !COFF::is_section (*s, ".msvcjmc")
 			&& !COFF::is_section (*s, OLF_BIND)
 			)
-			sections.push_back ({ pe.section_address (*s), s->VirtualSize });
+			sections.push_back ({ pe.section_address (*s), s->Misc.VirtualSize });
 	}
 }
 

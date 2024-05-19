@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/SystemInfo.h"
-#include <PortableExecutable.h>
+#include "../pe/PortableExecutable.h"
 #include "win32.h"
 
 namespace Nirvana {
