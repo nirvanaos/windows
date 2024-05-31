@@ -15,6 +15,10 @@ public:
 		image_ (pe_factory::create_pe (file))
 	{}
 
+	ModuleReader (Nirvana::AccessBuf::_ptr_type file) :
+		image_ (pe_factory::create_pe (file))
+	{}
+
 	Nirvana::ModuleMetadata get_module_metadata () const
 	{
 		Nirvana::ModuleMetadata md;
@@ -129,6 +133,18 @@ private:
 namespace Nirvana {
 
 ModuleMetadata get_module_metadata (std::istream& file)
+{
+	ModuleMetadata md;
+	try {
+		ModuleReader reader (file);
+		md = reader.get_module_metadata ();
+	} catch (const std::exception& ex) {
+		md.set_error (ex.what ());
+	}
+	return md;
+}
+
+ModuleMetadata get_module_metadata (Nirvana::AccessBuf::_ptr_type file)
 {
 	ModuleMetadata md;
 	try {

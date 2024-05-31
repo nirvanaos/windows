@@ -35,15 +35,15 @@ const void* PortableExecutable::get_COFF (const void* base_address)
 	typedef pe_bliss::pe_win::image_dos_header DOSHeader;
 	const DOSHeader* dos_header = (const DOSHeader*)base_address;
 
-	static const char DOSMagic [] = { 'M', 'Z' };
+	static const char DOS_magic [] = { 'M', 'Z' };
 
-	if (dos_header->e_magic != *(const uint16_t*)DOSMagic)
+	if (dos_header->e_magic != *(const uint16_t*)DOS_magic)
 		throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 
-	static const char PEMagic [] = { 'P', 'E', '\0', '\0' };
+	static const char PE_magic [] = { 'P', 'E', '\0', '\0' };
 
-	const uint32_t* PE_magic = (const uint32_t*)((const uint8_t*)base_address + dos_header->e_lfanew);
-	if (*PE_magic != *(const uint32_t*)PEMagic)
+	const uint32_t* PE_magic_hdr = (const uint32_t*)((const uint8_t*)base_address + dos_header->e_lfanew);
+	if (*PE_magic_hdr != *(const uint32_t*)PE_magic)
 		throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 
 	return PE_magic + 1;
