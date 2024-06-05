@@ -46,7 +46,7 @@ const void* PortableExecutable::get_COFF (const void* base_address)
 	if (*PE_magic_hdr != *(const uint32_t*)PE_magic)
 		throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 
-	return PE_magic + 1;
+	return PE_magic_hdr + 1;
 }
 
 PortableExecutable::PortableExecutable (const void* base_address) :
