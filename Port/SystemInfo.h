@@ -59,8 +59,14 @@ public:
 
 	static const uint16_t* supported_platforms () noexcept;
 
+	static const void* base_address () noexcept
+	{
+		return base_address_;
+	}
+
 private:
 	static unsigned int hardware_concurrency_;
+	static const void* base_address_;
 };
 
 }

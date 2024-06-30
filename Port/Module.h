@@ -67,7 +67,7 @@ protected:
 	/// \brief Return all read/write data sections
 	/// 
 	/// \param sections List of r/w data sections
-	void get_data_sections (DataSections& sections);
+	void get_data_sections (DataSections& sections) const;
 
 	/// Unload module (only for executables).
 	void unload () noexcept;

@@ -123,7 +123,7 @@ void Module::unload () noexcept
 	}
 }
 
-void Module::get_data_sections (DataSections& sections)
+void Module::get_data_sections (DataSections& sections) const
 {
 	Nirvana::Core::PortableExecutable pe (module_);
 	for (const COFF::Section* s = pe.sections (), *end = s + pe.section_count (); s != end; ++s) {

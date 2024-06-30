@@ -32,6 +32,7 @@ namespace Core {
 namespace Port {
 
 unsigned int SystemInfo::hardware_concurrency_;
+const void* SystemInfo::base_address_;
 
 const uint16_t* SystemInfo::supported_platforms () noexcept
 {
@@ -52,6 +53,7 @@ const uint16_t* SystemInfo::supported_platforms () noexcept
 
 void SystemInfo::initialize () noexcept
 {
+	base_address_ = GetModuleHandleW (nullptr);
 	::SYSTEM_INFO si;
 	::GetSystemInfo (&si);
 	hardware_concurrency_ = si.dwNumberOfProcessors;
@@ -59,7 +61,7 @@ void SystemInfo::initialize () noexcept
 
 const void* SystemInfo::get_OLF_section (size_t& size) noexcept
 {
-	PortableExecutable pe (GetModuleHandleW (nullptr));
+	PortableExecutable pe (base_address_);
 	return pe.find_OLF_section (size);
 }
 

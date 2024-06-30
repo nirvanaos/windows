@@ -1247,18 +1247,10 @@ long __stdcall exception_filter (EXCEPTION_POINTERS* pex)
 	}
 
 	siginfo_t signal;
-	if (ex2signal (pex, signal)) {
-		Core::Thread* th = Core::Thread::current_ptr ();
-		if (th) {
-			ExecDomain* ed = th->exec_domain ();
-			if (ed)
-				return ed->on_signal (signal) ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
-		}
-		if (signal.si_excode != CORBA::Exception::EC_NO_EXCEPTION)
-			CORBA::SystemException::_raise_by_code ((CORBA::SystemException::Code)signal.si_excode, signal.si_code);
-	}
-
-	return EXCEPTION_CONTINUE_SEARCH;
+	if (ex2signal (pex, signal))
+		return ExecDomain::on_signal (signal) ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
+	else
+		return EXCEPTION_CONTINUE_SEARCH;
 }
 
 long __stdcall unhandled_exception_filter (EXCEPTION_POINTERS* pex);
