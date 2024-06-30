@@ -121,7 +121,17 @@ bool ex2signal (EXCEPTION_POINTERS* pex, siginfo_t& siginfo) noexcept
 				siginfo.si_signo = exc - STATUS_SIGNAL_BEGIN;
 	}
 	if (siginfo.si_signo) {
+
+#ifdef _X86_
+		siginfo.si_addr = (void*)pex->ContextRecord->Eip;
+#elif defined (_AMD64_)
 		siginfo.si_addr = (void*)pex->ContextRecord->Rip;
+#elif defined (_ARM_)
+		siginfo.si_addr = (void*)pex->ContextRecord->Pc;
+#else
+#error Unsupported platform
+#endif
+
 		siginfo.si_excode = Signals::signal2ex (siginfo.si_signo);
 		if (0xC0000000 == (exc & 0xFFFF0000))
 			siginfo.si_errno = error2errno (exc & 0x0000FFFF, 0);
