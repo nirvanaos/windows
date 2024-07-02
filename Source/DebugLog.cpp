@@ -188,11 +188,16 @@ void report_unhandled (EXCEPTION_POINTERS* pex)
 		} break;
 	}
 
+	log.stack_trace ();
+}
+
+void DebugLog::stack_trace () const noexcept
+{
 #ifdef DEBUG_SYMBOLS
 	void* stack [63];
 	int frame_cnt = CaptureStackBackTrace (2, (DWORD)std::size (stack), stack, nullptr);
 	if (frame_cnt <= 0)
-		log << "Stack trace is not available\n";
+		*this << "Stack trace is not available\n";
 
 	IMAGEHLP_LINE64 line;
 	line.SizeOfStruct = sizeof (IMAGEHLP_LINE64);
@@ -201,15 +206,16 @@ void report_unhandled (EXCEPTION_POINTERS* pex)
 	HANDLE process = GetCurrentProcess ();
 	for (int i = 0; i < frame_cnt; ++i) {
 		if (SymGetLineFromAddr64 (process, (DWORD64)(stack [i]), &displacement, &line)) {
+			char buf [_MAX_ITOSTR_BASE10_COUNT];
 			_itoa (line.LineNumber, buf, 10);
-			log << line.FileName << '(' << buf << ")\n";
+			*this << line.FileName << '(' << buf << ")\n";
 		} else {
-			log << "Line not found\n";
+			*this << "Line not found\n";
 		}
 	}
 
 	if (frame_cnt == std::size (stack))
-		log << "More stack frames...\n";
+		*this << "More stack frames...\n";
 #endif
 }
 

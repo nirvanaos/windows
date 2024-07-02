@@ -46,9 +46,15 @@ void Debugger::output_debug_string (Nirvana::Debugger::DebugEvent level, const c
 
 bool Debugger::debug_break ()
 {
-	// If debugger is not present, __debugbreak will cause unhandled exception and stack trace.
-	__debugbreak ();
-	return IsDebuggerPresent ();
+	if (IsDebuggerPresent ()) {
+		__debugbreak ();
+		return true;
+	} else {
+		Windows::DebugLog log;
+		log << "Debug break\n";
+		log.stack_trace ();
+		return false;
+	}
 }
 
 bool Debugger::is_debugger_present () noexcept

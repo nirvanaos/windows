@@ -51,6 +51,8 @@ public:
 	static HANDLE get_handle () noexcept;
 	static void terminate () noexcept;
 
+	void stack_trace () const noexcept;
+
 	static bool trace_;
 
 private:
