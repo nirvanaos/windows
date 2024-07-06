@@ -425,8 +425,8 @@ void SchedulerMaster::reschedule (DeadlineTime deadline, SchedulerProcess& proce
 class SchedulerMaster::SysDomainCall : public SysManager::AsyncCall
 {
 protected:
-	SysDomainCall (Nirvana::SysManager::_ref_type&& ref, SysManager& impl, SchedulerProcess& process) :
-		SysManager::AsyncCall (std::move (ref), impl),
+	SysDomainCall (SysManager::AsyncCallContext&& ctx, SchedulerProcess& process) :
+		SysManager::AsyncCall (std::move (ctx)),
 		process_ (&process)
 	{}
 
@@ -437,9 +437,8 @@ protected:
 class SchedulerMaster::ProcessStart : public SysDomainCall
 {
 public:
-	ProcessStart (Nirvana::SysManager::_ref_type&& ref, SysManager& impl,
-		SchedulerProcess& process) noexcept :
-		SysDomainCall (std::move (ref), impl, process)
+	ProcessStart (SysManager::AsyncCallContext&& ctx, SchedulerProcess& process) noexcept :
+		SysDomainCall (std::move (ctx), process)
 	{}
 
 private:
@@ -449,9 +448,8 @@ private:
 class SchedulerMaster::ProcessTerminate : public SysDomainCall
 {
 public:
-	ProcessTerminate (Nirvana::SysManager::_ref_type&& ref, SysManager& impl,
-		SchedulerProcess& process) noexcept :
-		SysDomainCall (std::move (ref), impl, process)
+	ProcessTerminate (SysManager::AsyncCallContext&& ctx, SchedulerProcess& process) noexcept :
+		SysDomainCall (std::move (ctx), process)
 	{}
 
 private:
@@ -461,7 +459,8 @@ private:
 template <class R> inline
 void SchedulerMaster::call_sys_domain (SchedulerProcess& process)
 {
-	SysManager::async_call <R> (Chrono::make_deadline (SYS_DOMAIN_CALL_DEADLINE), std::ref (process));
+	if (!SysManager::async_call <R> (Chrono::make_deadline (SYS_DOMAIN_CALL_DEADLINE), std::ref (process)))
+		ESIOP::send_shutdown (process.process_id ()); // Shutdown is in the final stage
 }
 
 inline
