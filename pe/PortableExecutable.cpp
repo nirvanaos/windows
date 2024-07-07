@@ -30,23 +30,32 @@
 namespace Nirvana {
 namespace Core {
 
-const void* PortableExecutable::get_COFF (const void* base_address)
+void PortableExecutable::check_header (const DOSHeader& hdr)
 {
-	typedef pe_bliss::pe_win::image_dos_header DOSHeader;
-	const DOSHeader* dos_header = (const DOSHeader*)base_address;
-
 	static const char DOS_magic [] = { 'M', 'Z' };
 
-	if (dos_header->e_magic != *(const uint16_t*)DOS_magic)
+	if (hdr.e_magic != *(const uint16_t*)DOS_magic)
 		throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 
+}
+
+void PortableExecutable::check_header (const NTHeaders32& hdr)
+{
 	static const char PE_magic [] = { 'P', 'E', '\0', '\0' };
 
-	const uint32_t* PE_magic_hdr = (const uint32_t*)((const uint8_t*)base_address + dos_header->e_lfanew);
-	if (*PE_magic_hdr != *(const uint32_t*)PE_magic)
+	if (hdr.Signature != *(const uint32_t*)PE_magic)
 		throw_BAD_PARAM (make_minor_errno (ENOEXEC));
+}
 
-	return PE_magic_hdr + 1;
+const void* PortableExecutable::get_COFF (const void* base_address)
+{
+	const DOSHeader* dos_header = (const DOSHeader*)base_address;
+	check_header (*dos_header);
+
+	const NTHeaders32* nt_headers = (const NTHeaders32*)((const uint8_t*)base_address + dos_header->e_lfanew);
+	check_header (*nt_headers);
+
+	return &nt_headers->FileHeader;
 }
 
 PortableExecutable::PortableExecutable (const void* base_address) :
@@ -62,6 +71,21 @@ const void* PortableExecutable::find_OLF_section (size_t& size) const noexcept
 		return section_address (*ps);
 	}
 	return nullptr;
+}
+
+uint16_t PortableExecutable::get_platform (AccessDirect::_ptr_type binary)
+{
+	Bytes header;
+
+	binary->read (0, sizeof (DOSHeader), header);
+	const DOSHeader* dos_header = (const DOSHeader*)header.data ();
+	check_header (*dos_header);
+
+	binary->read (dos_header->e_lfanew, sizeof (NTHeaders32), header);
+	const NTHeaders32* nt_headers = (const NTHeaders32*)header.data ();
+	check_header (*nt_headers);
+
+	return nt_headers->FileHeader.Machine;
 }
 
 }

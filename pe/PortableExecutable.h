@@ -28,6 +28,7 @@
 #pragma once
 
 #include "COFF.h"
+#include <Nirvana/File.h>
 
 namespace Nirvana {
 namespace Core {
@@ -35,6 +36,8 @@ namespace Core {
 class PortableExecutable : public COFF
 {
 public:
+	static uint16_t get_platform (AccessDirect::_ptr_type binary);
+
 	PortableExecutable (const void* base_address);
 
 	const void* base_address () const noexcept
@@ -50,6 +53,12 @@ public:
 	const void* find_OLF_section (size_t& size) const noexcept;
 
 private:
+	typedef pe_bliss::pe_win::image_dos_header DOSHeader;
+	typedef pe_bliss::pe_win::image_nt_headers32 NTHeaders32;
+
+	static void check_header (const DOSHeader& hdr);
+	static void check_header (const NTHeaders32& hdr);
+
 	static const void* get_COFF (const void* base_address);
 
 private:

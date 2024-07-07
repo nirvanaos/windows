@@ -24,15 +24,16 @@
 *  popov.nirvana@gmail.com
 */
 #include "../Port/Module.h"
-#include "../pe/PortableExecutable.h"
 #include "win32.h"
 #include "error2errno.h"
 #include <Nirvana/string_conv.h>
 #include <Nirvana/posix_defs.h>
 #include <Nirvana/POSIX.h>
+#include <Nirvana/BindError.h>
 #include <ORB/Services.h>
 #include "../Port/Timer.h"
 #include <TimerEvent.h>
+#include <BindError.h>
 
 namespace Nirvana {
 namespace Core {
@@ -83,13 +84,17 @@ Module::Module (AccessDirect::_ptr_type file) :
 
 		module_ = LoadLibraryW (temp_path_.c_str ());
 		if (!module_)
-			throw_last_error ();
-		Nirvana::Core::PortableExecutable pe (module_);
-		if (!(metadata_.address = pe.find_OLF_section (metadata_.size)))
 			throw_BAD_PARAM (make_minor_errno (ENOEXEC));
+
+		Nirvana::Core::PortableExecutable pe (module_);
+
+		if (!(metadata_.address = pe.find_OLF_section (metadata_.size)))
+			BindError::throw_message ("Metadata not found");
+
 		const COFF::PE32Header* pehdr = pe.pe32_header ();
 		if (!pehdr || pehdr->AddressOfEntryPoint)
-			throw_BAD_PARAM (make_minor_errno (ENOEXEC));
+			BindError::throw_message ("Metadata not found");
+
 	} catch (...) {
 		unload ();
 		throw;

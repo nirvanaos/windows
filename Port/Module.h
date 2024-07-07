@@ -33,6 +33,7 @@
 #include <Section.h>
 #include <HeapAllocator.h>
 #include "../Windows/Source/WinWChar.h"
+#include "../pe/PortableExecutable.h"
 
 namespace Nirvana {
 namespace Core {
@@ -42,6 +43,11 @@ namespace Port {
 class Module
 {
 public:
+	static uint16_t get_platform (AccessDirect::_ptr_type file)
+	{
+		return PortableExecutable::get_platform (file);
+	}
+
 	void* address () const noexcept
 	{
 		return module_;
@@ -52,16 +58,26 @@ public:
 		return metadata_;
 	}
 
-protected:
 	/// Constructor
 	/// 
-	/// \param file Executable file access.
+	/// \param file Binary file access.
 	Module (AccessDirect::_ptr_type file);
 
 	/// Destructor
 	~Module ()
 	{
 		unload ();
+	}
+
+protected:
+	Module (const Module&) = delete;
+	
+	Module (Module&& src) noexcept :
+		module_ (src.module_),
+		metadata_ (src.metadata_),
+		temp_path_ (std::move (src.temp_path_))
+	{
+		src.module_ = nullptr;
 	}
 
 	/// \brief Return all read/write data sections
