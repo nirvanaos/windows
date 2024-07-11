@@ -70,8 +70,13 @@ int nirvana (int argc, char* argv [], char* envp []) noexcept
 					ErrConsole () << "System is not running.\n";
 					return -1;
 				}
+
+			default:
+				goto start;
 			}
 		}
+
+start:
 
 		if (system) {
 			if (BUILD_NO_SYS_DOMAIN) {
