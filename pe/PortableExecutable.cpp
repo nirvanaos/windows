@@ -36,7 +36,6 @@ void PortableExecutable::check_header (const DOSHeader& hdr)
 
 	if (hdr.e_magic != *(const uint16_t*)DOS_magic)
 		throw_BAD_PARAM (make_minor_errno (ENOEXEC));
-
 }
 
 void PortableExecutable::check_header (const NTHeaders32& hdr)
@@ -73,7 +72,7 @@ const void* PortableExecutable::find_OLF_section (size_t& size) const noexcept
 	return nullptr;
 }
 
-uint16_t PortableExecutable::get_platform (AccessDirect::_ptr_type binary)
+uint_fast16_t PortableExecutable::get_platform (AccessDirect::_ptr_type binary)
 {
 	Bytes header;
 

@@ -93,7 +93,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 
 		const COFF::PE32Header* pehdr = pe.pe32_header ();
 		if (!pehdr || pehdr->AddressOfEntryPoint)
-			BindError::throw_message ("Metadata not found");
+			BindError::throw_message ("Image must be linked with /NOENTRY");
 
 	} catch (...) {
 		unload ();

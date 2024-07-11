@@ -36,7 +36,7 @@ namespace Core {
 class PortableExecutable : public COFF
 {
 public:
-	static uint16_t get_platform (AccessDirect::_ptr_type binary);
+	static uint_fast16_t get_platform (AccessDirect::_ptr_type binary);
 
 	PortableExecutable (const void* base_address);
 
