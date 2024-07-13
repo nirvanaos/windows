@@ -29,11 +29,10 @@
 #include <Nirvana/string_conv.h>
 #include <Nirvana/posix_defs.h>
 #include <Nirvana/POSIX.h>
-#include <Nirvana/BindError.h>
+#include <Nirvana/BindErrorUtl.h>
 #include <ORB/Services.h>
 #include "../Port/Timer.h"
 #include <TimerEvent.h>
-#include <BindError.h>
 
 namespace Nirvana {
 namespace Core {
