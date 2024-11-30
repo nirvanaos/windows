@@ -26,6 +26,20 @@
 #include "internal.h"
 #include "wow64ext.h"
 
+// Undefine iso646.h macros
+#ifdef and
+#undef and
+#endif
+#ifdef or
+#undef or
+#endif
+#ifdef xor
+#undef xor
+#endif
+#ifdef not
+#undef not
+#endif
+
 template <class T>
 class TmpBuf
 {
