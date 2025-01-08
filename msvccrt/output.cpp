@@ -11,9 +11,9 @@ extern "C" int __cdecl __stdio_common_vsprintf (
   va_list          const arglist
 )
 {
-  Format <char> in (format);
-  FormatOutBufSize <char> out (buffer, buffer_count);
-  return Formatter::vformat (false, in, arglist, out);
+  WideInStrUTF8 in (format);
+  WideOutBufUTF8 out (buffer, buffer + buffer_count);
+  return Formatter::format (in, arglist, out);
 }
 
 extern "C" int __cdecl __stdio_common_vsprintf_s (
@@ -41,29 +41,6 @@ extern "C" int __cdecl __stdio_common_vsnprintf_s (
   return __stdio_common_vsprintf (options, buffer, buffer_count, format, locale, arglist);
 }
 
-namespace Nirvana {
-
-class FileOut : public Formatter::COut
-{
-public:
-  FileOut (FILE* f) :
-    f_ (f)
-  {}
-
-  /// Put character to output.
-  /// 
-  /// \param c Character.
-  virtual void put (int c) override
-  {
-    fputc (c, f_);
-  }
-
-private:
-  FILE* f_;
-};
-
-}
-
 extern "C" int __cdecl __stdio_common_vfprintf (
   unsigned __int64 const options,
   FILE* const stream,
@@ -72,7 +49,8 @@ extern "C" int __cdecl __stdio_common_vfprintf (
   va_list          const arglist
 )
 {
-  Format <char> in (format);
-  FileOut out (stream);
-  return Formatter::vformat (false, in, arglist, out);
+  WideInStrUTF8 in (format);
+  ByteOutFile out (stream);
+  WideOutUTF8 wout (out);
+  return Formatter::format (in, arglist, wout);
 }
