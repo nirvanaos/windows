@@ -3,6 +3,8 @@
 #include <Nirvana/string_conv.h>
 #include <crtdbg.h>
 
+using namespace Nirvana;
+
 extern "C" int __cdecl _CrtDbgReport (
 	int         report_type,
 	char const* file_name,
@@ -15,10 +17,10 @@ extern "C" int __cdecl _CrtDbgReport (
 
 	va_list arglist;
 	va_start (arglist, format);
-	append_format_v (s, format, arglist);
+	Formatter::append_format_v (s, format, arglist);
 	va_end (arglist);
 
-	Nirvana::the_debugger->debug_event ((Nirvana::Debugger::DebugEvent)(report_type + 1), s,
+	the_debugger->debug_event ((Debugger::DebugEvent)(report_type + 1), s,
 		file_name, line_number);
 
 	return 0;
@@ -40,14 +42,14 @@ extern "C" int __cdecl _CrtDbgReportW (
 
 	va_list arglist;
 	va_start (arglist, format);
-	append_format_v (s, format, arglist);
+	Formatter::append_format_v (s, format, arglist);
 	va_end (arglist);
 
 	IDL::String msg, sfn;
 	append_utf8 (s, msg);
 	append_utf8 (file_name, sfn);
 
-	Nirvana::the_debugger->debug_event ((Nirvana::Debugger::DebugEvent)(report_type + 1), msg, sfn, line_number);
+	the_debugger->debug_event ((Debugger::DebugEvent)(report_type + 1), msg, sfn, line_number);
 
 	return 0;
 }
