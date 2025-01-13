@@ -1,4 +1,4 @@
-#include <Nirvana/Formatter.h>
+#include <Nirvana/printf.h>
 
 using namespace Nirvana;
 
@@ -13,7 +13,7 @@ extern "C" int __cdecl __stdio_common_vsprintf (
 {
   WideInStrUTF8 in (format);
   WideOutBufUTF8 out (buffer, buffer + buffer_count);
-  return Formatter::format (in, arglist, out);
+  return Nirvana::printf (in, arglist, out);
 }
 
 extern "C" int __cdecl __stdio_common_vsprintf_s (
@@ -52,5 +52,5 @@ extern "C" int __cdecl __stdio_common_vfprintf (
   WideInStrUTF8 in (format);
   ByteOutFile out (stream);
   WideOutUTF8 wout (out);
-  return Formatter::format (in, arglist, wout);
+  return Nirvana::printf (in, arglist, wout);
 }
