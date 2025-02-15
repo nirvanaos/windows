@@ -122,13 +122,11 @@ typedef Ref <SchedulerProcess> SchedulerProcessRef;
 class SchedulerItem
 {
 public:
-	SchedulerItem () :
-		local_executor_ (nullptr)
+	SchedulerItem ()
 	{}
 
 	SchedulerItem (SchedulerProcess& process) :
-		process_ (&process),
-		local_executor_ (nullptr)
+		process_ (&process)
 	{}
 
 	SchedulerItem (Executor& executor) :
@@ -153,7 +151,7 @@ public:
 
 private:
 	SchedulerProcessRef process_;
-	Executor* local_executor_;
+	Ref <Executor> local_executor_;
 };
 
 /// SchedulerMaster class. 
