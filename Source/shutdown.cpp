@@ -37,7 +37,7 @@ namespace Windows {
 bool shutdown ()
 {
 	if (get_sys_process_id ()) {
-		ESIOP::send_shutdown (sys_process_id);
+		ESIOP::send_shutdown (sys_process_id, 0);
 		return true;
 	}
 	return false;
