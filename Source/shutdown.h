@@ -32,7 +32,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool shutdown ();
+bool shutdown (bool force);
 
 }
 }
