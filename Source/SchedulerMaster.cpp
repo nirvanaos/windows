@@ -460,7 +460,7 @@ template <class R> inline
 void SchedulerMaster::call_sys_domain (SchedulerProcess& process)
 {
 	if (!SysManager::async_call <R> (Chrono::make_deadline (SYS_DOMAIN_CALL_DEADLINE), std::ref (process)))
-		ESIOP::send_shutdown (process.process_id ()); // Shutdown is in the final stage
+		ESIOP::send_shutdown (process.process_id (), 0); // Shutdown is in the final stage
 }
 
 inline

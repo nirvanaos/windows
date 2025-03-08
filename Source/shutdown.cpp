@@ -34,10 +34,10 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
-bool shutdown ()
+bool shutdown (bool force)
 {
 	if (get_sys_process_id ()) {
-		ESIOP::send_shutdown (sys_process_id);
+		ESIOP::send_shutdown (sys_process_id, force);
 		return true;
 	}
 	return false;

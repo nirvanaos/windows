@@ -2,6 +2,7 @@
 #include "../Port/Timer.h"
 #include "../Port/SystemInfo.h"
 #include "../Source/win32.h"
+#include "Scheduler.h"
 #include <gtest/gtest.h>
 #include <atomic>
 
@@ -27,6 +28,7 @@ protected:
 		Nirvana::Core::Port::SystemInfo::initialize ();
 		Nirvana::Core::Port::Chrono::initialize ();
 		Nirvana::Core::Port::Timer::initialize ();
+		Nirvana::Core::Scheduler::initialize ();
 	}
 
 	virtual void TearDown ()
@@ -35,6 +37,7 @@ protected:
 		// before the destructor).
 		Nirvana::Core::Port::Timer::terminate ();
 		Nirvana::Core::Port::Chrono::terminate ();
+		Nirvana::Core::Scheduler::terminate ();
 	}
 };
 

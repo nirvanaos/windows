@@ -53,8 +53,6 @@ protected:
 	Timer ();
 	~Timer ();
 
-	virtual void signal () noexcept = 0;
-
 private:
 	struct _TP_TIMER* timer_;
 

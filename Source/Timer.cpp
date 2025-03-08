@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
-#include "../Port/Timer.h"
+#include <Timer.h>
 #include "../Port/SystemInfo.h"
 #include <limits>
 
@@ -76,7 +76,8 @@ struct Timer::Pool
 	{
 		if (!initialized)
 			throw_INITIALIZE ();
-		TP_TIMER* p = CreateThreadpoolTimer (&timer_callback, &timer, &callback_environ);
+		TP_TIMER* p = CreateThreadpoolTimer (&timer_callback,
+			&static_cast <Core::Timer&> (timer), &callback_environ);
 		if (!p)
 			throw_NO_MEMORY ();
 		return p;
@@ -101,7 +102,7 @@ struct Timer::Pool
 
 void CALLBACK Timer::Pool::timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*)
 {
-	((Timer*)context)->signal ();
+	((Core::Timer*)context)->port_signal ();
 }
 
 Timer::Pool Timer::pool_ {};

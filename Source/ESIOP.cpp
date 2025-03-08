@@ -45,7 +45,7 @@ void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) n
 	}
 }
 
-void send_shutdown (ProtDomainId domain_id)
+void send_shutdown (ProtDomainId domain_id, unsigned flags)
 {
 	Handle process = OpenProcess (PROCESS_DUP_HANDLE, false, domain_id);
 	if (!process)
@@ -61,7 +61,7 @@ void send_shutdown (ProtDomainId domain_id)
 		)
 		throw_last_error ();
 
-	Shutdown msg ((Nirvana::Core::Security::Context::ABI)(uintptr_t)token);
+	Shutdown msg ((Nirvana::Core::Security::Context::ABI)(uintptr_t)token, flags);
 	Mailslot ms;
 	ms.open (object_name (MAILSLOT_PREFIX, domain_id));
 	ms.send (msg);

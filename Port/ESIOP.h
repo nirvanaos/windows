@@ -83,7 +83,7 @@ Nirvana::HOST_PLATFORM == Nirvana::PLATFORM_I386
 /// \param size The error message size.
 void send_error_message (ProtDomainId domain_id, const void* msg, size_t size) noexcept;
 
-void send_shutdown (ProtDomainId domain_id);
+void send_shutdown (ProtDomainId domain_id, unsigned flags);
 
 }
 

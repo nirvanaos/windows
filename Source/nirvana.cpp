@@ -51,7 +51,8 @@ int nirvana (int argc, char* argv [], char* envp []) noexcept
 	try {
 		bool system = false;
 		while (argc > 1 && '-' == *argv [1]) {
-			switch (argv [1][1]) {
+			char cmd = argv [1][1];
+			switch (cmd) {
 
 			case 't':
 				DebugLog::trace_ = true;
@@ -64,7 +65,8 @@ int nirvana (int argc, char* argv [], char* envp []) noexcept
 				break;
 
 			case 'd':
-				if (shutdown ())
+			case 'f':
+				if (shutdown ('f' == cmd))
 					return 0;
 				else {
 					ErrConsole () << "System is not running.\n";
