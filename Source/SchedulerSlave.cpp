@@ -187,9 +187,11 @@ void SchedulerSlave::core_free () noexcept
 
 void SchedulerSlave::execute () noexcept
 {
-	Executor* executor;
-	if (queue_.delete_min (executor))
-		ThreadWorker::execute (*executor);
+	{
+		Ref <Executor> executor;
+		if (queue_.delete_min (executor))
+			ThreadWorker::execute (*executor);
+	}
 	core_free ();
 }
 

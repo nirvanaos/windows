@@ -37,6 +37,7 @@
 #include "WorkerThreads.h"
 #include "object_name.h"
 #include "BufferPool.h"
+#include <CORBA/Servant_var.h>
 
 namespace Nirvana {
 namespace Core {
@@ -122,16 +123,14 @@ typedef Ref <SchedulerProcess> SchedulerProcessRef;
 class SchedulerItem
 {
 public:
-	SchedulerItem () :
-		local_executor_ (nullptr)
+	SchedulerItem () noexcept
 	{}
 
-	SchedulerItem (SchedulerProcess& process) :
-		process_ (&process),
-		local_executor_ (nullptr)
+	SchedulerItem (SchedulerProcess& process) noexcept :
+		process_ (&process)
 	{}
 
-	SchedulerItem (Executor& executor) :
+	SchedulerItem (Executor& executor) noexcept :
 		local_executor_ (&executor)
 	{}
 
@@ -140,9 +139,9 @@ public:
 		return process_;
 	}
 
-	Executor* local_executor () const
+	Executor* detach_executor () noexcept
 	{
-		return local_executor_;
+		return static_cast <PortableServer::Servant_var <Executor>&> (local_executor_)._retn ();
 	}
 
 	bool operator < (const SchedulerItem& rhs) const
@@ -153,7 +152,7 @@ public:
 
 private:
 	SchedulerProcessRef process_;
-	Executor* local_executor_;
+	Ref <Executor> local_executor_;
 };
 
 /// SchedulerMaster class. 
@@ -198,8 +197,9 @@ public:
 		if (process)
 			return process->execute ();
 		else {
-			assert (item.local_executor ());
-			worker_threads_.execute (*item.local_executor ());
+			Executor* executor = item.detach_executor ();
+			assert (executor);
+			worker_threads_.execute (*executor);
 			return true;
 		}
 	}

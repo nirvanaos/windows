@@ -28,13 +28,10 @@
 #define NIRVANA_CORE_WINDOWS_SCHEDULERABSTRACT_H_
 #pragma once
 
-#include <Nirvana/Nirvana.h>
+#include "Executor.h"
 
 namespace Nirvana {
 namespace Core {
-
-class Executor;
-
 namespace Windows {
 
 class NIRVANA_NOVTABLE SchedulerAbstract
