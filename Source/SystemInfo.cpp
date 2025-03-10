@@ -56,8 +56,7 @@ void SystemInfo::initialize () noexcept
 	base_address_ = GetModuleHandleW (nullptr);
 	::SYSTEM_INFO si;
 	::GetSystemInfo (&si);
-//	hardware_concurrency_ = si.dwNumberOfProcessors;
-	hardware_concurrency_ = 1;
+	hardware_concurrency_ = si.dwNumberOfProcessors;
 }
 
 const void* SystemInfo::get_OLF_section (size_t& size) noexcept
