@@ -64,7 +64,7 @@ public:
 
 	static void execute (Executor& executor) noexcept
 	{
-		Core::ThreadWorker::execute (executor);
+		static_cast <Core::ThreadWorker&> (Core::Thread::current ()).execute (executor);
 		RevertToSelf ();
 	}
 
