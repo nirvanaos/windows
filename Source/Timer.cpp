@@ -24,119 +24,35 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
-#include <Timer.h>
-#include "../Port/SystemInfo.h"
-#include <limits>
+#include "Timer.h"
+#include "Handle.h"
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
+namespace Windows {
 
-struct Timer::Pool
+StaticallyAllocated <Timer::Global> Timer::global_;
+
+void Timer::initialize ()
 {
-	void initialize () noexcept
-	{
-		assert (!initialized);
-
-		InitializeThreadpoolEnvironment (&callback_environ);
-		thread_pool = CreateThreadpool (nullptr);
-		assert (thread_pool);
-
-		TP_POOL_STACK_INFORMATION si {
-			Windows::NEUTRAL_FIBER_STACK_RESERVE,
-			Windows::NEUTRAL_FIBER_STACK_COMMIT
-		};
-
-		NIRVANA_VERIFY (SetThreadpoolStackInformation (thread_pool, &si));
-		SetThreadpoolThreadMaximum (thread_pool, Port::SystemInfo::hardware_concurrency ());
-		NIRVANA_VERIFY (SetThreadpoolThreadMinimum (thread_pool, 0));
-
-		SetThreadpoolCallbackPool (&callback_environ, thread_pool);
-
-		cleanup_group = CreateThreadpoolCleanupGroup ();
-		assert (cleanup_group);
-		SetThreadpoolCallbackCleanupGroup (&callback_environ, cleanup_group, nullptr);
-
-		initialized = true;
-	}
-
-	void terminate () noexcept
-	{
-		assert (initialized);
-
-		initialized = false;
-
-		CloseThreadpoolCleanupGroupMembers (cleanup_group, true, nullptr);
-		CloseThreadpoolCleanupGroup (cleanup_group);
-		CloseThreadpool (thread_pool);
-		DestroyThreadpoolEnvironment (&callback_environ);
-	}
-
-	TP_TIMER* timer_create (Port::Timer& timer)
-	{
-		if (!initialized)
-			throw_INITIALIZE ();
-		TP_TIMER* p = CreateThreadpoolTimer (&timer_callback,
-			&static_cast <Core::Timer&> (timer), &callback_environ);
-		if (!p)
-			throw_NO_MEMORY ();
-		return p;
-	}
-
-	void timer_close (TP_TIMER* timer) noexcept
-	{
-		if (initialized) {
-			SetThreadpoolTimer (timer, nullptr, 0, 0);
-			WaitForThreadpoolTimerCallbacks (timer, true);
-			CloseThreadpoolTimer (timer);
-		}
-	}
-
-	static void CALLBACK timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*);
-
-	TP_CALLBACK_ENVIRON callback_environ;
-	TP_POOL* thread_pool;
-	TP_CLEANUP_GROUP* cleanup_group;
-	volatile bool initialized;
-};
-
-void CALLBACK Timer::Pool::timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*)
-{
-	((Core::Timer*)context)->port_signal ();
-}
-
-Timer::Pool Timer::pool_ {};
-
-void Timer::initialize () noexcept
-{
-	pool_.initialize ();
+	global_.construct ();
 }
 
 void Timer::terminate () noexcept
 {
-	pool_.terminate ();
+	global_.destruct ();
 }
-
-bool Timer::initialized () noexcept
-{
-	return pool_.initialized;
-}
-
-Timer::Timer () :
-	timer_ (pool_.timer_create (*this))
-{}
 
 Timer::~Timer ()
 {
-	pool_.timer_close (timer_);
+	CloseHandle (handles_ [HANDLE_TIMER]);
+	CloseHandle (handles_ [HANDLE_DESTRUCT]);
 }
 
 void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period)
 {
-	if (!pool_.initialized)
-		return;
 	period /= TimeBase::MILLISECOND;
-	if (period > (TimeBase::TimeT)std::numeric_limits <DWORD>::max ())
+	if (period > (TimeBase::TimeT)std::numeric_limits <LONG>::max ())
 		throw_BAD_PARAM ();
 	LARGE_INTEGER dt;
 	if (flags & TIMER_ABSOLUTE)
@@ -146,13 +62,19 @@ void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT perio
 			throw_BAD_PARAM ();
 		dt.QuadPart = -(LONGLONG)due_time;
 	}
-	SetThreadpoolTimer (timer_, (FILETIME*)&dt, (DWORD)period, 0);
+	if (!SetWaitableTimer (handles_ [HANDLE_TIMER], &dt, (LONG)period, nullptr, nullptr, true))
+		Windows::throw_last_error ();
 }
 
 void Timer::cancel () noexcept
 {
-	if (pool_.initialized)
-		SetThreadpoolTimer (timer_, nullptr, 0, 0);
+	CancelWaitableTimer (handles_ [HANDLE_TIMER]);
+}
+
+unsigned long __stdcall Timer::thread_proc (Timer* _this)
+{
+	_this->completion_port_.thread_proc ();
+	return 0;
 }
 
 }

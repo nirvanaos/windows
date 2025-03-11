@@ -30,8 +30,6 @@
 
 #include <CORBA/CORBA.h>
 
-struct _TP_TIMER;
-
 namespace Nirvana {
 namespace Core {
 namespace Port {
@@ -44,20 +42,27 @@ public:
 	void set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period);
 	void cancel () noexcept;
 
-	static void initialize () noexcept;
+	static void initialize ();
 	static void terminate () noexcept;
-
-	static bool initialized () noexcept;
 
 protected:
 	Timer ();
 	~Timer ();
 
 private:
-	struct _TP_TIMER* timer_;
+	class Global;
+	static StaticallyAllocated <Global> global_;
 
-	struct Pool;
-	static Pool pool_;
+	enum Handle
+	{
+		HANDLE_TIMER,
+		HANDLE_DESTRUCT,
+		HANDLE_TERMINATE,
+
+		HANDLE_CNT
+	};
+
+	void* handles_ [HANDLE_CNT];
 };
 
 }
