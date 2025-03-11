@@ -28,7 +28,7 @@
 #define NIRVANA_CORE_THREADPOSTMAN_H_
 #pragma once
 
-#include "Thread.inl"
+#include "../Port/Thread.h"
 
 namespace Nirvana {
 namespace Core {
