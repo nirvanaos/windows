@@ -110,6 +110,12 @@ const bool RUNTIME_SUPPORT_DISABLE = false;
 /// So we can enable pooling.
 const bool EXEC_DOMAIN_POOLING = true;
 
+/// Background thread creation may be heavy.
+/// So we can enable pooling.
+const bool BACKGROUND_THREAD_POOLING = false;
+
+const TimeBase::TimeT OBJECT_POOL_HOUSEKEEPING_PERIOD = 3 * TimeBase::SECOND;
+
 ///@{
 /// When a request is issued, the request deadline is not known yet.
 /// So initially request is issued with some small deadline and then deadline is adjusted.
