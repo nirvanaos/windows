@@ -50,8 +50,7 @@ protected:
 	/// Continue execution.
 	void resume () noexcept;
 
-	/// Stop thread
-	void finish () noexcept
+	void stop () noexcept
 	{
 		finish_ = true;
 		resume ();

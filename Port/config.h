@@ -114,7 +114,7 @@ const bool EXEC_DOMAIN_POOLING = true;
 
 /// Background thread creation may be heavy.
 /// So we can enable pooling.
-const bool BACKGROUND_THREAD_POOLING = false;
+const bool BACKGROUND_THREAD_POOLING = true;
 
 /// Object pool housekeeping
 const TimeBase::TimeT OBJECT_POOL_SHRINK_PERIOD = 3 * TimeBase::SECOND;

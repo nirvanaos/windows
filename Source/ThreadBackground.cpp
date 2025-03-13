@@ -46,10 +46,10 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 		thread.execute ();
 		RevertToSelf ();
 	}
-	
-	thread.on_thread_proc_end ();
 
 	// The object may be destructed here
+	thread.on_thread_proc_end ();
+
 	ExecContext::convert_to_thread ();
 	return 0;
 }
