@@ -99,8 +99,10 @@ const unsigned PROT_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For protection domai
 /// If module was not used during this period of time, it will be unloaded.
 const TimeBase::TimeT MODULE_UNLOAD_TIMEOUT = 10 * TimeBase::MINUTE;
 
-/// ORB proxy garbage collection deadline. May be INFINITE_DEADLINE
-const TimeBase::TimeT PROXY_GC_DEADLINE = 10 * TimeBase::SECOND;
+/// Garbage collection deadline. Must be reasonable large.
+/// May also be INFINITE_DEADLINE, but such a case will infinite delay GC
+/// under stress environment.
+const TimeBase::TimeT GC_DEADLINE = 10 * TimeBase::SECOND;
 
 /// Disable iterator debugging.
 /// May be used in production systems to eliminate unused runtime support code from core.
@@ -114,7 +116,8 @@ const bool EXEC_DOMAIN_POOLING = true;
 /// So we can enable pooling.
 const bool BACKGROUND_THREAD_POOLING = false;
 
-const TimeBase::TimeT OBJECT_POOL_HOUSEKEEPING_PERIOD = 3 * TimeBase::SECOND;
+/// Object pool housekeeping
+const TimeBase::TimeT OBJECT_POOL_SHRINK_PERIOD = 3 * TimeBase::SECOND;
 
 ///@{
 /// When a request is issued, the request deadline is not known yet.
