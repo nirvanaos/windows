@@ -38,50 +38,82 @@
 namespace Nirvana {
 namespace Core {
 
+namespace Port {
+
 class Timer;
+
+}
 
 namespace Windows {
 
 class Timer : public StackElem,
 	private Port::Thread
 {
-	static const unsigned MAX_POOL_SIZE = 10;
+	friend class ObjectCreator <Timer*>;
+	using Thread = Port::Thread;
 
 public:
+	static void initialize ();
+	static void terminate () noexcept;
+
+	static Timer& create (Port::Timer& facade)
+	{
+		Timer& t = global_->create ();
+		t.facade_ = &facade;
+	}
+
+	void release () noexcept
+	{
+#ifndef NDEBUG
+		facade_ = nullptr;
+#endif
+		global_->release (*this);
+	}
+
+	void set (const LARGE_INTEGER& due_time, LONG period, bool resume);
+	void cancel () noexcept;
+
+private:
 	Timer ()
+#ifndef NDEBUG
+		: facade_ (nullptr)
+#endif
 	{
 		if (!(handles_ [HANDLE_TIMER] = CreateWaitableTimerW (nullptr, false, nullptr)))
 			Windows::throw_last_error ();
 		if (!(handles_ [HANDLE_DESTRUCT] = CreateEventW (nullptr, false, false, nullptr)))
 			Windows::throw_last_error ();
 		handles_ [HANDLE_TERMINATE] = global_->terminate_event ();
+
+		Thread::create (this, Windows::TIMER_THREAD_PRIORITY);
+
+		global_->on_timer_construct ();
 	}
 
 	~Timer ();
-
-	static void initialize ();
-	static void terminate () noexcept;
-
-	void connect (Core::Timer& timer) noexcept
-	{
-		timer_ = &timer;
-	}
-
-	void return_to_pool ()
-	{
-
-	}
 
 private:
 	friend class Thread;
 	static unsigned long __stdcall thread_proc (Timer* _this);
 
 private:
+	enum Handle
+	{
+		HANDLE_TIMER,
+		HANDLE_DESTRUCT,
+		HANDLE_TERMINATE,
+
+		HANDLE_CNT
+	};
+
+	HANDLE handles_ [HANDLE_CNT];
+
+	Port::Timer* facade_;
+
 	class Global
 	{
 	public:
 		Global () :
-			pool_ (MAX_POOL_SIZE),
 			terminate_ (CreateEventW (nullptr, true, false, nullptr)),
 			destructed_ (CreateEventW (nullptr, true, true, nullptr)),
 			timer_count_ (0)
@@ -91,6 +123,8 @@ private:
 		{
 			SetEvent (terminate_);
 			WaitForSingleObject (destructed_, INFINITE);
+			CloseHandle (terminate_);
+			CloseHandle (destructed_);
 		}
 
 		HANDLE terminate_event () const noexcept
@@ -112,35 +146,22 @@ private:
 
 		Timer& create ()
 		{
-			return pool_.create ();
+			return *pool_.create ();
 		}
 
-		void return_to_pool (Timer& timer) noexcept
+		void release (Timer& timer) noexcept
 		{
-			pool_.release (timer);
+			pool_.release (&timer);
 		}
 
 	private:
-		ObjectPool <Timer> pool_;
-		Windows::Handle terminate_;
-		Windows::Handle destructed_;
+		ObjectPool <Timer*> pool_;
+		HANDLE terminate_;
+		HANDLE destructed_;
 		AtomicCounter <false> timer_count_;
 	};
 
 	static StaticallyAllocated <Global> global_;
-
-	enum Handle
-	{
-		HANDLE_TIMER,
-		HANDLE_DESTRUCT,
-		HANDLE_TERMINATE,
-
-		HANDLE_CNT
-	};
-
-	HANDLE handles_ [HANDLE_CNT];
-
-	Core::Timer* timer_;
 };
 
 }

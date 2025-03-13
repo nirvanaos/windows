@@ -32,6 +32,13 @@
 
 namespace Nirvana {
 namespace Core {
+
+namespace Windows {
+
+class Timer;
+
+}
+
 namespace Port {
 
 class Timer
@@ -50,19 +57,12 @@ protected:
 	~Timer ();
 
 private:
-	class Global;
-	static StaticallyAllocated <Global> global_;
+	friend class Windows::Timer;
 
-	enum Handle
-	{
-		HANDLE_TIMER,
-		HANDLE_DESTRUCT,
-		HANDLE_TERMINATE,
+	void signal () noexcept;
 
-		HANDLE_CNT
-	};
-
-	void* handles_ [HANDLE_CNT];
+private:
+	Windows::Timer& timer_;
 };
 
 }

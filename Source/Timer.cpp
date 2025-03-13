@@ -5,7 +5,7 @@
 *
 * Author: Igor Popov
 *
-* Copyright (c) 2021 Igor Popov.
+* Copyright (c) 2025 Igor Popov.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU Lesser General Public License as published by
@@ -25,28 +25,78 @@
 */
 #include "pch.h"
 #include "Timer.h"
-#include "Handle.h"
+#include <Timer.h>
 
 namespace Nirvana {
 namespace Core {
+
 namespace Windows {
 
 StaticallyAllocated <Timer::Global> Timer::global_;
 
-void Timer::initialize ()
+inline void Timer::initialize ()
 {
 	global_.construct ();
 }
 
-void Timer::terminate () noexcept
+inline void Timer::terminate () noexcept
 {
 	global_.destruct ();
 }
 
 Timer::~Timer ()
 {
+	SetEvent (handles_ [HANDLE_DESTRUCT]);
+	Thread::join ();
 	CloseHandle (handles_ [HANDLE_TIMER]);
 	CloseHandle (handles_ [HANDLE_DESTRUCT]);
+}
+
+unsigned long __stdcall Timer::thread_proc (Timer* _this)
+{
+	DWORD result;
+	while ((WAIT_OBJECT_0 + HANDLE_TIMER) == (result = WaitForMultipleObjects (HANDLE_CNT, _this->handles_, false, INFINITE))) {
+		_this->facade_->signal ();
+	}
+
+	if (WAIT_OBJECT_0 + HANDLE_TERMINATE == result)
+		delete _this;
+
+	return 0;
+}
+
+inline void Timer::set (const LARGE_INTEGER& due_time, LONG period, bool resume)
+{
+	if (!SetWaitableTimer (handles_ [HANDLE_TIMER], &due_time, period, nullptr, nullptr, resume))
+		Windows::throw_last_error ();
+}
+
+inline void Timer::cancel () noexcept
+{
+	CancelWaitableTimer (handles_ [HANDLE_TIMER]);
+}
+
+}
+
+namespace Port {
+
+void Timer::initialize ()
+{
+	Windows::Timer::initialize ();
+}
+
+void Timer::terminate ()
+{
+	Windows::Timer::terminate ();
+}
+
+Timer::Timer () :
+	timer_ (Windows::Timer::create (*this))
+{}
+
+Timer::~Timer ()
+{
+	timer_.release ();
 }
 
 void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period)
@@ -62,19 +112,18 @@ void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT perio
 			throw_BAD_PARAM ();
 		dt.QuadPart = -(LONGLONG)due_time;
 	}
-	if (!SetWaitableTimer (handles_ [HANDLE_TIMER], &dt, (LONG)period, nullptr, nullptr, true))
-		Windows::throw_last_error ();
+
+	timer_.set (dt, period, false);
 }
 
-void Timer::cancel () noexcept
+void Timer::cancel ()
 {
-	CancelWaitableTimer (handles_ [HANDLE_TIMER]);
+	timer_.cancel ();
 }
 
-unsigned long __stdcall Timer::thread_proc (Timer* _this)
+inline void Timer::signal () noexcept
 {
-	_this->completion_port_.thread_proc ();
-	return 0;
+	static_cast <Core::Timer&> (*this).port_signal ();
 }
 
 }
