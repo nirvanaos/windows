@@ -47,7 +47,8 @@ class Timer;
 namespace Windows {
 
 class Timer : public StackElem,
-	private Port::Thread
+	private Port::Thread,
+	public SharedObject
 {
 	friend class ObjectCreator <Timer*>;
 	using Thread = Port::Thread;
@@ -56,51 +57,33 @@ public:
 	static void initialize ();
 	static void terminate () noexcept;
 
-	static Timer& create (Port::Timer& facade)
-	{
-		Timer& t = global_->create ();
-		t.facade_ = &facade;
-	}
-
-	void release () noexcept
-	{
-#ifndef NDEBUG
-		facade_ = nullptr;
-#endif
-		global_->release (*this);
-	}
-
+	static Timer& create (Port::Timer& facade);
+	void release () noexcept;
 	void set (const LARGE_INTEGER& due_time, LONG period, bool resume);
 	void cancel () noexcept;
 
 private:
-	Timer ()
-#ifndef NDEBUG
-		: facade_ (nullptr)
-#endif
-	{
-		if (!(handles_ [HANDLE_TIMER] = CreateWaitableTimerW (nullptr, false, nullptr)))
-			Windows::throw_last_error ();
-		if (!(handles_ [HANDLE_DESTRUCT] = CreateEventW (nullptr, false, false, nullptr)))
-			Windows::throw_last_error ();
-		handles_ [HANDLE_TERMINATE] = global_->terminate_event ();
-
-		Thread::create (this, Windows::TIMER_THREAD_PRIORITY);
-
-		global_->on_timer_construct ();
-	}
-
+	Timer ();
 	~Timer ();
 
-private:
 	friend class Thread;
-	static unsigned long __stdcall thread_proc (Timer* _this);
+	static unsigned long __stdcall thread_proc (Timer* _this) noexcept;
+
+	void queue_apc (void (__stdcall *f) (Timer* _this)) noexcept
+	{
+		QueueUserAPC ((PAPCFUNC)f, Thread::handle_, (ULONG_PTR)this);
+	}
+
+	static void __stdcall apc_destruct (Timer* _this) noexcept;
+	static void __stdcall apc_release (Timer* _this) noexcept;
+	static void __stdcall apc_create (Timer* _this) noexcept;
+
+	void release_to_pool () noexcept;
 
 private:
 	enum Handle
 	{
 		HANDLE_TIMER,
-		HANDLE_DESTRUCT,
 		HANDLE_TERMINATE,
 
 		HANDLE_CNT
@@ -110,57 +93,10 @@ private:
 
 	Port::Timer* facade_;
 
-	class Global
-	{
-	public:
-		Global () :
-			terminate_ (CreateEventW (nullptr, true, false, nullptr)),
-			destructed_ (CreateEventW (nullptr, true, true, nullptr)),
-			timer_count_ (0)
-		{}
+	volatile bool destruct_;
+	volatile bool pooled_;
 
-		~Global ()
-		{
-			SetEvent (terminate_);
-			WaitForSingleObject (destructed_, INFINITE);
-			CloseHandle (terminate_);
-			CloseHandle (destructed_);
-		}
-
-		HANDLE terminate_event () const noexcept
-		{
-			return terminate_;
-		}
-
-		void on_timer_construct () noexcept
-		{
-			if (1 == timer_count_.increment_seq ())
-				ResetEvent (destructed_);
-		}
-
-		void on_timer_destruct () noexcept
-		{
-			if (0 == timer_count_.decrement_seq ())
-				SetEvent (destructed_);
-		}
-
-		Timer& create ()
-		{
-			return *pool_.create ();
-		}
-
-		void release (Timer& timer) noexcept
-		{
-			pool_.release (&timer);
-		}
-
-	private:
-		ObjectPool <Timer*> pool_;
-		HANDLE terminate_;
-		HANDLE destructed_;
-		AtomicCounter <false> timer_count_;
-	};
-
+	class Global;
 	static StaticallyAllocated <Global> global_;
 };
 
