@@ -30,7 +30,6 @@
 #include <Nirvana/posix_defs.h>
 #include <Nirvana/BindErrorUtl.h>
 #include <ORB/Services.h>
-#include "../Port/Timer.h"
 #include <TimerEvent.h>
 #include <append_path.h>
 
@@ -114,7 +113,7 @@ void Module::unload () noexcept
 			assert (ERROR_ACCESS_DENIED == GetLastError ());
 			if (!--retry_cnt)
 				break;
-			if (Timer::initialized ()) {
+			if (Core::Timer::initialized ()) {
 				TimerEvent timer;
 				timer.set (0, TimeBase::MILLISECOND * RETRY_WAIT_MS, 0);
 				timer.wait ();

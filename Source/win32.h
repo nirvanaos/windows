@@ -83,6 +83,9 @@ const int SCHEDULER_THREAD_PRIORITY = THREAD_PRIORITY_TIME_CRITICAL;
 /// Postman thread priority must be above worker thread priority.
 const int POSTMAN_THREAD_PRIORITY = THREAD_PRIORITY_HIGHEST;
 
+/// Timer thread priority must be above worker thread priority.
+const int TIMER_THREAD_PRIORITY = THREAD_PRIORITY_HIGHEST;
+
 /// Input/output thread priority
 const int IO_THREAD_PRIORITY = THREAD_PRIORITY_HIGHEST;
 

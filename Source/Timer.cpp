@@ -5,7 +5,7 @@
 *
 * Author: Igor Popov
 *
-* Copyright (c) 2021 Igor Popov.
+* Copyright (c) 2025 Igor Popov.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU Lesser General Public License as published by
@@ -24,119 +24,211 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
+#include "Timer.h"
 #include <Timer.h>
-#include "../Port/SystemInfo.h"
-#include <limits>
 
 namespace Nirvana {
 namespace Core {
-namespace Port {
 
-struct Timer::Pool
+namespace Windows {
+
+class Timer::Global
 {
-	void initialize () noexcept
+public:
+	Global () :
+		terminate_ (CreateEventW (nullptr, true, false, nullptr)),
+		inactive_ (CreateEventW (nullptr, true, true, nullptr)),
+		active_timer_count_ (0)
+	{}
+
+	~Global ()
 	{
-		assert (!initialized);
+		SetEvent (terminate_);
+		WaitForSingleObject (inactive_, INFINITE);
 
-		InitializeThreadpoolEnvironment (&callback_environ);
-		thread_pool = CreateThreadpool (nullptr);
-		assert (thread_pool);
+		// Now all timers are in the pool
 
-		TP_POOL_STACK_INFORMATION si {
-			Windows::NEUTRAL_FIBER_STACK_RESERVE,
-			Windows::NEUTRAL_FIBER_STACK_COMMIT
-		};
-
-		NIRVANA_VERIFY (SetThreadpoolStackInformation (thread_pool, &si));
-		SetThreadpoolThreadMaximum (thread_pool, Port::SystemInfo::hardware_concurrency ());
-		NIRVANA_VERIFY (SetThreadpoolThreadMinimum (thread_pool, 0));
-
-		SetThreadpoolCallbackPool (&callback_environ, thread_pool);
-
-		cleanup_group = CreateThreadpoolCleanupGroup ();
-		assert (cleanup_group);
-		SetThreadpoolCallbackCleanupGroup (&callback_environ, cleanup_group, nullptr);
-
-		initialized = true;
+		CloseHandle (terminate_);
+		CloseHandle (inactive_);
 	}
 
-	void terminate () noexcept
+	HANDLE terminate_event () const noexcept
 	{
-		assert (initialized);
-
-		initialized = false;
-
-		CloseThreadpoolCleanupGroupMembers (cleanup_group, true, nullptr);
-		CloseThreadpoolCleanupGroup (cleanup_group);
-		CloseThreadpool (thread_pool);
-		DestroyThreadpoolEnvironment (&callback_environ);
+		return terminate_;
 	}
 
-	TP_TIMER* timer_create (Port::Timer& timer)
+	Timer* create ()
 	{
-		if (!initialized)
-			throw_INITIALIZE ();
-		TP_TIMER* p = CreateThreadpoolTimer (&timer_callback,
-			&static_cast <Core::Timer&> (timer), &callback_environ);
-		if (!p)
-			throw_NO_MEMORY ();
-		return p;
-	}
+		if (!Core::Timer::initialized ())
+			throw_BAD_INV_ORDER ();
 
-	void timer_close (TP_TIMER* timer) noexcept
-	{
-		if (initialized) {
-			SetThreadpoolTimer (timer, nullptr, 0, 0);
-			WaitForThreadpoolTimerCallbacks (timer, true);
-			CloseThreadpoolTimer (timer);
+		active_cnt_inc ();
+
+		try {
+			return pool_.create ();
+		} catch (...) {
+			active_cnt_dec ();
+			throw;
 		}
 	}
 
-	static void CALLBACK timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*);
+	void release (Timer* timer) noexcept
+	{
+		pool_.release (timer);
+		active_cnt_dec ();
+	}
 
-	TP_CALLBACK_ENVIRON callback_environ;
-	TP_POOL* thread_pool;
-	TP_CLEANUP_GROUP* cleanup_group;
-	volatile bool initialized;
+	void active_cnt_inc () noexcept
+	{
+		if (1 == active_timer_count_.increment_seq ())
+			ResetEvent (inactive_);
+	}
+
+	void active_cnt_dec () noexcept
+	{
+		if (0 == active_timer_count_.decrement_seq ())
+			SetEvent (inactive_);
+	}
+
+private:
+	ObjectPool <Timer*> pool_;
+	HANDLE terminate_;
+	HANDLE inactive_;
+	AtomicCounter <false> active_timer_count_;
 };
 
-void CALLBACK Timer::Pool::timer_callback (TP_CALLBACK_INSTANCE*, void* context, TP_TIMER*)
+StaticallyAllocated <Timer::Global> Timer::global_;
+
+inline void Timer::initialize ()
 {
-	((Core::Timer*)context)->port_signal ();
+	global_.construct ();
 }
 
-Timer::Pool Timer::pool_ {};
-
-void Timer::initialize () noexcept
+inline void Timer::terminate () noexcept
 {
-	pool_.initialize ();
+	global_.destruct ();
+}
+
+inline Timer::Timer () :
+	facade_ (nullptr),
+	destruct_ (false),
+	pooled_ (false)
+{
+	if (!(handles_ [HANDLE_TIMER] = CreateWaitableTimerW (nullptr, false, nullptr)))
+		Windows::throw_last_error ();
+	handles_ [HANDLE_TERMINATE] = global_->terminate_event ();
+
+	Thread::create (this, Windows::TIMER_THREAD_PRIORITY);
+}
+
+Timer::~Timer ()
+{
+	queue_apc (apc_destruct);
+	Thread::join ();
+	CloseHandle (handles_ [HANDLE_TIMER]);
+}
+
+inline Timer& Timer::create (Port::Timer& facade)
+{
+	Timer* t = global_->create ();
+	t->facade_ = &facade;
+	if (t->pooled_)
+		t->queue_apc (apc_create);
+	return *t;
+}
+
+inline void Timer::release () noexcept
+{
+	facade_ = nullptr;
+	cancel ();
+
+	// Actual release will be done in the thread_proc()
+	queue_apc (apc_release);
+}
+
+unsigned long __stdcall Timer::thread_proc (Timer* _this) noexcept
+{
+	while (!_this->destruct_) {
+		if (!_this->pooled_) {
+			switch (WaitForMultipleObjectsEx (HANDLE_CNT, _this->handles_, false, INFINITE, true)) {
+				case WAIT_OBJECT_0 + HANDLE_TIMER:
+					_this->facade_->signal ();
+					break;
+				case WAIT_OBJECT_0 + HANDLE_TERMINATE:
+					_this->release_to_pool ();
+					break;
+			}
+		} else
+			SleepEx (INFINITE, true);
+	}
+
+	return 0;
+}
+
+void __stdcall Timer::apc_destruct (Timer* _this) noexcept
+{
+	assert (_this->pooled_);
+	_this->destruct_ = true;
+}
+
+void __stdcall Timer::apc_release (Timer* _this) noexcept
+{
+	if (!_this->pooled_)
+		_this->release_to_pool ();
+}
+
+void __stdcall Timer::apc_create (Timer* _this) noexcept
+{
+	_this->pooled_ = false;
+}
+
+void Timer::release_to_pool () noexcept
+{
+	pooled_ = true;
+	global_->release (this);
+}
+
+inline void Timer::set (const LARGE_INTEGER& due_time, LONG period, bool resume)
+{
+	if (!SetWaitableTimer (handles_ [HANDLE_TIMER], &due_time, period, nullptr, nullptr, resume))
+		Windows::throw_last_error ();
+}
+
+inline void Timer::cancel () noexcept
+{
+	CancelWaitableTimer (handles_ [HANDLE_TIMER]);
+}
+
+}
+
+namespace Port {
+
+void Timer::initialize ()
+{
+	Windows::Timer::initialize ();
 }
 
 void Timer::terminate () noexcept
 {
-	pool_.terminate ();
-}
-
-bool Timer::initialized () noexcept
-{
-	return pool_.initialized;
+	Windows::Timer::terminate ();
 }
 
 Timer::Timer () :
-	timer_ (pool_.timer_create (*this))
+	timer_ (Windows::Timer::create (*this))
 {}
 
 Timer::~Timer ()
 {
-	pool_.timer_close (timer_);
+	timer_.release ();
 }
 
 void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period)
 {
-	if (!pool_.initialized)
+	if (!Core::Timer::initialized ())
 		return;
+
 	period /= TimeBase::MILLISECOND;
-	if (period > (TimeBase::TimeT)std::numeric_limits <DWORD>::max ())
+	if (period > (TimeBase::TimeT)std::numeric_limits <LONG>::max ())
 		throw_BAD_PARAM ();
 	LARGE_INTEGER dt;
 	if (flags & TIMER_ABSOLUTE)
@@ -146,13 +238,21 @@ void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT perio
 			throw_BAD_PARAM ();
 		dt.QuadPart = -(LONGLONG)due_time;
 	}
-	SetThreadpoolTimer (timer_, (FILETIME*)&dt, (DWORD)period, 0);
+
+	timer_.set (dt, (LONG)period, false);
 }
 
 void Timer::cancel () noexcept
 {
-	if (pool_.initialized)
-		SetThreadpoolTimer (timer_, nullptr, 0, 0);
+	if (!Core::Timer::initialized ())
+		return;
+
+	timer_.cancel ();
+}
+
+inline void Timer::signal () noexcept
+{
+	static_cast <Core::Timer&> (*this).port_signal ();
 }
 
 }

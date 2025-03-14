@@ -30,10 +30,15 @@
 
 #include <CORBA/CORBA.h>
 
-struct _TP_TIMER;
-
 namespace Nirvana {
 namespace Core {
+
+namespace Windows {
+
+class Timer;
+
+}
+
 namespace Port {
 
 class Timer
@@ -44,20 +49,20 @@ public:
 	void set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT period);
 	void cancel () noexcept;
 
-	static void initialize () noexcept;
+	static void initialize ();
 	static void terminate () noexcept;
-
-	static bool initialized () noexcept;
 
 protected:
 	Timer ();
 	~Timer ();
 
 private:
-	struct _TP_TIMER* timer_;
+	friend class Windows::Timer;
 
-	struct Pool;
-	static Pool pool_;
+	void signal () noexcept;
+
+private:
+	Windows::Timer& timer_;
 };
 
 }
