@@ -1,8 +1,8 @@
 #include "../Port/Chrono.h"
-#include "../Port/Timer.h"
 #include "../Port/SystemInfo.h"
 #include "../Source/win32.h"
-#include "Scheduler.h"
+#include <Scheduler.h>
+#include <Timer.h>
 #include <gtest/gtest.h>
 #include <atomic>
 
@@ -26,8 +26,9 @@ protected:
 		// Code here will be called immediately after the constructor (right
 		// before each test).
 		Nirvana::Core::Port::SystemInfo::initialize ();
+		ASSERT_TRUE (Nirvana::Core::Heap::initialize ());
 		Nirvana::Core::Port::Chrono::initialize ();
-		Nirvana::Core::Port::Timer::initialize ();
+		Nirvana::Core::Timer::initialize ();
 		Nirvana::Core::Scheduler::initialize ();
 	}
 
@@ -35,9 +36,11 @@ protected:
 	{
 		// Code here will be called immediately after each test (right
 		// before the destructor).
-		Nirvana::Core::Port::Timer::terminate ();
+		if (Nirvana::Core::Timer::initialized ())
+			Nirvana::Core::Timer::terminate ();
 		Nirvana::Core::Port::Chrono::terminate ();
 		Nirvana::Core::Scheduler::terminate ();
+		Nirvana::Core::Heap::terminate ();
 	}
 };
 
@@ -90,14 +93,11 @@ TEST_F (TestTimer, Destruct)
 
 TEST_F (TestTimer, Shutdown)
 {
-	{
-		TimerTest timer;
-		timer.set (0, 1 * TimeBase::SECOND, 0);
-		Nirvana::Core::Port::Timer::terminate ();
-		Sleep (2000);
-		EXPECT_EQ (timer.signalled_, 0);
-	}
-	Nirvana::Core::Port::Timer::initialize ();
+	TimerTest timer;
+	timer.set (0, 1 * TimeBase::SECOND, 0);
+	Nirvana::Core::Timer::terminate ();
+	Sleep (2000);
+	EXPECT_EQ (timer.signalled_, 0);
 }
 
 TEST_F (TestTimer, Periodic)

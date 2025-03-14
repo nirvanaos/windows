@@ -219,6 +219,9 @@ Timer::Timer () :
 
 Timer::~Timer ()
 {
+	if (!Core::Timer::initialized ())
+		return; // timer_ is dangling here
+
 	timer_.release ();
 }
 
