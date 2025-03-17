@@ -31,6 +31,7 @@
 
 #include <Nirvana/Nirvana.h>
 #include <Nirvana/platform.h>
+#include "config.h"
 #include <type_traits>
 
 extern "C" __declspec (dllimport)
@@ -40,7 +41,9 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+extern uint32_t cur_process_id;
 extern uint32_t sys_process_id;
+extern bool is_system_domain;
 
 }
 }
@@ -57,7 +60,7 @@ typedef uint32_t ProtDomainId;
 /// \returns Current protection domain id.
 inline ProtDomainId current_domain_id (void) noexcept
 {
-	return GetCurrentProcessId ();
+	return Nirvana::Core::Windows::cur_process_id;
 }
 
 /// \returns System protection domain id.

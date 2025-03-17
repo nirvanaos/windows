@@ -70,6 +70,18 @@ void Thread::join () const
 		WaitForSingleObject (handle_, INFINITE);
 }
 
+inline
+int Thread::priority () const noexcept
+{
+	return GetThreadPriority (handle_);
+}
+
+inline
+void Thread::priority (int i) const noexcept
+{
+	NIRVANA_VERIFY (SetThreadPriority (handle_, i));
+}
+
 }
 }
 }

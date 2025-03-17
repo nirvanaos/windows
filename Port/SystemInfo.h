@@ -41,6 +41,9 @@ class SystemInfo
 public:
 	static void initialize () noexcept;
 
+	static void terminate () noexcept
+	{}
+
 	static unsigned int hardware_concurrency () noexcept
 	{
 		return hardware_concurrency_;

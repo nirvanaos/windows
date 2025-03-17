@@ -46,73 +46,63 @@ static void swallow_arg (int& argc, char* argv [])
 }
 
 inline
-int nirvana (int argc, char* argv [], char* envp []) noexcept
+int nirvana (int argc, char* argv [], char* envp [])
 {
-	try {
-		bool system = false;
-		while (argc > 1 && '-' == *argv [1]) {
-			char cmd = argv [1][1];
-			switch (cmd) {
+	bool system = false;
+	while (argc > 1 && '-' == *argv [1]) {
+		char cmd = argv [1][1];
+		switch (cmd) {
 
-			case 't':
-				DebugLog::trace_ = true;
-				swallow_arg (argc, argv);
-				break;
+		case 't':
+			DebugLog::trace_ = true;
+			swallow_arg (argc, argv);
+			break;
 
-			case 's':
-				system = true;
-				swallow_arg (argc, argv);
-				break;
+		case 's':
+			system = true;
+			swallow_arg (argc, argv);
+			break;
 
-			case 'd':
-			case 'f':
-				if (shutdown ('f' == cmd))
-					return 0;
-				else {
-					ErrConsole () << "System is not running.\n";
-					return -1;
-				}
-
-			default:
-				goto start;
+		case 'd':
+		case 'f':
+			if (shutdown ('f' == cmd))
+				return 0;
+			else {
+				ErrConsole () << "System is not running.\n";
+				return -1;
 			}
+
+		default:
+			goto start;
 		}
+	}
 
 start:
 
-		if (system) {
-			if (BUILD_NO_SYS_DOMAIN) {
-				ErrConsole () << "Wrong platform. Use 64-bit version.\n";
-				return -1;
-			} else {
-				StartupSys startup (argc, argv, envp);
-				if (!SchedulerMaster ().run (startup)) {
-					ErrConsole () << "System is already running.\n";
-					return -1;
-				} else {
-					startup.check ();
-					return startup.ret ();
-				}
-			}
+	if (system) {
+		if (BUILD_NO_SYS_DOMAIN) {
+			ErrConsole () << "Wrong platform. Use 64-bit version.\n";
+			return -1;
 		} else {
-			StartupProt startup (argc, argv, envp);
-			if (!SchedulerSlave ().run (startup, StartupProt::default_deadline ())) {
-				ErrConsole () << "System is not running.\n";
+			StartupSys startup (argc, argv, envp);
+			if (!SchedulerMaster ().run (startup)) {
+				ErrConsole () << "System is already running.\n";
 				return -1;
 			} else {
 				startup.check ();
 				return startup.ret ();
 			}
 		}
-
-	} catch (const CORBA::SystemException& ex) {
-		char buf [_MAX_ITOSTR_BASE16_COUNT];
-		_itoa (ex.minor (), buf, 16);
-		ErrConsole () << ex._name () << "(0x" << buf << ")\n";
-	} catch (const std::exception& ex) {
-		ErrConsole () << ex.what () << '\n';
+	} else {
+		StartupProt startup (argc, argv, envp);
+		if (!SchedulerSlave ().run (startup, StartupProt::default_deadline ())) {
+			ErrConsole () << "System is not running.\n";
+			return -1;
+		} else {
+			startup.check ();
+			return startup.ret ();
+		}
 	}
-	return -1;
 }
 
 }
@@ -130,7 +120,12 @@ extern "C" DWORD nirvana_startup (void)
 
 int CALLBACK WinMain (HINSTANCE, HINSTANCE, LPSTR, int)
 {
-	Nirvana::Core::initialize0 ();
-	Nirvana::Core::Windows::CmdLineParser cmdline;
-	return Nirvana::Core::Windows::nirvana (cmdline.argc (), cmdline.argv (), cmdline.envp ());
+	try {
+		Nirvana::Core::initialize0 ();
+		Nirvana::Core::Windows::CmdLineParser cmdline;
+		return Nirvana::Core::Windows::nirvana (cmdline.argc (), cmdline.argv (), cmdline.envp ());
+	} catch (const std::exception& ex) {
+		Nirvana::Core::Windows::ErrConsole () << ex.what () << '\n';
+	}
+	return -1;
 }

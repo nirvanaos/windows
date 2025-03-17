@@ -72,6 +72,10 @@ void CALLBACK ThreadWorker::main_neutral_fiber_proc (MainNeutralFiberParam* para
 void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline, ThreadWorker* other_workers,
 	size_t other_worker_cnt)
 {
+	HANDLE process = GetCurrentProcess ();
+	HANDLE thread_handle;
+	NIRVANA_VERIFY (DuplicateHandle (process, GetCurrentThread (), process, &thread_handle, 0, false, DUPLICATE_SAME_ACCESS));
+	handle_ = thread_handle;
 	Core::Thread& thread = static_cast <Core::ThreadWorker&> (*this);
 	Port::Thread::current (&thread);
 
@@ -98,7 +102,8 @@ void ThreadWorker::run_main (Startup& startup, DeadlineTime deadline, ThreadWork
 	Port::ExecContext::main_fiber_proc ();
 
 	assert (dbg_main_thread == GetCurrentThreadId ());
-	assert (!handle_); // Prevent join to self.
+	CloseHandle (handle_);
+	handle_ = nullptr; // Prevent join to self.
 
 	Port::Thread::current (nullptr);
 	Port::ExecContext::current (nullptr);

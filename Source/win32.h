@@ -89,6 +89,9 @@ const int TIMER_THREAD_PRIORITY = THREAD_PRIORITY_HIGHEST;
 /// Input/output thread priority
 const int IO_THREAD_PRIORITY = THREAD_PRIORITY_HIGHEST;
 
+/// Maximal thread priority except for the scheduler
+const int THREAD_PRIORITY_MAX = THREAD_PRIORITY_HIGHEST;
+
 const DWORD PROCESS_START_ACK_TIMEOUT = 1000; // 1 sec
 
 const size_t PAGE_SIZE = 4096;

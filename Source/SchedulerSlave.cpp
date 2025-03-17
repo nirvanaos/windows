@@ -88,8 +88,9 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 		this, STACK_SIZE_PARAM_IS_A_RESERVATION, nullptr)))
 		throw_INITIALIZE ();
 
+	cur_process_id = GetCurrentProcessId ();
 	HANDLE sem = CreateSemaphoreW (nullptr, 0, (LONG)Port::SystemInfo::hardware_concurrency (),
-		object_name (SCHEDULER_SEMAPHORE_PREFIX, GetCurrentProcessId ()));
+		object_name (SCHEDULER_SEMAPHORE_PREFIX, cur_process_id));
 	if (!sem)
 		throw_INITIALIZE ();
 
@@ -129,6 +130,7 @@ void SchedulerSlave::delete_item () noexcept
 void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) noexcept
 {
 	try {
+		Port::Thread::PriorityBoost boost;
 		queue_.insert (deadline, &executor);
 	} catch (...) {
 		on_error (CORBA::SystemException::EC_NO_MEMORY);
@@ -144,6 +146,7 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) noexce
 bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept
 {
 	try {
+		Port::Thread::PriorityBoost boost;
 		if (!queue_.reorder (deadline, &executor, old))
 			return false;
 	} catch (...) {
@@ -189,7 +192,11 @@ void SchedulerSlave::execute () noexcept
 {
 	{
 		Ref <Executor> executor;
-		if (queue_.delete_min (executor))
+		{
+			Port::Thread::PriorityBoost boost;
+			queue_.delete_min (executor);
+		}
+		if (executor)
 			ThreadWorker::execute (*executor);
 	}
 	core_free ();

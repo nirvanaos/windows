@@ -67,7 +67,8 @@ const char* const wow64_func_names [WOW64_FUNC_CNT] = {
 inline ULONG handle_count (HANDLE h)
 {
 	PUBLIC_OBJECT_BASIC_INFORMATION info;
-	if (!NtQueryObject (h, ObjectBasicInformation, &info, sizeof (info), nullptr))
+	NTSTATUS err = NtQueryObject (h, ObjectBasicInformation, &info, sizeof (info), nullptr);
+	if (!err)
 		return info.HandleCount;
 	assert (false);
 	return 0;

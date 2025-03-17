@@ -43,93 +43,125 @@ class LockableHandle
 public:
 	void init_invalid () noexcept
 	{
-		// Must be null and locked exclusively
-		assert (val_ == SPIN_MASK);
-		val_ = INVALID_VAL;
+		// Must be null and exclusively locked
+		assert (val_ == LOCK_MASK);
+		// Must be lock-free
+		assert (val_.is_lock_free ());
+		val_.store (INVALID_VAL, std::memory_order_relaxed);
 	}
-
+	
 	operator bool () const noexcept
 	{
-		return (val_ & ~SPIN_MASK) != 0;
+		return (val_ & ~LOCK_MASK) != 0;
 	}
-
+	
 	void* lock () noexcept;
 
 	void unlock () noexcept
 	{
-		assert (val_ & SPIN_MASK);
-		--val_;
+		assert (val_ & LOCK_MASK);
+		val_.fetch_sub (LOCK_INC, std::memory_order_release);
 	}
 
 	void* exclusive_lock () noexcept;
 
-	void* handle () const noexcept
+	void exclusive_unlock () noexcept
 	{
-		return val2handle (val_);
+		assert ((val_ & LOCK_MASK) == LOCK_MASK);
+		val_.fetch_sub (LOCK_MASK, std::memory_order_release);
 	}
 
 	void set_and_unlock (void* handle) noexcept
 	{
 		// Must be exclusive locked
-		assert ((val_ & SPIN_MASK) == SPIN_MASK);
+		assert ((val_ & LOCK_MASK) == LOCK_MASK);
 		val_ = handle2val (handle);
 	}
 
 	HANDLE reset_and_unlock () noexcept
 	{
 		// Must be exclusive locked
-		assert ((val_ & SPIN_MASK) == SPIN_MASK);
-		HANDLE h = val2handle (val_ & ~SPIN_MASK);
-		val_ = 0;
+		assert ((val_ & LOCK_MASK) == LOCK_MASK);
+		HANDLE h = val2handle (val_.load (std::memory_order_relaxed));
+		val_.store (0, std::memory_order_release);
 		return h;
-	}
-
-	void exclusive_unlock () noexcept
-	{
-		assert ((val_ & SPIN_MASK) == SPIN_MASK);
-		val_.fetch_sub (SPIN_MASK, std::memory_order_release);
 	}
 
 	void reset_on_failure () noexcept
 	{
-		val_ = 0;
+		assert ((val_ & LOCK_MASK) == LOCK_MASK);
+		val_.store (0, std::memory_order_release);
+	}
+
+	void* handle () const noexcept
+	{
+		return val2handle (val_);
 	}
 
 private:
 	// Both 32-bit and 64-bit Windows use 32-bit handles for the interoperability.
-	// Maximal number of handles per process is 0x1000000.
-	// So SHIFT_BITS can be max 5. We limit it to 4 just in case.
 
-	static const unsigned SHIFT_BITS = 4;
+	// For all platforms of the given host platform IntegralType must be lock-free.
+	// Now we use 32-bit type. This provides 6 bits for the lock counter.
+	// For the future systems with extremely large number of cores we can use uint64_t
+	// to extend lock counter capacity.
+	using IntegralType = uint32_t;
+
+	// Maximal number of handles per process is 0x1000000.
+	static const unsigned USED_BITS = 25;
 
 	// Low 2 bits of a handle are always zero.
 	static const unsigned ALIGN_BITS = 2;
 
-	static const unsigned LOCK_BITS = SHIFT_BITS + ALIGN_BITS;
+	// Only these bits in the valid Windows handle can be not zero.
+	static const uintptr_t USED_BIT_MASK = ~(~(uintptr_t)0 << USED_BITS) << ALIGN_BITS;
 
-	static const uint32_t SPIN_MASK = (uint32_t)~(~0 << LOCK_BITS);
+	// Reserve 1 bit more for INVALID_HANDLE_VALUE
+	static const unsigned LOCK_OFFSET = USED_BITS + 1;
 
-	static const uint32_t INVALID_VAL = (uint32_t)(~0 << LOCK_BITS);
+	// Highest bits are used for the locking
+	static const IntegralType LOCK_MASK = ~(IntegralType)0 << LOCK_OFFSET;
+	static const IntegralType LOCK_INC = 1 << LOCK_OFFSET;
 
-	static const uintptr_t INVALID_HANDLE = (uintptr_t)~0;
+	// INVALID_HANDLE_VALUE
+	static const IntegralType INVALID_VAL = ~LOCK_MASK;
 
-	static uint32_t handle2val (void* handle) noexcept
+	static IntegralType handle2val (void* handle) noexcept
 	{
-		if (INVALID_HANDLE == (uintptr_t)handle)
+		if ((void*)(-1) == handle)
 			return INVALID_VAL;
 		else {
-			uintptr_t ui = (uintptr_t)handle;
-			assert ((ui & ((~(uintptr_t)0 << (32 - SHIFT_BITS)) | ~(~(uintptr_t)0 << ALIGN_BITS))) == 0);
-			return (uint32_t)ui << SHIFT_BITS;
+			assert (((uintptr_t)handle & ~USED_BIT_MASK) == 0);
+			IntegralType ui = (IntegralType)(uintptr_t)handle;
+			return ui >> ALIGN_BITS;
 		}
 	}
 
-	static void* val2handle (uint32_t val) noexcept
+	static void* val2handle (IntegralType val) noexcept
 	{
-		return INVALID_VAL == val ? (void*)INVALID_HANDLE : (void*)(uintptr_t)(val >> SHIFT_BITS);
+		val &= ~LOCK_MASK;
+		if (INVALID_VAL == val)
+			return (void*)(-1);
+		else {
+			uintptr_t ui = (uintptr_t)val << ALIGN_BITS;
+			assert (!(ui & ~USED_BIT_MASK));
+			return (void*)ui;
+		}
 	}
 
-	volatile std::atomic <uint32_t> val_;
+	class BackOff
+	{
+	public:
+		BackOff ();
+
+		void operator () ();
+
+	private:
+		unsigned iterations_;
+		RandomGen rndgen_;
+	};
+
+	std::atomic <IntegralType> val_;
 };
 
 }

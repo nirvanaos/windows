@@ -1,10 +1,10 @@
-#include "../Port/Chrono.h"
-#include "../Port/SystemInfo.h"
-#include "../Source/win32.h"
+#include <Chrono.h>
+#include <SystemInfo.h>
 #include <Scheduler.h>
 #include <Timer.h>
 #include <gtest/gtest.h>
 #include <atomic>
+#include "../Source/win32.h"
 
 namespace TestTimer {
 
@@ -25,9 +25,9 @@ protected:
 	{
 		// Code here will be called immediately after the constructor (right
 		// before each test).
-		Nirvana::Core::Port::SystemInfo::initialize ();
+		Nirvana::Core::SystemInfo::initialize ();
 		ASSERT_TRUE (Nirvana::Core::Heap::initialize ());
-		Nirvana::Core::Port::Chrono::initialize ();
+		Nirvana::Core::Chrono::initialize ();
 		Nirvana::Core::Timer::initialize ();
 		Nirvana::Core::Scheduler::initialize ();
 	}
@@ -41,6 +41,7 @@ protected:
 		Nirvana::Core::Port::Chrono::terminate ();
 		Nirvana::Core::Scheduler::terminate ();
 		Nirvana::Core::Heap::terminate ();
+		Nirvana::Core::SystemInfo::terminate ();
 	}
 };
 

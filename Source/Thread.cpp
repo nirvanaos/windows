@@ -24,6 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
+#include <Thread.h>
 #include "Thread.inl"
 #include "error2errno.h"
 
@@ -32,6 +33,7 @@ namespace Core {
 namespace Port {
 
 unsigned long Thread::current_;
+const int Thread::DEFAULT_PRIORITY_BOOST = Windows::THREAD_PRIORITY_MAX;
 
 void Thread::create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority)
 {
@@ -42,6 +44,24 @@ void Thread::create (PTHREAD_START_ROUTINE thread_proc, void* param, int priorit
 		throw_NO_MEMORY ();
 	if (THREAD_PRIORITY_NORMAL != priority)
 		NIRVANA_VERIFY (SetThreadPriority (handle_, priority));
+}
+
+Thread::PriorityBoost::PriorityBoost (Core::Thread* thread, int priority) noexcept :
+	thread_ (thread)
+{
+	// In some cases (startup, test), thread nay be null.
+	if (thread) {
+		if ((saved_priority_ = thread->port ().priority ()) < priority)
+			thread->port ().priority (priority);
+		else
+			thread_ = nullptr; // Do not restore
+	}
+}
+
+Thread::PriorityBoost::~PriorityBoost ()
+{
+	if (thread_)
+		thread_->port ().priority (saved_priority_);
 }
 
 }

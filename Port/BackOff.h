@@ -28,6 +28,10 @@
 #define NIRVANA_CORE_PORT_BACKOFF_H_
 #pragma once
 
+#include <Thread.h>
+#include "../Source/Chrono.h"
+#include "../Source/SystemInfo.h"
+
 extern "C" __declspec (dllimport)
 void __stdcall Sleep (unsigned long dwMilliseconds);
 
@@ -44,15 +48,23 @@ protected:
 	/// A number of iterations when we should call yield ().
 	/// SwitchToThread () experiences the expensive cost of a context switch, which can be 10000+ cycles.
 	/// It also suffers the cost of ring 3 to ring 0 transitions, which can be 1000+ cycles.
-	static const unsigned ITERATIONS_YIELD = 11000;
+
+	static unsigned iterations_yield () noexcept
+	{
+		return 11000;
+	}
 
 	/// Maximal number of iterations.
-	static const unsigned ITERATIONS_MAX = 1000000;
-
-	static void yield (unsigned iterations)
+	static unsigned iterations_max () noexcept
 	{
-		::SwitchToThread ();
+		return iterations_yield () * 2;
 	}
+
+	static void yield (unsigned iterations) noexcept
+	{
+		NIRVANA_VERIFY (::SwitchToThread ());
+	}
+
 };
 
 }

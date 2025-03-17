@@ -40,8 +40,7 @@ namespace Windows {
 inline
 bool initialize_windows (void)
 {
-  Port::SystemInfo::initialize ();
-  Port::Chrono::initialize ();
+  Core::SystemInfo::initialize ();
   if (
     !Port::Thread::initialize () ||
     !Core::Heap::initialize () ||
@@ -59,7 +58,7 @@ void terminate_windows (void) noexcept
 {
   Heap::terminate ();
   Port::Thread::terminate ();
-  Port::Chrono::terminate ();
+  Core::SystemInfo::terminate ();
 }
 
 }

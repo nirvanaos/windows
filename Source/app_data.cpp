@@ -32,6 +32,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+uint32_t cur_process_id;
 uint32_t sys_process_id;
 
 size_t get_app_data_path (WCHAR* path, size_t size, bool create) noexcept

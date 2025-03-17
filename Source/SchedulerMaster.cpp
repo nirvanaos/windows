@@ -331,7 +331,7 @@ bool SchedulerMaster::run (StartupSys& startup)
 {
 	SetPriorityClass (GetCurrentProcess (), PROCESS_PRIORITY_CLASS);
 
-	sys_process_id = GetCurrentProcessId ();
+	cur_process_id = sys_process_id = GetCurrentProcessId ();
 
 	sysdomainid_ = open_sysdomainid (true);
 	if (INVALID_HANDLE_VALUE == sysdomainid_)
@@ -385,6 +385,7 @@ void SchedulerMaster::delete_item () noexcept
 void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) noexcept
 {
 	try {
+		Port::Thread::PriorityBoost boost (SCHEDULER_THREAD_PRIORITY);
 		Base::schedule (deadline, executor);
 	} catch (...) {
 		on_error (CORBA::SystemException::EC_NO_MEMORY);
@@ -394,6 +395,7 @@ void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) noexc
 bool SchedulerMaster::reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept
 {
 	try {
+		Port::Thread::PriorityBoost boost (SCHEDULER_THREAD_PRIORITY);
 		if (Base::reschedule (deadline, executor, old))
 			return true;
 	} catch (...) {

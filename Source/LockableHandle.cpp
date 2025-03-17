@@ -25,32 +25,65 @@
 */
 #include "pch.h"
 #include "LockableHandle.h"
+#include <random>
 
 namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+// System domain scheduler threads may compete for handle locking
+// with other threads in other domains.
+// So we use BackOff bo (THREAD_PRIORITY_MAX_SYS_DOMAIN);
+
 void* LockableHandle::lock () noexcept
 {
-	for (BackOff bo; true; bo ()) {
-		uint32_t cur = val_.load ();
-		while ((cur & SPIN_MASK) != SPIN_MASK) {
-			if (val_.compare_exchange_weak (cur, cur + 1, std::memory_order_acquire))
-				return val2handle (cur & ~SPIN_MASK);
+	for (BackOff bo;;) {
+		IntegralType cur = val_.load (std::memory_order_acquire);
+		while ((cur & LOCK_MASK) != LOCK_MASK) {
+			if (val_.compare_exchange_weak (cur, cur + LOCK_INC))
+				return val2handle (cur);
 		}
+		bo ();
 	}
 }
 
 void* LockableHandle::exclusive_lock () noexcept
 {
-	for (BackOff bo; true; bo ()) {
-		uint32_t cur = val_.load ();
-		while ((cur & SPIN_MASK) == 0) {
-			if (val_.compare_exchange_weak (cur, cur | SPIN_MASK, std::memory_order_acquire))
+	for (BackOff bo;;) {
+		IntegralType cur = val_.load ();
+		while ((cur & LOCK_MASK) == 0) {
+			if (val_.compare_exchange_weak (cur, cur | LOCK_MASK))
 				return val2handle (cur);
 		}
+		bo ();
 	}
 }
+
+LockableHandle::BackOff::BackOff () :
+	iterations_ (1),
+	rndgen_ ((RandomGen::result_type)(uintptr_t)this)
+{}
+
+void LockableHandle::BackOff::operator () ()
+{
+	static const unsigned MAX_MS = 100;
+
+	static const unsigned ITER_PER_MS = 1;
+	static const unsigned ITER_MAX = MAX_MS * ITER_PER_MS;
+
+	typedef std::uniform_int_distribution <unsigned> Dist;
+
+	unsigned iterations = iterations_;
+	if (iterations >= 4)
+		iterations = Dist (iterations / 2 + 1, iterations) (rndgen_);
+
+	if (iterations > 1 || !SwitchToThread ())
+		Sleep ((iterations + ITER_PER_MS - 1) / ITER_PER_MS);
+
+	if ((iterations_ <<= 1) > ITER_MAX)
+		iterations_ = ITER_MAX;
+}
+
 
 }
 }

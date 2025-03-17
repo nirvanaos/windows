@@ -36,6 +36,7 @@ namespace Nirvana {
 namespace Core {
 namespace Windows {
 
+extern uint32_t cur_process_id;
 extern uint32_t sys_process_id;
 
 HANDLE open_sysdomainid (bool write);

@@ -91,19 +91,47 @@ public:
 			NIRVANA_VERIFY (ImpersonateLoggedOnUser (sec_context));
 	}
 
+	class PriorityBoost
+	{
+	public:
+		PriorityBoost () noexcept :
+			PriorityBoost (current ())
+		{}
+
+		PriorityBoost (Core::Thread* thread) noexcept :
+			PriorityBoost (thread, DEFAULT_PRIORITY_BOOST)
+		{}
+
+		PriorityBoost (int priority) noexcept :
+			PriorityBoost (current (), priority)
+		{}
+
+		~PriorityBoost ();
+
+	private:
+		PriorityBoost (Core::Thread* thread, int priority) noexcept;
+
+	private:
+		Core::Thread* thread_;
+		int saved_priority_;
+	};
+
 	///@}
 
 public:
 	static bool initialize () noexcept;
 	static void terminate () noexcept;
 
-	static void current (Core::Thread* core_thread);
-
 	template <class T>
 	void create (T* p, int priority) // THREAD_PRIORITY_NORMAL = 0
 	{
 		create ((PTHREAD_START_ROUTINE)T::thread_proc, p, priority);
 	}
+
+	static void current (Core::Thread* core_thread);
+
+	int priority () const noexcept;
+	void priority (int i) const noexcept;
 
 protected:
 	Thread () noexcept :
@@ -116,9 +144,10 @@ private:
 	void create (PTHREAD_START_ROUTINE thread_proc, void* param, int priority);
 
 protected:
-	static unsigned long current_;
-
 	HANDLE handle_;
+
+	static unsigned long current_;
+	static const int DEFAULT_PRIORITY_BOOST;
 };
 
 }
