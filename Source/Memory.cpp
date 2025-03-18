@@ -1229,6 +1229,9 @@ long __stdcall exception_filter (EXCEPTION_POINTERS* pex)
 		!(pex->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE)
 		) {
 		void* address = (void*)pex->ExceptionRecord->ExceptionInformation [1];
+
+		// Probably this is a transient failure related to the memory remapping.
+
 		BlockInfo* block = local_address_space->allocated_block ((uint8_t*)address);
 		if (block) {
 			HANDLE mapping = block->mapping.lock ();

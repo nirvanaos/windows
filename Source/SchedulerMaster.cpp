@@ -535,7 +535,7 @@ void SchedulerMaster::WorkerThreads::completed (_OVERLAPPED* ovl, uint32_t size,
 {
 	{
 		PortableServer::Servant_var <Executor> ref (reinterpret_cast <Executor*> (ovl));
-		ThreadWorker::execute (*ref);
+		static_cast <ThreadWorker&> (Thread::current ()).execute (*ref);
 	}
 	SchedulerMaster::singleton ().core_free ();
 }

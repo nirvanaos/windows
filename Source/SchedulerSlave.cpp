@@ -190,15 +190,18 @@ void SchedulerSlave::core_free () noexcept
 
 void SchedulerSlave::execute () noexcept
 {
+	ThreadWorker& worker = static_cast <ThreadWorker&> (Thread::current ());
+
 	{
 		Ref <Executor> executor;
 		{
-			Port::Thread::PriorityBoost boost;
+			Port::Thread::PriorityBoost boost (&worker);
 			queue_.delete_min (executor);
 		}
 		if (executor)
-			ThreadWorker::execute (*executor);
+			worker.execute (*executor);
 	}
+
 	core_free ();
 }
 
