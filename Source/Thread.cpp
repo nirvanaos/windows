@@ -51,7 +51,7 @@ Thread::PriorityBoost::PriorityBoost (Core::Thread* thread, int priority) noexce
 {
 	// In some cases (startup, test), thread nay be null.
 	if (thread) {
-		if ((saved_priority_ = thread->port ().priority ()) < priority)
+		if ((saved_priority_ = thread->port ().priority ()) != priority)
 			thread->port ().priority (priority);
 		else
 			thread_ = nullptr; // Do not restore

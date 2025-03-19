@@ -91,6 +91,7 @@ public:
 			NIRVANA_VERIFY (ImpersonateLoggedOnUser (sec_context));
 	}
 
+	// Used to assign equal priority to all concurrenting threads
 	class PriorityBoost
 	{
 	public:
