@@ -145,6 +145,10 @@ const bool SINGLE_DOMAIN = false;
 /// Used for build auxiliary platform core.
 const bool BUILD_NO_SYS_DOMAIN = HOST_PLATFORM != PLATFORM;
 
+/// `true` to use atomic uint64_t for LockablePtr on 32-bit platform, if available.
+/// `false` may be used for debugging native 32-bit.
+const bool USE_LOCKABLE_PTR_64 = true;
+
 }
 }
 
