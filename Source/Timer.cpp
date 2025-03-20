@@ -36,6 +36,7 @@ class Timer::Global
 {
 public:
 	Global () :
+		pool_ (TIMER_POOL_MIN),
 		terminate_ (CreateEventW (nullptr, true, false, nullptr)),
 		inactive_ (CreateEventW (nullptr, true, true, nullptr)),
 		active_timer_count_ (0)

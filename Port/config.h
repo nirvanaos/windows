@@ -111,13 +111,15 @@ const bool RUNTIME_SUPPORT_DISABLE = false;
 /// Execution domain creation may be heavy.
 /// So we can enable pooling.
 const bool EXEC_DOMAIN_POOLING = true;
+const unsigned EXEC_DOMAIN_POOL_MIN = 16;
 
 /// Background thread creation may be heavy.
 /// So we can enable pooling.
 const bool BACKGROUND_THREAD_POOLING = true;
+const unsigned BACKGROUND_THREAD_POOL_MIN = 8;
 
 /// Object pool housekeeping
-const TimeBase::TimeT OBJECT_POOL_SHRINK_PERIOD = 3 * TimeBase::SECOND;
+const TimeBase::TimeT OBJECT_POOL_SHRINK_PERIOD = 5 * TimeBase::SECOND;
 
 ///@{
 /// When a request is issued, the request deadline is not known yet.
@@ -130,6 +132,8 @@ const TimeBase::TimeT INITIAL_REQUEST_DEADLINE_LOCAL = 1 * TimeBase::MICROSECOND
 const TimeBase::TimeT INITIAL_REQUEST_DEADLINE_REMOTE = 1 * TimeBase::MILLISECOND;
 
 ///@}
+
+static const unsigned INCOMING_REQUEST_SKIP_LIST_LEVELS = 10;
 
 /// Cancel request deadline.
 const TimeBase::TimeT CANCEL_REQUEST_DEADLINE = 1 * TimeBase::SECOND;
