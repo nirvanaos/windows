@@ -118,6 +118,9 @@ const unsigned EXEC_DOMAIN_POOL_MIN = 16;
 const bool BACKGROUND_THREAD_POOLING = true;
 const unsigned BACKGROUND_THREAD_POOL_MIN = 8;
 
+const bool HEAP_POOLING = true;
+const unsigned HEAP_POOL_MIN = 16;
+
 /// Object pool housekeeping
 const TimeBase::TimeT OBJECT_POOL_SHRINK_PERIOD = 5 * TimeBase::SECOND;
 
