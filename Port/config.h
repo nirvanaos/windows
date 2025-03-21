@@ -80,19 +80,14 @@ const size_t HEAP_DIRECTORY_SIZE = 0x10000;
 /// See HeapDirectory.h
 const size_t HEAP_DIRECTORY_LEVELS = 11;
 
-/// Skip list level count for the heap skip list.
-static const unsigned HEAP_SKIP_LIST_LEVELS = 10;
-
 /// @}
 
-/** Maximum count of levels in PriorityQueue.
+/** Maximum count of levels in the SkipList.
 To provide best performance with a probabilistic time complexity of
-O(logN) where N is the maximum number of elements, the queue should
-have PRIORITY_QUEUE_LEVELS = logN. Too large value degrades the performance.
+O(logN) where N is the maximum number of elements, the skip list should
+have SKIP_LIST_DEFAULT_LEVELS = logN. Too large value degrades the performance.
 */
-const unsigned SYNC_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For syncronization domain.
-const unsigned SYS_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For system-wide scheduler.
-const unsigned PROT_DOMAIN_PRIORITY_QUEUE_LEVELS = 10; //!< For protection domain scheduler.
+const unsigned SKIP_LIST_DEFAULT_LEVELS = 10;
 
 /// Unused module unloading timeout
 /// 
@@ -111,7 +106,7 @@ const bool RUNTIME_SUPPORT_DISABLE = false;
 /// Execution domain creation may be heavy.
 /// So we can enable pooling.
 const bool EXEC_DOMAIN_POOLING = true;
-const unsigned EXEC_DOMAIN_POOL_MIN = 16;
+const unsigned EXEC_DOMAIN_POOL_MIN = 10;
 
 /// Background thread creation may be heavy.
 /// So we can enable pooling.
@@ -135,8 +130,6 @@ const TimeBase::TimeT INITIAL_REQUEST_DEADLINE_LOCAL = 1 * TimeBase::MICROSECOND
 const TimeBase::TimeT INITIAL_REQUEST_DEADLINE_REMOTE = 1 * TimeBase::MILLISECOND;
 
 ///@}
-
-static const unsigned INCOMING_REQUEST_SKIP_LIST_LEVELS = 10;
 
 /// Cancel request deadline.
 const TimeBase::TimeT CANCEL_REQUEST_DEADLINE = 1 * TimeBase::SECOND;

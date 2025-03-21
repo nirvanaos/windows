@@ -86,7 +86,7 @@ private:
 	HANDLE terminate_event_;
 	HANDLE watchdog_thread_;
 	HANDLE scheduler_pipe_;
-	SkipListWithPool <PriorityQueueReorder <Ref <Executor>, PROT_DOMAIN_PRIORITY_QUEUE_LEVELS> > queue_;
+	SkipListWithPool <PriorityQueueReorder <Ref <Executor>, SKIP_LIST_DEFAULT_LEVELS> > queue_;
 	WorkerThreads <WorkerSemaphore> worker_threads_;
 };
 
