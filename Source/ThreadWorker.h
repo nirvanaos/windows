@@ -62,9 +62,9 @@ public:
 	~ThreadWorker ()
 	{}
 
-	void execute (Executor& executor) noexcept
+	void execute (Ref <Executor>&& executor) noexcept
 	{
-		static_cast <Core::ThreadWorker&> (*this).execute (executor);
+		static_cast <Core::ThreadWorker&> (*this).execute (std::move (executor));
 		RevertToSelf ();
 	}
 

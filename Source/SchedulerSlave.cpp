@@ -204,15 +204,13 @@ void SchedulerSlave::execute () noexcept
 {
 	ThreadWorker& worker = static_cast <ThreadWorker&> (Thread::current ());
 
+	Ref <Executor> executor;
 	{
-		Ref <Executor> executor;
-		{
-			Port::Thread::PriorityBoost boost (&worker);
-			queue_.delete_min (executor);
-		}
-		if (executor)
-			worker.execute (*executor);
+		Port::Thread::PriorityBoost boost (&worker);
+		queue_.delete_min (executor);
 	}
+	if (executor)
+		worker.execute (std::move (executor));
 
 	core_free ();
 }

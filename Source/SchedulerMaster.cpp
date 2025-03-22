@@ -536,10 +536,8 @@ void SchedulerMaster::worker_thread_proc () noexcept
 
 void SchedulerMaster::WorkerThreads::completed (_OVERLAPPED* ovl, uint32_t size, uint32_t error) noexcept
 {
-	{
-		PortableServer::Servant_var <Executor> ref (reinterpret_cast <Executor*> (ovl));
-		static_cast <ThreadWorker&> (Thread::current ()).execute (*ref);
-	}
+	PortableServer::Servant_var <Executor> ref (reinterpret_cast <Executor*> (ovl));
+	static_cast <ThreadWorker&> (Thread::current ()).execute (std::move (ref));
 	SchedulerMaster::singleton ().core_free ();
 }
 
