@@ -92,8 +92,8 @@ private:
 	}
 
 	void connect () noexcept;
-	void create_item ();
-	void delete_item ();
+	void create_item (bool with_reschedule);
+	void delete_item (bool with_reschedule);
 	void core_free ();
 	void schedule (DeadlineTime deadline);
 	void reschedule (DeadlineTime deadline, DeadlineTime old);
@@ -113,7 +113,7 @@ private:
 	AtomicCounter <false> valid_cnt_;
 	AtomicCounter <false> used_cores_;
 	// create_item and delete_item may be out of order, so we need signed counter.
-	AtomicCounter <true> created_items_;
+	std::atomic <int> created_items_;
 	std::atomic_flag terminated_;
 	BufferPool buffers_;
 };
@@ -181,8 +181,8 @@ public:
 	bool run (StartupSys& startup);
 
 	// Implementation of SchedulerAbstract.
-	virtual void create_item ();
-	virtual void delete_item () noexcept;
+	virtual void create_item (bool with_reschedule);
+	virtual void delete_item (bool with_reschedule) noexcept;
 	virtual void schedule (DeadlineTime deadline, Executor& executor) noexcept;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept;
 	virtual void shutdown () noexcept;

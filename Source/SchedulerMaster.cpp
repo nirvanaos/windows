@@ -139,7 +139,7 @@ void SchedulerProcess::terminate () noexcept
 		scheduler_.core_free ();
 	}
 	for (auto cnt = created_items_.load (); cnt > 0; --cnt) {
-		scheduler_.delete_item ();
+		scheduler_.delete_item (false);
 	}
 }
 
@@ -167,16 +167,16 @@ void SchedulerProcess::core_free ()
 	scheduler_.core_free ();
 }
 
-void SchedulerProcess::create_item ()
+void SchedulerProcess::create_item (bool with_reschedule)
 {
-	scheduler_.create_item ();
-	created_items_.increment ();
+	scheduler_.create_item (with_reschedule);
+	created_items_.fetch_add (with_reschedule ? 2 : 1, std::memory_order_relaxed);
 }
 
-void SchedulerProcess::delete_item ()
+void SchedulerProcess::delete_item (bool with_reschedule)
 {
-	created_items_.decrement ();
-	scheduler_.create_item ();
+	created_items_.fetch_add (with_reschedule ? -2 : -1, std::memory_order_relaxed);
+	scheduler_.create_item (with_reschedule);
 }
 
 void SchedulerProcess::schedule (DeadlineTime deadline)
@@ -243,22 +243,25 @@ void SchedulerProcess::completed (OVERLAPPED* ovl, uint32_t size, uint32_t error
 void SchedulerProcess::dispatch_message (const void* msg, size_t size)
 {
 	switch (size) {
-		case sizeof (SchedulerMessage::Tagged) :
-			switch (((SchedulerMessage::Tagged*)msg)->tag) {
-			case SchedulerMessage::Tagged::CREATE_ITEM:
-				create_item ();
-				break;
-			case SchedulerMessage::Tagged::DELETE_ITEM:
-				delete_item ();
-				break;
-			case SchedulerMessage::Tagged::CORE_FREE:
-				core_free ();
-				break;
+		case sizeof (SchedulerMessage::Tagged) : {
+			auto tag = ((SchedulerMessage::Tagged*)msg)->tag;
+			switch (tag) {
+				case SchedulerMessage::Tagged::CREATE_ITEM:
+				case SchedulerMessage::Tagged::CREATE_ITEM2:
+					create_item (SchedulerMessage::Tagged::CREATE_ITEM2 == tag);
+					break;
+				case SchedulerMessage::Tagged::DELETE_ITEM:
+				case SchedulerMessage::Tagged::DELETE_ITEM2:
+					delete_item (SchedulerMessage::Tagged::DELETE_ITEM2 == tag);
+					break;
+				case SchedulerMessage::Tagged::CORE_FREE:
+					core_free ();
+					break;
 
-			default:
-				assert (false);
+				default:
+					assert (false);
 			}
-			break;
+		} break;
 
 		case sizeof (SchedulerMessage::Schedule) :
 			schedule (((SchedulerMessage::Schedule*)msg)->deadline);
@@ -372,14 +375,14 @@ bool SchedulerMaster::create_process (DWORD flags) noexcept
 	return true;
 }
 
-void SchedulerMaster::create_item ()
+void SchedulerMaster::create_item (bool with_reschedule)
 {
-	Base::create_item ();
+	Base::create_item (with_reschedule);
 }
 
-void SchedulerMaster::delete_item () noexcept
+void SchedulerMaster::delete_item (bool with_reschedule) noexcept
 {
-	Base::delete_item ();
+	Base::delete_item (with_reschedule);
 }
 
 void SchedulerMaster::schedule (DeadlineTime deadline, Executor& executor) noexcept

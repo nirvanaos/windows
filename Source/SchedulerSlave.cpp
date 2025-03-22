@@ -107,24 +107,36 @@ bool SchedulerSlave::run (StartupProt& startup, DeadlineTime startup_deadline)
 	return true;
 }
 
-void SchedulerSlave::create_item ()
+void SchedulerSlave::create_item (bool with_reschedule)
 {
-	queue_.create_item ();
 	try {
-		send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::CREATE_ITEM));
+		send (SchedulerMessage::Tagged (with_reschedule ?
+			SchedulerMessage::Tagged::CREATE_ITEM2
+			:
+			SchedulerMessage::Tagged::CREATE_ITEM
+		));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
 	}
+	queue_.create_item ();
+	if (with_reschedule)
+		queue_.create_item ();
 }
 
-void SchedulerSlave::delete_item () noexcept
+void SchedulerSlave::delete_item (bool with_reschedule) noexcept
 {
-	queue_.delete_item ();
 	try {
-		send (SchedulerMessage::Tagged (SchedulerMessage::Tagged::DELETE_ITEM));
+		send (SchedulerMessage::Tagged (with_reschedule ?
+			SchedulerMessage::Tagged::DELETE_ITEM2
+			:
+			SchedulerMessage::Tagged::DELETE_ITEM
+		));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
 	}
+	queue_.delete_item ();
+	if (with_reschedule)
+		queue_.delete_item ();
 }
 
 void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) noexcept

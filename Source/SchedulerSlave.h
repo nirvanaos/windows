@@ -56,8 +56,8 @@ public:
 	bool run (StartupProt& startup, DeadlineTime startup_deadline);
 
 	// Implementation of SchedulerAbstract.
-	virtual void create_item ();
-	virtual void delete_item () noexcept;
+	virtual void create_item (bool with_reschedule);
+	virtual void delete_item (bool with_reschedule) noexcept;
 	virtual void schedule (DeadlineTime deadline, Executor& executor) noexcept;
 	virtual bool reschedule (DeadlineTime deadline, Executor& executor, DeadlineTime old) noexcept;
 	virtual void shutdown () noexcept;

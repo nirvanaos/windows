@@ -66,9 +66,11 @@ struct SchedulerMessage
 	{
 		enum Tag : uint32_t
 		{
+			CORE_FREE,
 			CREATE_ITEM,
+			CREATE_ITEM2,
 			DELETE_ITEM,
-			CORE_FREE
+			DELETE_ITEM2
 		}
 		tag;
 
