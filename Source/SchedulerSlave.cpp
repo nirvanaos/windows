@@ -207,7 +207,7 @@ void SchedulerSlave::execute () noexcept
 	Ref <Executor> executor;
 	{
 		Port::Thread::PriorityBoost boost (&worker);
-		queue_.delete_min (executor);
+		NIRVANA_VERIFY (queue_.delete_min (executor));
 	}
 	if (executor)
 		worker.execute (std::move (executor));
