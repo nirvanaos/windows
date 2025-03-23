@@ -64,7 +64,7 @@ protected:
 	{
 		// If all concurrenting threads have the same priority, SwitchToThread will return TRUE.
 		// Otherwise the concurrency must be adjusted with Thread::PriorityBoost.
-		NIRVANA_VERIFY (::SwitchToThread ());
+		NIRVANA_VERIFY_EX (::SwitchToThread (), true);
 	}
 
 };

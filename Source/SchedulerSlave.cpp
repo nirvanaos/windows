@@ -143,7 +143,7 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) noexce
 {
 	try {
 		Port::Thread::PriorityBoost boost;
-		queue_.insert (deadline, &executor);
+		NIRVANA_VERIFY (queue_.insert (deadline, &executor));
 	} catch (...) {
 		on_error (CORBA::SystemException::EC_NO_MEMORY);
 	}
@@ -204,15 +204,13 @@ void SchedulerSlave::execute () noexcept
 {
 	ThreadWorker& worker = static_cast <ThreadWorker&> (Thread::current ());
 
+	Ref <Executor> executor;
 	{
-		Ref <Executor> executor;
-		{
-			Port::Thread::PriorityBoost boost (&worker);
-			queue_.delete_min (executor);
-		}
-		if (executor)
-			worker.execute (*executor);
+		Port::Thread::PriorityBoost boost (&worker);
+		NIRVANA_VERIFY (queue_.delete_min (executor));
 	}
+	if (executor)
+		worker.execute (std::move (executor));
 
 	core_free ();
 }

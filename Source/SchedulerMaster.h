@@ -191,7 +191,7 @@ public:
 	virtual void worker_thread_proc () noexcept;
 
 	/// Called by SchedulerImpl
-	bool execute (SchedulerItem& item) noexcept
+	bool execute (SchedulerItem item) noexcept
 	{
 		SchedulerProcess* process = item.process ();
 		if (process)
