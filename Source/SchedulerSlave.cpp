@@ -143,7 +143,7 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) noexce
 {
 	try {
 		Port::Thread::PriorityBoost boost;
-		queue_.insert (deadline, &executor);
+		NIRVANA_VERIFY (queue_.insert (deadline, &executor));
 	} catch (...) {
 		on_error (CORBA::SystemException::EC_NO_MEMORY);
 	}
