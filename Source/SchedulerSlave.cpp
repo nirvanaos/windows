@@ -144,11 +144,6 @@ void SchedulerSlave::schedule (DeadlineTime deadline, Executor& executor) noexce
 	try {
 		Port::Thread::PriorityBoost boost;
 		NIRVANA_VERIFY (queue_.insert (deadline, &executor));
-	} catch (...) {
-		on_error (CORBA::SystemException::EC_NO_MEMORY);
-	}
-
-	try {
 		send (SchedulerMessage::Schedule (deadline));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
@@ -161,14 +156,10 @@ bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, Dead
 		Port::Thread::PriorityBoost boost;
 		if (!queue_.reorder (deadline, &executor, old))
 			return false;
-	} catch (...) {
-		on_error (CORBA::SystemException::EC_NO_MEMORY);
-	}
-
-	try {
 		send (SchedulerMessage::ReSchedule (deadline, old));
 	} catch (const CORBA::SystemException& ex) {
 		on_error (ex.__code ());
+		return false;
 	}
 	return true;
 }
@@ -176,7 +167,7 @@ bool SchedulerSlave::reschedule (DeadlineTime deadline, Executor& executor, Dead
 void SchedulerSlave::shutdown () noexcept
 {
 #ifdef DEBUG_SHUTDOWN
-	Port::Debugger::output_debug_string ("Shutdown 2\n");
+	Port::Debugger::output_debug_string (Debugger::DebugEvent::DEBUG_INFO, "Shutdown 2\n");
 #endif
 
 	CloseHandle (scheduler_pipe_);
@@ -209,8 +200,7 @@ void SchedulerSlave::execute () noexcept
 		Port::Thread::PriorityBoost boost (&worker);
 		NIRVANA_VERIFY (queue_.delete_min (executor));
 	}
-	if (executor)
-		worker.execute (std::move (executor));
+	worker.execute (std::move (executor));
 
 	core_free ();
 }

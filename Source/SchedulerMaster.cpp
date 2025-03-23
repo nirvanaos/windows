@@ -523,7 +523,7 @@ void SchedulerMaster::ProcessTerminate::run ()
 void SchedulerMaster::shutdown () noexcept
 {
 #ifdef DEBUG_SHUTDOWN
-	Port::Debugger::output_debug_string ("Shutdown 2\n");
+	Port::Debugger::output_debug_string (Debugger::DebugEvent::DEBUG_INFO, "Shutdown 2\n");
 #endif
 	Pool::terminate ();
 	worker_threads_.shutdown ();

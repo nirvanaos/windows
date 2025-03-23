@@ -30,6 +30,9 @@
 
 #include "../Source/SchedulerAbstract.h"
 
+// Output debug messages on shutdown.
+#define DEBUG_SHUTDOWN
+
 namespace Nirvana {
 namespace Core {
 namespace Port {
