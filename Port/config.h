@@ -109,7 +109,7 @@ const bool EXEC_DOMAIN_POOLING = true;
 const unsigned EXEC_DOMAIN_POOL_MIN = 10;
 
 /// Usage of the background threads may be completely disabled.
-const bool BACKGROUND_THREAD_DISABLE = true;
+const bool BACKGROUND_THREAD_DISABLE = false;
 
 /// Background thread creation may be heavy.
 /// So we can enable pooling.

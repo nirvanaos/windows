@@ -24,7 +24,7 @@
 *  popov.nirvana@gmail.com
 */
 #include "pch.h"
-#include <ThreadBackground.inl>
+#include <ThreadBackground.h>
 #include <ExecDomain.h>
 #include "Thread.inl"
 #include <signal.h>
@@ -40,10 +40,11 @@ DWORD CALLBACK ThreadBackground::thread_proc (ThreadBackground* _this)
 	thread.neutral_context ().port ().convert_to_fiber ();
 
 	for (;;) {
-		WaitForSingleObject (_this->event_, INFINITE);
+		DWORD ret = WaitForSingleObject (_this->event_, INFINITE);
+		assert (WAIT_OBJECT_0 == ret);
 		if (_this->finish_)
 			break;
-		thread.execute ();
+		thread.run ();
 		RevertToSelf ();
 	}
 
@@ -71,11 +72,6 @@ ThreadBackground::~ThreadBackground ()
 void ThreadBackground::start ()
 {
 	Thread::create (this, Windows::BACKGROUND_THREAD_PRIORITY);
-}
-
-void ThreadBackground::resume () noexcept
-{
-	NIRVANA_VERIFY (SetEvent (event_));
 }
 
 }

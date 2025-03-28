@@ -95,14 +95,15 @@ void __stdcall ExecContext::fiber_proc (Core::ExecContext* context)
 void ExecContext::main_fiber_proc ()
 {
 	for (;;) {
-		ExecDomain* ed = Core::Thread::current ().exec_domain ();
-		if (!ed) {
-			assert (dbg_main_thread_id_ == GetCurrentThreadId ());
+		Core::Thread& th = Core::Thread::current ();
+		if (!th.executing ())
 			break;
-		}
+		ExecDomain* ed = th.exec_domain ();
+		assert (ed);
 		current (main_fiber_context_);
 		run (*ed);
 	}
+	assert (dbg_main_thread_id_ == GetCurrentThreadId ());
 }
 
 void ExecContext::convert_to_fiber () noexcept

@@ -29,6 +29,7 @@
 #include <StartupSys.h>
 #include <SysManager.h>
 #include <Chrono.h>
+#include <ThreadWorker.h>
 #include <ORB/Services.h>
 #include "error2errno.h"
 #include "../Port/Security.h"

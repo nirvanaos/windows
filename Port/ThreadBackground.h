@@ -30,6 +30,12 @@
 
 #include <Thread.h>
 
+extern "C" __declspec (dllimport)
+int __stdcall SwitchToThread (void);
+
+extern "C" __declspec (dllimport)
+int __stdcall SetEvent (void* hEvent);
+
 namespace Nirvana {
 namespace Core {
 namespace Port {
@@ -43,12 +49,22 @@ protected:
 	ThreadBackground ();
 	~ThreadBackground ();
 
-	/// Create thread
+	/// Create thread.
 	void start ();
 
-	/// Continue execution.
-	void resume () noexcept;
+	/// Execute step.
+	void execute () const noexcept
+	{
+		resume ();
+	}
 
+	/// Yield execution to another thread that is ready to run on the current processor.
+	static void yield () noexcept
+	{
+		SwitchToThread ();
+	}
+
+	/// Terminate thread.
 	void stop () noexcept
 	{
 		finish_ = true;
@@ -61,9 +77,14 @@ private:
 	friend class Nirvana::Core::Port::Thread;
 	static unsigned long __stdcall thread_proc (ThreadBackground* _this);
 
+	void resume () const noexcept
+	{
+		NIRVANA_VERIFY (SetEvent (event_));
+	}
+
 private:
-	HANDLE event_;
-	bool finish_;
+	void* event_;
+	volatile bool finish_;
 };
 
 }

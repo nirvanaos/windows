@@ -27,7 +27,7 @@
 #include "SchedulerSlave.h"
 #include <Scheduler.h>
 #include <StartupProt.h>
-#include <Executor.h>
+#include <ThreadWorker.h>
 #include "SchedulerMessage.h"
 #include "app_data.h"
 #include "object_name.h"
