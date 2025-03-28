@@ -108,6 +108,9 @@ const bool RUNTIME_SUPPORT_DISABLE = false;
 const bool EXEC_DOMAIN_POOLING = true;
 const unsigned EXEC_DOMAIN_POOL_MIN = 10;
 
+/// Usage of the background threads may be completely disabled.
+const bool BACKGROUND_THREAD_DISABLE = true;
+
 /// Background thread creation may be heavy.
 /// So we can enable pooling.
 const bool BACKGROUND_THREAD_POOLING = true;
