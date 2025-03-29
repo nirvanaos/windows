@@ -152,7 +152,9 @@ const bool BUILD_NO_SYS_DOMAIN = HOST_PLATFORM != PLATFORM;
 /// `false` may be used for debugging native 32-bit.
 const bool USE_LOCKABLE_PTR_64 = true;
 
-const bool ENABLE_MEM_CONTEXT_ASYNC_DESTROY = true;
+/// For some host implementations, MemContext may be released out of the execution domain.
+/// In this case we create async call for this.
+const bool ENABLE_MEM_CONTEXT_ASYNC_DESTROY = false;
 
 }
 }
