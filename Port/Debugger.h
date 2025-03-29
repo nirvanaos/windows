@@ -40,14 +40,17 @@ class Debugger
 {
 public:
 	/// \brief Prints message to debug output.
+	/// 
+	/// \param level The message level.
 	/// \param msg The message.
 	static void output_debug_string (Nirvana::Debugger::DebugEvent level, const char* msg);
 
 	/// \brief Debug break.
 	/// 
+	/// \param level The message level.
 	/// \returns If debugger is available, performs debug break and returns `true`.
-	/// Otherwise returns `false`;
-	static bool debug_break ();
+	///   Otherwise returns `false`;
+	static bool debug_break (Nirvana::Debugger::DebugEvent level);
 
 	/// \brief Determines whether the calling process is being debugged by a user-mode debugger.
 	/// 

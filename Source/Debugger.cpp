@@ -44,17 +44,17 @@ void Debugger::output_debug_string (Nirvana::Debugger::DebugEvent level, const c
 		Windows::DebugLog () << msg;
 }
 
-bool Debugger::debug_break ()
+bool Debugger::debug_break (Nirvana::Debugger::DebugEvent level)
 {
 	if (IsDebuggerPresent ()) {
 		__debugbreak ();
 		return true;
-	} else {
+	} else if (level >= Nirvana::Debugger::DebugEvent::DEBUG_ASSERT) {
 		Windows::DebugLog log;
 		log << "Debug break\n";
 		log.stack_trace ();
-		return false;
 	}
+	return false;
 }
 
 bool Debugger::is_debugger_present () noexcept
