@@ -48,8 +48,18 @@ public:
 	/// 
 	static TimeBase::UtcT system_clock () noexcept;
 
+	/// System clock frequency, Hz.
+	static const uint64_t system_clock_frequency () noexcept
+	{
+		return clock_frequency_;
+	}
+
 	/// Current UTC time.
 	static TimeBase::UtcT UTC () noexcept;
+
+	/// Set current UTC time.
+	/// \param t UTC time.
+	static void set_UTC (TimeBase::TimeT t);
 
 	/// Duration since system startup in 100 ns intervals.
 	static SteadyTime steady_clock () noexcept
@@ -59,14 +69,20 @@ public:
 		return t;
 	}
 
-	/// Duration since system startup.
+	/// Steady clock frequency, Hz.
+	static const uint64_t steady_clock_frequency () noexcept
+	{
+		return clock_frequency_;
+	}
+
+	/// Duration since system startup with maximal precision.
 	static DeadlineTime deadline_clock () noexcept
 	{
 		return __rdtsc ();
 	}
 
 	/// Deadline clock frequency, Hz.
-	static const DeadlineTime& deadline_clock_frequency () noexcept
+	static const uint64_t& deadline_clock_frequency () noexcept
 	{
 		return TSC_frequency_;
 	}
@@ -80,7 +96,7 @@ public:
 	/// \return Deadline time as local steady clock value.
 	static DeadlineTime make_deadline (TimeBase::TimeT timeout) noexcept;
 
-	static void initialize () noexcept;
+	static void initialize ();
 	static void terminate () noexcept;
 
 private:
@@ -100,6 +116,8 @@ private:
 
 	static void* hkey_time_config_;
 	static void* hkey_time_client_;
+
+	static uint64_t clock_frequency_;
 };
 
 }

@@ -25,9 +25,9 @@
 */
 #include "pch.h"
 #include "../Port/Chrono.h"
-#include <timeapi.h>
 #include <limits>
 #include <Nirvana/rescale.h>
+#include "error2errno.h"
 
 namespace Nirvana {
 namespace Core {
@@ -41,8 +41,9 @@ uint64_t Chrono::max_timeout64_;
 
 void* Chrono::hkey_time_config_;
 void* Chrono::hkey_time_client_;
+uint64_t Chrono::clock_frequency_;
 
-void Chrono::initialize () noexcept
+void Chrono::initialize ()
 {
 	TSC_frequency_ = 0;
 	{
@@ -58,7 +59,8 @@ void Chrono::initialize () noexcept
 
 	if (!TSC_frequency_) {
 		LARGE_INTEGER pf;
-		QueryPerformanceFrequency (&pf);
+		if (!QueryPerformanceFrequency (&pf))
+			throw_INITIALIZE ();
 
 		LARGE_INTEGER pc_start;
 		int prio = GetThreadPriority (GetCurrentThread ());
@@ -66,16 +68,17 @@ void Chrono::initialize () noexcept
 		QueryPerformanceCounter (&pc_start);
 		uint64_t start = __rdtsc ();
 		NIRVANA_VERIFY (SetThreadPriority (GetCurrentThread (), prio));
-		
+
 		Sleep (100);
-		
+
 		LARGE_INTEGER pc_end;
 		NIRVANA_VERIFY (SetThreadPriority (GetCurrentThread (), THREAD_PRIORITY_TIME_CRITICAL));
 		QueryPerformanceCounter (&pc_end);
 		uint64_t end = __rdtsc ();
 		NIRVANA_VERIFY (SetThreadPriority (GetCurrentThread (), prio));
-		
+
 		TSC_frequency_ = rescale64 (end - start, pf.QuadPart, 0, pc_end.QuadPart - pc_start.QuadPart);
+		clock_frequency_ = pf.QuadPart > 10000000I64 ? 10000000I64 : pf.QuadPart;
 
 		HKEY time_service;
 		if (RegOpenKeyW (HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services\\W32Time", &time_service))
@@ -90,17 +93,10 @@ void Chrono::initialize () noexcept
 #ifndef NIRVANA_FAST_RESCALE64
 	max_timeout64_ = std::numeric_limits <uint64_t>::max () / TSC_frequency_;
 #endif
-
-	TIMECAPS tc;
-	timeGetDevCaps (&tc, sizeof (tc));
-	timeBeginPeriod (tc.wPeriodMin);
 }
 
 void Chrono::terminate () noexcept
 {
-	TIMECAPS tc;
-	timeGetDevCaps (&tc, sizeof (tc));
-	timeEndPeriod (tc.wPeriodMin);
 	RegCloseKey (hkey_time_config_);
 	RegCloseKey (hkey_time_client_);
 }
@@ -164,6 +160,17 @@ TimeBase::UtcT Chrono::system_clock () noexcept
 	t.tdf ((int16_t)tzi.Bias);
 
 	return t;
+}
+
+void Chrono::set_UTC (TimeBase::TimeT t)
+{
+	FILETIME ft;
+	ft.dwHighDateTime = (DWORD)(t >> 32);
+	ft.dwLowDateTime = (DWORD)t;
+
+	SYSTEMTIME st;
+	if (!FileTimeToSystemTime (&ft, &st) || !SetSystemTime (&st))
+		Windows::throw_last_error ();
 }
 
 DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) noexcept
