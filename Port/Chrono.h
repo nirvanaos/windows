@@ -48,10 +48,10 @@ public:
 	/// 
 	static TimeBase::UtcT system_clock () noexcept;
 
-	/// System clock frequency, Hz.
-	static const uint64_t system_clock_frequency () noexcept
+	/// System clock resolution.
+	static TimeBase::TimeT system_clock_resolution () noexcept
 	{
-		return clock_frequency_;
+		return clock_resolution_;
 	}
 
 	/// Current UTC time.
@@ -69,10 +69,10 @@ public:
 		return t;
 	}
 
-	/// Steady clock frequency, Hz.
-	static const uint64_t steady_clock_frequency () noexcept
+	/// Steady clock resolution.
+	static const SteadyTime steady_clock_resolution () noexcept
 	{
-		return clock_frequency_;
+		return clock_resolution_;
 	}
 
 	/// Duration since system startup with maximal precision.
@@ -117,7 +117,7 @@ private:
 	static void* hkey_time_config_;
 	static void* hkey_time_client_;
 
-	static uint64_t clock_frequency_;
+	static uint64_t clock_resolution_;
 };
 
 }

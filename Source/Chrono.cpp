@@ -41,7 +41,7 @@ uint64_t Chrono::max_timeout64_;
 
 void* Chrono::hkey_time_config_;
 void* Chrono::hkey_time_client_;
-uint64_t Chrono::clock_frequency_;
+uint64_t Chrono::clock_resolution_;
 
 void Chrono::initialize ()
 {
@@ -78,7 +78,8 @@ void Chrono::initialize ()
 		NIRVANA_VERIFY (SetThreadPriority (GetCurrentThread (), prio));
 
 		TSC_frequency_ = rescale64 (end - start, pf.QuadPart, 0, pc_end.QuadPart - pc_start.QuadPart);
-		clock_frequency_ = pf.QuadPart > 10000000I64 ? 10000000I64 : pf.QuadPart;
+		uint32_t clock_freq = pf.QuadPart > 10000000 ? 10000000 : pf.QuadPart;
+		clock_resolution_ = 10000000 / clock_freq;
 
 		HKEY time_service;
 		if (RegOpenKeyW (HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services\\W32Time", &time_service))
