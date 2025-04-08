@@ -26,6 +26,7 @@
 #include "pch.h"
 #include "Timer.h"
 #include <Timer.h>
+#include <timeapi.h>
 
 namespace Nirvana {
 namespace Core {
@@ -40,10 +41,15 @@ public:
 		terminate_ (CreateEventW (nullptr, true, false, nullptr)),
 		inactive_ (CreateEventW (nullptr, true, true, nullptr)),
 		active_timer_count_ (0)
-	{}
+	{
+		TIMECAPS tc;
+		timeGetDevCaps (&tc, sizeof (tc));
+		timeBeginPeriod (min_period_ = tc.wPeriodMin);
+	}
 
 	~Global ()
 	{
+		timeEndPeriod (min_period_);
 		SetEvent (terminate_);
 		WaitForSingleObject (inactive_, INFINITE);
 
@@ -91,11 +97,17 @@ public:
 			SetEvent (inactive_);
 	}
 
+	LONG min_period () const noexcept
+	{
+		return min_period_;
+	}
+
 private:
 	ObjectPool <Timer*> pool_;
 	HANDLE terminate_;
 	HANDLE inactive_;
 	AtomicCounter <false> active_timer_count_;
+	UINT min_period_;
 };
 
 StaticallyAllocated <Timer::Global> Timer::global_;
@@ -191,6 +203,9 @@ void Timer::release_to_pool () noexcept
 
 inline void Timer::set (const LARGE_INTEGER& due_time, LONG period, bool resume)
 {
+	if (period > 0 && period < global_->min_period ())
+		throw_BAD_PARAM ();
+
 	if (!SetWaitableTimer (handles_ [HANDLE_TIMER], &due_time, period, nullptr, nullptr, resume))
 		Windows::throw_last_error ();
 }
@@ -231,9 +246,11 @@ void Timer::set (unsigned flags, TimeBase::TimeT due_time, TimeBase::TimeT perio
 	if (!Core::Timer::initialized ())
 		return;
 
-	period /= TimeBase::MILLISECOND;
-	if (period > (TimeBase::TimeT)std::numeric_limits <LONG>::max ())
-		throw_BAD_PARAM ();
+	if (period) {
+		period /= TimeBase::MILLISECOND;
+		if (0 == period || period > (TimeBase::TimeT)std::numeric_limits <LONG>::max ())
+			throw_BAD_PARAM ();
+	}
 	LARGE_INTEGER dt;
 	if (flags & TIMER_ABSOLUTE)
 		dt.QuadPart = due_time - Windows::WIN_TIME_OFFSET_SEC * TimeBase::SECOND;
