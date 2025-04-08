@@ -78,7 +78,7 @@ void Chrono::initialize ()
 		NIRVANA_VERIFY (SetThreadPriority (GetCurrentThread (), prio));
 
 		TSC_frequency_ = rescale64 (end - start, pf.QuadPart, 0, pc_end.QuadPart - pc_start.QuadPart);
-		uint32_t clock_freq = pf.QuadPart > 10000000 ? 10000000 : pf.QuadPart;
+		uint32_t clock_freq = pf.QuadPart > 10000000 ? 10000000 : (uint32_t)pf.QuadPart;
 		clock_resolution_ = 10000000 / clock_freq;
 
 		HKEY time_service;
@@ -152,6 +152,21 @@ TimeBase::UtcT Chrono::UTC () noexcept
 	return TimeBase::UtcT (ui.QuadPart + Windows::WIN_TIME_OFFSET_SEC * TimeBase::SECOND, inacclo, 0, 0);
 }
 
+void Chrono::set_UTC (TimeBase::TimeT t)
+{
+	if (t < Windows::WIN_TIME_OFFSET_SEC * TimeBase::SECOND)
+		throw_BAD_PARAM ();
+
+	t -= Windows::WIN_TIME_OFFSET_SEC * TimeBase::SECOND;
+	FILETIME ft;
+	ft.dwHighDateTime = (DWORD)(t >> 32);
+	ft.dwLowDateTime = (DWORD)t;
+
+	SYSTEMTIME st;
+	if (!FileTimeToSystemTime (&ft, &st) || !SetSystemTime (&st))
+		Windows::throw_last_error ();
+}
+
 TimeBase::UtcT Chrono::system_clock () noexcept
 {
 	TimeBase::UtcT t = UTC ();
@@ -161,17 +176,6 @@ TimeBase::UtcT Chrono::system_clock () noexcept
 	t.tdf ((int16_t)tzi.Bias);
 
 	return t;
-}
-
-void Chrono::set_UTC (TimeBase::TimeT t)
-{
-	FILETIME ft;
-	ft.dwHighDateTime = (DWORD)(t >> 32);
-	ft.dwLowDateTime = (DWORD)t;
-
-	SYSTEMTIME st;
-	if (!FileTimeToSystemTime (&ft, &st) || !SetSystemTime (&st))
-		Windows::throw_last_error ();
 }
 
 DeadlineTime Chrono::make_deadline (TimeBase::TimeT timeout) noexcept
