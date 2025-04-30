@@ -49,7 +49,7 @@ public:
 	static TimeBase::UtcT system_clock () noexcept;
 
 	/// System clock resolution.
-	static TimeBase::TimeT system_clock_resolution () noexcept
+	static TimeBase::TimeT& system_clock_resolution () noexcept
 	{
 		return clock_resolution_;
 	}
@@ -70,7 +70,7 @@ public:
 	}
 
 	/// Steady clock resolution.
-	static const SteadyTime steady_clock_resolution () noexcept
+	static const SteadyTime& steady_clock_resolution () noexcept
 	{
 		return clock_resolution_;
 	}
