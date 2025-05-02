@@ -29,7 +29,7 @@
 #pragma once
 
 #include <Nirvana/Nirvana.h>
-#include <errno.h>
+#include <Nirvana/errors.h>
 
 namespace Nirvana {
 namespace Core {
