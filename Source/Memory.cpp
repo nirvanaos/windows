@@ -27,7 +27,7 @@
 #include "AddressSpace.inl"
 #include <Nirvana/real_copy.h>
 #include <ExecDomain.h>
-#include <Nirvana/signal.h>
+#include <Nirvana/signal_defs.h>
 #include "ex2signal.h"
 #include <winternl.h>
 #include "DebugLog.h"
