@@ -40,6 +40,7 @@ protected:
 	FileAccessConsoleBase (FileChar* file, unsigned flags, void* out, void* in);
 	~FileAccessConsoleBase ();
 
+	virtual bool isatty () const override;
 	virtual void read_start () noexcept override;
 	virtual void read_cancel () noexcept override;
 	virtual Ref <IO_Request> write_start (const IDL::String& data) override;

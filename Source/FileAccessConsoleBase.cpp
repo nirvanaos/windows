@@ -47,6 +47,11 @@ FileAccessConsoleBase::~FileAccessConsoleBase ()
 		CloseHandle (read_event_);
 }
 
+bool FileAccessConsoleBase::isatty () const
+{
+	return true;
+}
+
 void FileAccessConsoleBase::read_start () noexcept
 {
 	if (!read_event_) {
