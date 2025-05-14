@@ -173,7 +173,7 @@ TimeBase::UtcT Chrono::system_clock () noexcept
 
 	TIME_ZONE_INFORMATION tzi;
 	GetTimeZoneInformation (&tzi);
-	t.tdf ((int16_t)tzi.Bias);
+	t.tdf (-(TimeBase::TdfT)tzi.Bias);
 
 	return t;
 }
