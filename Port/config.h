@@ -101,7 +101,7 @@ const TimeBase::TimeT GC_DEADLINE = 10 * TimeBase::SECOND;
 
 /// Disable iterator debugging.
 /// May be used in production systems to eliminate unused runtime support code from core.
-const bool RUNTIME_SUPPORT_DISABLE = false;
+const bool RUNTIME_SUPPORT_DISABLE = true;
 
 /// Execution domain creation may be heavy.
 /// So we can enable pooling.
