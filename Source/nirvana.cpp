@@ -34,6 +34,7 @@
 #include <StartupProt.h>
 #include <StartupSys.h>
 #include <initterm.h>
+#include <SharedAllocator.h>
 
 namespace Nirvana {
 namespace Core {
@@ -122,7 +123,7 @@ int CALLBACK WinMain (HINSTANCE, HINSTANCE, LPSTR, int)
 {
 	try {
 		Nirvana::Core::initialize0 ();
-		Nirvana::Core::Windows::CmdLineParser cmdline;
+		Nirvana::Core::Windows::CmdLineParser <Nirvana::Core::SharedAllocator> cmdline;
 		return Nirvana::Core::Windows::nirvana (cmdline.argc (), cmdline.argv (), cmdline.envp ());
 	} catch (const std::exception& ex) {
 		Nirvana::Core::Windows::ErrConsole () << ex.what () << '\n';
