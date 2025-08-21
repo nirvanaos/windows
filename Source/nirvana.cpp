@@ -25,7 +25,7 @@
 */
 #include "pch.h"
 #include "initialize.h"
-#include "CmdLineParser.h"
+#include <Nirvana/Windows/CmdLineParser.h>
 #include "SchedulerMaster.h"
 #include "SchedulerSlave.h"
 #include "shutdown.h"
@@ -123,7 +123,7 @@ int CALLBACK WinMain (HINSTANCE, HINSTANCE, LPSTR, int)
 {
 	try {
 		Nirvana::Core::initialize0 ();
-		Nirvana::Core::Windows::CmdLineParser <Nirvana::Core::SharedAllocator> cmdline;
+		Nirvana::Windows::CmdLineParser <Nirvana::Core::SharedAllocator> cmdline;
 		return Nirvana::Core::Windows::nirvana (cmdline.argc (), cmdline.argv (), cmdline.envp ());
 	} catch (const std::exception& ex) {
 		Nirvana::Core::Windows::ErrConsole () << ex.what () << '\n';
