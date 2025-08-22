@@ -38,7 +38,7 @@ namespace Core {
 namespace Windows {
 
 inline
-bool initialize_windows (void)
+bool initialize_windows (void) noexcept
 {
   Core::SystemInfo::initialize ();
   if (

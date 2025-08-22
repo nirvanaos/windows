@@ -35,6 +35,7 @@
 #include <StartupSys.h>
 #include <initterm.h>
 #include <SharedAllocator.h>
+#include <Nirvana/crt_startup.h>
 
 namespace Nirvana {
 namespace Core {
@@ -46,8 +47,7 @@ static void swallow_arg (int& argc, char* argv [])
 	--argc;
 }
 
-inline
-int nirvana (int argc, char* argv [], char* envp [])
+inline int nirvana (int argc, char* argv [], char* envp [])
 {
 	bool system = false;
 	while (argc > 1 && '-' == *argv [1]) {
@@ -106,9 +106,27 @@ start:
 	}
 }
 
+inline int run_nirvana () noexcept
+{
+	try {
+		initialize0 ();
+		Nirvana::Windows::CmdLineParser <SharedAllocator> cmdline;
+		int ret = nirvana (cmdline.argc (), cmdline.argv (), cmdline.envp ());
+		terminate0 ();
+		return ret;
+	} catch (const std::exception& ex) {
+		ErrConsole () << ex.what () << '\n';
+	}
+	return -1;
+}
+
 }
 }
 }
+
+#ifdef _WIN32
+
+// Use MS UCRT
 
 extern "C" DWORD WinMainCRTStartup (void);
 
@@ -117,16 +135,29 @@ extern "C" DWORD nirvana_startup (void)
 	if (!Nirvana::Core::Windows::initialize_windows ())
 		return -1;
 	return WinMainCRTStartup ();
+	// Actually it does not return here
 }
 
 int CALLBACK WinMain (HINSTANCE, HINSTANCE, LPSTR, int)
 {
-	try {
-		Nirvana::Core::initialize0 ();
-		Nirvana::Windows::CmdLineParser <Nirvana::Core::SharedAllocator> cmdline;
-		return Nirvana::Core::Windows::nirvana (cmdline.argc (), cmdline.argv (), cmdline.envp ());
-	} catch (const std::exception& ex) {
-		Nirvana::Core::Windows::ErrConsole () << ex.what () << '\n';
-	}
-	return -1;
+	atexit (Nirvana::Core::Windows::terminate_windows);
+	return Nirvana::Core::Windows::run_nirvana ();
 }
+
+#else
+
+// Use Nirvana CRTL
+
+extern "C" DWORD nirvana_startup (void)
+{
+	if (!Nirvana::Core::Windows::initialize_windows ())
+		return -1;
+	if (!Nirvana::crt_init ())
+		return -1;
+	int ret = Nirvana::Core::Windows::run_nirvana ();
+	Nirvana::crt_term ();
+	Nirvana::Core::Windows::terminate_windows ();
+	return ret;
+}
+
+#endif
