@@ -35,7 +35,7 @@
 #include <StartupSys.h>
 #include <initterm.h>
 #include <SharedAllocator.h>
-#include <Nirvana/crt_startup.h>
+#include <Nirvana/CRTL/initterm.h>
 
 namespace Nirvana {
 namespace Core {
@@ -152,10 +152,10 @@ extern "C" DWORD nirvana_startup (void)
 {
 	if (!Nirvana::Core::Windows::initialize_windows ())
 		return -1;
-	if (!Nirvana::crt_init ())
+	if (!CRTL::initialize ())
 		return -1;
 	int ret = Nirvana::Core::Windows::run_nirvana ();
-	Nirvana::crt_term ();
+	CRTL::terminate ();
 	Nirvana::Core::Windows::terminate_windows ();
 	return ret;
 }
