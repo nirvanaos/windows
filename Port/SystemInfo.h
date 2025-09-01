@@ -51,7 +51,7 @@ public:
 
 	static const void* get_OLF_section (size_t& size) noexcept;
 
-	static_assert (HOST_PLATFORM == PLATFORM_X64 || HOST_PLATFORM == PLATFORM_I386,
+	static_assert (HOST_PLATFORM == PLATFORM_X64 || HOST_PLATFORM == PLATFORM_X86,
 		"Unsupported host");
 
 #if defined (__GNUG__) || defined (__clang__)

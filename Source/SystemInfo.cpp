@@ -38,11 +38,11 @@ const uint16_t* SystemInfo::supported_platforms () noexcept
 {
 	static uint16_t platforms_x64 [] = {
 		PLATFORM_X64,
-		PLATFORM_I386
+		PLATFORM_X86
 	};
 
 	static uint16_t platforms_i386 [] = {
-		PLATFORM_I386
+		PLATFORM_X86
 	};
 
 	if (HOST_PLATFORM == PLATFORM_X64)

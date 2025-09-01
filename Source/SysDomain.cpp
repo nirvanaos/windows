@@ -56,7 +56,7 @@ uint32_t SysDomain::create_prot_domain (unsigned platform, const IDL::String& ho
 			throw_BAD_PARAM ();
 
 		const WinWChar* folder;
-		if (platform == PLATFORM_I386)
+		if (platform == PLATFORM_X86)
 			folder = x86;
 		else
 			throw_BAD_PARAM ();
@@ -117,7 +117,7 @@ IDL::String SysDomain::get_platform_dir (unsigned platform)
 			throw_BAD_PARAM ();
 
 		const WinWChar* folder;
-		if (platform == PLATFORM_I386)
+		if (platform == PLATFORM_X86)
 			folder = x86;
 		else
 			throw_BAD_PARAM ();
