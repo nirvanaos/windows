@@ -35,7 +35,6 @@
 #include <StartupSys.h>
 #include <initterm.h>
 #include <SharedAllocator.h>
-#include <Nirvana/CRTL/initterm.h>
 
 namespace Nirvana {
 namespace Core {
@@ -147,6 +146,8 @@ int CALLBACK WinMain (HINSTANCE, HINSTANCE, LPSTR, int)
 #else
 
 // Use Nirvana CRTL
+
+#include <Nirvana/CRTL/initterm.h>
 
 extern "C" DWORD nirvana_startup (void)
 {
