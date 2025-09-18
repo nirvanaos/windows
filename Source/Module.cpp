@@ -85,6 +85,7 @@ Module::Module (AccessDirect::_ptr_type file) :
 			throw_BAD_PARAM (make_minor_errno (ENOEXEC));
 
 		Nirvana::Core::PortableExecutable pe (module_);
+		size_ = pe.pe32_header ()->SizeOfImage;
 
 		if (!(metadata_.address = pe.find_OLF_section (metadata_.size)))
 			BindError::throw_message ("Metadata not found");

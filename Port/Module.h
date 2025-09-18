@@ -53,6 +53,11 @@ public:
 		return module_;
 	}
 
+	size_t size () const noexcept
+	{
+		return size_;
+	}
+
 	const Section& metadata () const noexcept
 	{
 		return metadata_;
@@ -93,7 +98,9 @@ private:
 		HeapAllocator <Windows::WinWChar> > FilePath;
 
 	void* module_;
+	size_t size_;
 	Section metadata_;
+	Section code_;
 	FilePath temp_path_;
 };
 
