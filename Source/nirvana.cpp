@@ -25,7 +25,7 @@
 */
 #include "pch.h"
 #include "initialize.h"
-#include <Nirvana/Windows/CmdLineParser.h>
+#include <CmdLineParser.h>
 #include "SchedulerMaster.h"
 #include "SchedulerSlave.h"
 #include "shutdown.h"
@@ -46,7 +46,7 @@ static void swallow_arg (int& argc, char* argv [])
 	--argc;
 }
 
-inline int nirvana (int argc, char* argv [], char* envp [])
+inline int nirvana (int argc, char* argv [])
 {
 	bool system = false;
 	while (argc > 1 && '-' == *argv [1]) {
@@ -84,7 +84,7 @@ start:
 			ErrConsole () << "Wrong platform. Use 64-bit version.\n";
 			return -1;
 		} else {
-			StartupSys startup (argc, argv, envp);
+			StartupSys startup (argc, argv);
 			if (!SchedulerMaster ().run (startup)) {
 				ErrConsole () << "System is already running.\n";
 				return -1;
@@ -94,7 +94,7 @@ start:
 			}
 		}
 	} else {
-		StartupProt startup (argc, argv, envp);
+		StartupProt startup (argc, argv);
 		if (!SchedulerSlave ().run (startup, StartupProt::default_deadline ())) {
 			ErrConsole () << "System is not running.\n";
 			return -1;
@@ -110,7 +110,7 @@ inline int run_nirvana () noexcept
 	try {
 		initialize0 ();
 		Nirvana::Windows::CmdLineParser <SharedAllocator> cmdline;
-		int ret = nirvana (cmdline.argc (), cmdline.argv (), cmdline.envp ());
+		int ret = nirvana (cmdline.argc (), cmdline.argv ());
 		terminate0 ();
 		return ret;
 	} catch (const std::exception& ex) {
