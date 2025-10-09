@@ -146,7 +146,7 @@ const bool SINGLE_DOMAIN = false;
 /// `true` to exclude system domain code from the binary.
 /// 
 /// Used for build auxiliary platform core.
-const bool BUILD_NO_SYS_DOMAIN = HOST_PLATFORM != PLATFORM;
+const bool BUILD_NO_SYS_DOMAIN = NIRVANA_HOST_PLATFORM != PLATFORM;
 
 /// `true` to use atomic uint64_t for LockablePtr on 32-bit platform, if available.
 /// `false` may be used for debugging native 32-bit.
@@ -155,6 +155,18 @@ const bool USE_LOCKABLE_PTR_64 = true;
 /// For some host implementations, MemContext may be released out of the execution domain.
 /// In this case we create async call for this.
 const bool ENABLE_MEM_CONTEXT_ASYNC_DESTROY = false;
+
+/// Really used address bit count. Currently 48 for all 64-bit systems.
+/// For 64-bit Windows user space 47 bits.
+/// For 32-bit Windows user space 31 bits in most cases. But it may be configured to use more.
+/// We check this on the system initialization.
+const unsigned ADDRESS_BITS_USED = (sizeof (void*) == 8) ? 47 : 31;
+
+/// How to set unused high address bits.
+/// Usually it is 0.
+/// But if we consider a hypotetical 32-bit system where user address space occupies high 2GB,
+/// we have ADDRESS_BITS_USED = 31 and ADDRESS_UNUSED_BITS_VAL = 0x80000000.
+static const uintptr_t ADDRESS_UNUSED_BITS_VAL = 0;
 
 }
 }

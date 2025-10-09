@@ -74,7 +74,7 @@ inline ProtDomainId sys_domain_id (void) noexcept
 /// SharedMemPtr size is enough to store memory address
 /// for any supported platform.
 using SharedMemPtr = std::conditional_t <
-Nirvana::HOST_PLATFORM == Nirvana::PLATFORM_X86
+Nirvana::NIRVANA_HOST_PLATFORM == Nirvana::PLATFORM_X86
 , uint32_t, uint64_t>;
 
 /// If an incoming request can't be processed, the system uses this function

@@ -45,18 +45,21 @@ const uint16_t* SystemInfo::supported_platforms () noexcept
 		PLATFORM_X86
 	};
 
-	if (HOST_PLATFORM == PLATFORM_X64)
+	if (NIRVANA_HOST_PLATFORM == PLATFORM_X64)
 		return platforms_x64;
 	else
 		return platforms_i386;
 }
 
-void SystemInfo::initialize () noexcept
+bool SystemInfo::initialize () noexcept
 {
-	base_address_ = GetModuleHandleW (nullptr);
 	::SYSTEM_INFO si;
 	::GetSystemInfo (&si);
+	if ((uintptr_t)si.lpMaximumApplicationAddress & (~(uintptr_t)0 << ADDRESS_BITS_USED))
+		return false;
+	base_address_ = GetModuleHandleW (nullptr);
 	hardware_concurrency_ = si.dwNumberOfProcessors;
+	return true;
 }
 
 const void* SystemInfo::get_OLF_section (size_t& size) noexcept

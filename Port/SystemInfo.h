@@ -39,7 +39,7 @@ namespace Port {
 class SystemInfo
 {
 public:
-	static void initialize () noexcept;
+	static bool initialize () noexcept;
 
 	static void terminate () noexcept
 	{}
@@ -51,13 +51,13 @@ public:
 
 	static const void* get_OLF_section (size_t& size) noexcept;
 
-	static_assert (HOST_PLATFORM == PLATFORM_X64 || HOST_PLATFORM == PLATFORM_X86,
+	static_assert (NIRVANA_HOST_PLATFORM == PLATFORM_X64 || NIRVANA_HOST_PLATFORM == PLATFORM_X86,
 		"Unsupported host");
 
 #if defined (__GNUG__) || defined (__clang__)
 	static const size_t SUPPORTED_PLATFORM_CNT = 1;
 #else
-	static const size_t SUPPORTED_PLATFORM_CNT = (HOST_PLATFORM == PLATFORM_X64) ? 2 : 1;
+	static const size_t SUPPORTED_PLATFORM_CNT = (NIRVANA_HOST_PLATFORM == PLATFORM_X64) ? 2 : 1;
 #endif
 
 	static const uint16_t* supported_platforms () noexcept;
